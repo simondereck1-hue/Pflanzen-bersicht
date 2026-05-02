@@ -26,7 +26,7 @@ CSV_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
 # Grundriss-Bild-URL (GitHub Raw oder eigener Host)
 # Tipp: Lade "Grundriss EG.PNG" in dein GitHub-Repo und ersetze diese URL.
-GRUNDRISS_URL = "https://raw.githubusercontent.com/DEIN_USERNAME/DEIN_REPO/main/Grundriss%20EG.PNG"
+GRUNDRISS_URL = "https://raw.githubusercontent.com/simondereck1-hue/Pflanzen-bersicht/main/Grundriss%20EG.PNG"
 
 # ============================================================
 # HAUPT-KOMPONENTE – alles läuft im Browser
