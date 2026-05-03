@@ -7,7 +7,6 @@ import json, math
 # ============================================================
 st.set_page_config(layout="wide", page_title="Pflanzen-Planer Pro", page_icon="🌿")
 
-# stApp Background an das neue "Soft Cream" (Biophilic) anpassen
 st.markdown("""
 <style>
   #MainMenu, header, footer { visibility: hidden; }
@@ -18,7 +17,6 @@ st.markdown("""
 
 SHEET_ID  = "1cbOPNq-CrYrin-U0OkUJ5AE2AWF6Ba7RqIHlVOtUCK0"
 CSV_URL   = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-POSITIONS_SHEET_CSV = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 
 GITHUB_BASE = "https://raw.githubusercontent.com/simondereck1-hue/Pflanzen-bersicht/main"
 
@@ -29,7 +27,35 @@ LAT_DEG = 48.9
 LON_DEG = 9.3
 
 # ============================================================
+# GEBÄUDEAUSRICHTUNG: Aus Süd→Nord-Vektoren berechnet
+# EG:    Süden(1233,775) → Norden(1267,771): dx=34, dy=-4 → Azimut des Gebäude-Nordens
+# 1.OG:  Süden(1221,768) → Norden(1255,703): dx=34, dy=-65
+# 2.OG:  Süden(1267,744) → Norden(1293,691): dx=26, dy=-53
+#
+# buildingNorthAzimuth = Winkel, in den das Gebäude-Nord zeigt (in geogr. Grad)
+# atan2(dx, -dy) weil Bildkoord Y nach unten, geogr. Nord nach oben
+# ============================================================
+
+def building_north_azimuth(sx, sy, nx, ny):
+    """Berechnet den geographischen Azimut des Gebäude-Nordens
+    aus zwei Punkten: Süden (sx,sy) und Norden (nx,ny) im Bildkoordinatensystem."""
+    dx = nx - sx
+    dy = ny - sy   # Bildkoord: Y wächst nach unten
+    # In geogr. Koordinaten zeigt Nord nach oben (neg. Bild-Y)
+    # Azimut = Winkel von geogr. Nord, clockwise
+    az = math.degrees(math.atan2(dx, -dy)) % 360
+    return az
+
+EG_BNA   = building_north_azimuth(1233, 775, 1267, 771)   # ≈ 96.7°
+OG1_BNA  = building_north_azimuth(1221, 768, 1255, 703)   # ≈ 27.6°
+OG2_BNA  = building_north_azimuth(1267, 744, 1293, 691)   # ≈ 26.1°
+
+# ============================================================
 # FLOOR METADATA
+# Außenwände werden jetzt explizit als geschlossene Hülle definiert.
+# Die Segmente gehen im Uhrzeigersinn um das Stockwerk.
+# Fensterbereiche werden aus der Außenwand "ausgeschnitten" -
+# d.h. dort gibt es KEIN Wandsegment, nur ein Fensterobjekt.
 # ============================================================
 FLOOR_DATA = {
     "EG": {
@@ -37,7 +63,26 @@ FLOOR_DATA = {
         "imgW": 1312, "imgH": 808,
         "floorX1": 170, "floorY1": 5, "floorX2": 1100, "floorY2": 570,
         "realW": 10, "realH": 6,
-        "buildingNorthAzimuth": math.degrees(math.atan2(34, -(-4))) % 360,
+        "buildingNorthAzimuth": EG_BNA,
+        # Außenwände: Segmente der Gebäudehülle OHNE Fensteröffnungen
+        # Seite W (x=170): y=5..95, Fenster 95..470, y=470..570
+        # Seite S (y=570): x=170..900, Fenster 900..1000, x=1000..1100
+        # Seite E (x=1100): y=570..530 (Fenster 530..340), y=340..100 (Fenster 100..33), y=33..5
+        # Seite N (y=5): x=1100..170
+        "outerWalls": [
+            # West-Wand (undurchlässig oberhalb + unterhalb des Fensters)
+            {"x1":170,"y1":5,   "x2":170,"y2":95},
+            {"x1":170,"y1":470, "x2":170,"y2":570},
+            # Süd-Wand
+            {"x1":170,"y1":570, "x2":900,"y2":570},
+            {"x1":1000,"y1":570,"x2":1100,"y2":570},
+            # Ost-Wand
+            {"x1":1100,"y1":570,"x2":1100,"y2":530},
+            {"x1":1100,"y1":340,"x2":1100,"y2":100},
+            {"x1":1100,"y1":33, "x2":1100,"y2":5},
+            # Nord-Wand
+            {"x1":1100,"y1":5,  "x2":170,"y2":5},
+        ],
         "windows": [
             {"x1":170,"y1":95,  "x2":170, "y2":470, "side":"W"},
             {"x1":900,"y1":570, "x2":1000,"y2":570, "side":"S"},
@@ -55,7 +100,22 @@ FLOOR_DATA = {
         "imgW": 1300, "imgH": 800,
         "floorX1": 110, "floorY1": 0, "floorX2": 1150, "floorY2": 620,
         "realW": 10, "realH": 6,
-        "buildingNorthAzimuth": math.degrees(math.atan2(34, 65)) % 360,
+        "buildingNorthAzimuth": OG1_BNA,
+        # West-Wand (x=110): y=0..110, Fenster 110..175, y=175..315, Fenster 315..515, y=515..620
+        # Süd-Wand (y=620): x=110..590, Fenster 590..740, x=740..1150
+        # Ost-Wand (x=1150): y=620..580 (Fenster 580..405), y=405..335 (Fenster 335..210), y=210..0
+        # Nord-Wand (y=0): x=1150..110
+        "outerWalls": [
+            {"x1":110,"y1":0,   "x2":110,"y2":110},
+            {"x1":110,"y1":175, "x2":110,"y2":315},
+            {"x1":110,"y1":515, "x2":110,"y2":620},
+            {"x1":110,"y1":620, "x2":590,"y2":620},
+            {"x1":740,"y1":620, "x2":1150,"y2":620},
+            {"x1":1150,"y1":620,"x2":1150,"y2":580},
+            {"x1":1150,"y1":405,"x2":1150,"y2":335},
+            {"x1":1150,"y1":210,"x2":1150,"y2":0},
+            {"x1":1150,"y1":0,  "x2":110,"y2":0},
+        ],
         "windows": [
             {"x1":110,"y1":110,"x2":110,"y2":175,"side":"W"},
             {"x1":110,"y1":315,"x2":110,"y2":515,"side":"W"},
@@ -77,7 +137,19 @@ FLOOR_DATA = {
         "imgW": 1348, "imgH": 784,
         "floorX1": 210, "floorY1": 10, "floorX2": 1100, "floorY2": 580,
         "realW": 10, "realH": 6,
-        "buildingNorthAzimuth": math.degrees(math.atan2(26, 53)) % 360,
+        "buildingNorthAzimuth": OG2_BNA,
+        # West-Wand (x=210): y=10..210, Fenster 210..375, y=375..580
+        # Süd-Wand (y=580): x=210..630, Fenster 630..770, x=770..1100
+        # Ost-Wand (x=1100): y=580..10 (kein Fenster)
+        # Nord-Wand (y=10): x=1100..210
+        "outerWalls": [
+            {"x1":210,"y1":10,  "x2":210,"y2":210},
+            {"x1":210,"y1":375, "x2":210,"y2":580},
+            {"x1":210,"y1":580, "x2":630,"y2":580},
+            {"x1":770,"y1":580, "x2":1100,"y2":580},
+            {"x1":1100,"y1":580,"x2":1100,"y2":10},
+            {"x1":1100,"y1":10, "x2":210,"y2":10},
+        ],
         "windows": [
             {"x1":210,"y1":210,"x2":210,"y2":375,"side":"W"},
             {"x1":630,"y1":580,"x2":770,"y2":580,"side":"S"},
@@ -94,7 +166,7 @@ FLOOR_DATA = {
 FLOOR_DATA_JSON = json.dumps(FLOOR_DATA)
 
 # ============================================================
-# HTML / JS APP - BIOPHILIC DESIGN UPDATE
+# HTML / JS APP
 # ============================================================
 html_app = f"""<!DOCTYPE html>
 <html lang="de">
@@ -106,28 +178,23 @@ html_app = f"""<!DOCTYPE html>
 <style>
 /* ── TOKENS (Biophilic Palette) ── */
 :root {{
-  --bg: #FCFAF7; /* Soft Cream */
-  --surface: rgba(255, 255, 255, 0.85); /* Glassmorphism Base */
+  --bg: #FCFAF7;
+  --surface: rgba(255, 255, 255, 0.85);
   --surface-solid: #FFFFFF;
-  --surface-2: #F1F8E9; /* Sage Green Light */
-  --surface-3: #E8F5E9; /* Sage Green Slightly Darker */
-  --border: rgba(45, 71, 57, 0.08); /* Soft Deep Forest border */
+  --surface-2: #F1F8E9;
+  --surface-3: #E8F5E9;
+  --border: rgba(45, 71, 57, 0.08);
   --border-2: rgba(45, 71, 57, 0.15);
-  
-  --accent: #7CB342; /* Vibrant Sage / Fresh Green */
-  --accent-dim: rgba(124, 179, 66, 0.15); 
+  --accent: #7CB342;
+  --accent-dim: rgba(124, 179, 66, 0.15);
   --accent-glow: rgba(124, 179, 66, 0.35);
-  
-  --warn: #E2A76F; /* Earthly Clay */
+  --warn: #E2A76F;
   --warn-dim: rgba(226, 167, 111, 0.15);
-  
-  --danger: #E57373; /* Soft Coral */
+  --danger: #E57373;
   --danger-dim: rgba(229, 115, 115, 0.15);
-  
-  --text: #2D4739; /* Deep Forest */
-  --muted: #688E7B; /* Muted Forest */
+  --text: #2D4739;
+  --muted: #688E7B;
   --muted2: #9EB5A8;
-  
   --r: 16px; --rs: 12px; --rx: 24px;
   --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   --sidebar-w: 340px;
@@ -186,7 +253,7 @@ input,select{{font-family:inherit}}
 /* ── MAIN ── */
 #main{{display:flex;flex:1;overflow:hidden;position:relative;padding:0 16px 16px 16px;gap:16px;}}
 
-/* ── SIDEBARS (Floating Panels) ── */
+/* ── SIDEBARS ── */
 #left-sidebar, #right-sidebar{{
   width:var(--sidebar-w);background:var(--surface);
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -267,7 +334,7 @@ input,select{{font-family:inherit}}
   background: rgba(124,179,66,0.05);
 }}
 
-/* ── PLANT PINS (Organic & Bouncy) ── */
+/* ── PLANT PINS ── */
 .plant-pin{{
   position:absolute;display:flex;flex-direction:column;align-items:center;
   cursor:grab;user-select:none;touch-action:none;z-index:10;
@@ -330,7 +397,6 @@ input,select{{font-family:inherit}}
 .score-badge.bad{{border:1px solid rgba(229,115,115,0.4);background:var(--surface-solid);}}
 .score-badge.bad .sc-text h3{{color:var(--danger)}}
 
-/* Botanische & Astronomische Licht-Sektion */
 .astro-panel{{
   background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
   padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 16px rgba(45,71,57,0.03);
@@ -348,7 +414,6 @@ input,select{{font-family:inherit}}
 }}
 .win-chip.hit{{background:var(--warn-dim);border-color:rgba(226,167,111,0.4);color:#d38e53;}}
 
-/* Licht-Balken (Fitness-App Style) */
 .light-bar-wrap{{display:flex;flex-direction:column;gap:10px;background:var(--surface-solid);padding:16px;border-radius:var(--rx);border:1px solid var(--border);box-shadow:0 4px 16px rgba(45,71,57,0.03);}}
 .lbw-label{{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--text)}}
 .lbw-track{{height:12px;border-radius:6px;background:rgba(45,71,57,0.05);position:relative;overflow:hidden}}
@@ -373,7 +438,7 @@ input,select{{font-family:inherit}}
 .act-btn.danger-btn{{background:var(--surface-solid);border-color:rgba(229,115,115,0.4);color:var(--danger)}}
 .act-btn.danger-btn:hover{{background:var(--danger-dim);}}
 
-/* ── LIBRARY VIEW – HOCHWERTIGE PRODUKTKARTEN ── */
+/* ── LIBRARY VIEW ── */
 #library-view{{display:none;flex:1;overflow-y:auto;padding:24px 32px;flex-direction:column;gap:24px}}
 #library-view.active{{display:flex}}
 #library-view::-webkit-scrollbar{{width:8px}}
@@ -390,7 +455,6 @@ input,select{{font-family:inherit}}
 .lib-search::placeholder{{color:var(--muted2)}}
 .lib-search:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);}}
 
-/* Grid: Viel White Space */
 .lib-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:24px;padding-bottom:32px;}}
 
 .lib-card{{
@@ -412,41 +476,27 @@ input,select{{font-family:inherit}}
 }}
 .lib-card-meta{{flex:1;min-width:0}}
 .lib-card-name{{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;line-height:1.2;color:var(--text);margin-bottom:6px}}
-.lib-card-loc{{
-  display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);
-}}
+.lib-card-loc{{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);}}
 .lib-card-loc-dot{{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}}
 .lib-card-loc-dot.placed{{background:var(--accent);box-shadow:0 0 6px var(--accent);}}
 
-/* Lichtanzeige Wellness-Style */
 .lib-light-row{{display:flex;align-items:center;gap:12px;background:var(--bg);padding:12px 16px;border-radius:var(--r);}}
 .lib-light-icon{{font-size:18px;flex-shrink:0}}
 .lib-light-bar-wrap{{flex:1}}
 .lib-light-bar-track{{height:8px;border-radius:4px;background:rgba(45,71,57,0.06);position:relative;overflow:hidden}}
 .lib-light-bar-fill{{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34, 1.56, .64, 1)}}
 .lib-light-labels{{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted);margin-top:6px}}
-.lib-light-score{{
-  font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
-  min-width:44px;text-align:right;flex-shrink:0
-}}
+.lib-light-score{{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:44px;text-align:right;flex-shrink:0}}
 
 .lib-divider{{height:1px;background:var(--border);margin:0}}
 
-/* Pflege-Grid */
 .lib-care-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
-.lib-care-cell{{
-  background:var(--bg);border-radius:var(--rs);padding:12px 16px;
-  display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);
-}}
+.lib-care-cell{{background:var(--bg);border-radius:var(--rs);padding:12px 16px;display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);}}
 .lib-care-cell-lbl{{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}}
 .lib-care-cell-val{{font-size:15px;font-weight:700;color:var(--text)}}
 .lib-care-cell-unit{{font-size:11px;color:var(--muted);margin-left:3px;font-weight:500}}
 
-/* Status-Chip */
-.lib-status-chip{{
-  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
-  border-radius:99px;font-size:12px;font-weight:600;
-}}
+.lib-status-chip{{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:600;}}
 .lib-status-chip.ideal{{background:var(--surface-solid);color:var(--accent);border:1px solid var(--accent-glow);box-shadow:0 2px 8px var(--accent-dim);}}
 .lib-status-chip.ok{{background:var(--surface-solid);color:#d38e53;border:1px solid rgba(226,167,111,0.4);box-shadow:0 2px 8px var(--warn-dim);}}
 .lib-status-chip.bad{{background:var(--surface-solid);color:var(--danger);border:1px solid rgba(229,115,115,0.4);box-shadow:0 2px 8px var(--danger-dim);}}
@@ -459,6 +509,116 @@ input,select{{font-family:inherit}}
   transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);
 }}
 .show-on-map-btn:hover{{background:var(--bg);border-color:var(--accent-glow);color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,71,57,0.05);}}
+
+/* ── PFLEGE-KALENDER VIEW ── */
+#care-view{{display:none;flex:1;overflow-y:auto;padding:24px 32px;flex-direction:column;gap:20px}}
+#care-view.active{{display:flex}}
+#care-view::-webkit-scrollbar{{width:8px}}
+#care-view::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:4px}}
+
+.care-header{{
+  display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;
+  background:var(--surface);padding:24px;border-radius:var(--rx);border:1px solid var(--border);
+  backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(45,71,57,0.04);
+}}
+.care-header h2{{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);}}
+.care-header-sub{{font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}}
+.care-header-actions{{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}}
+.care-mass-btn{{
+  padding:10px 20px;font-size:13px;font-weight:600;border-radius:99px;
+  border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
+  transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);cursor:pointer;
+}}
+.care-mass-btn:hover{{background:var(--bg);border-color:var(--accent-glow);color:var(--accent);transform:translateY(-1px);}}
+.care-mass-btn.primary{{background:var(--accent);border-color:var(--accent);color:#fff;}}
+.care-mass-btn.primary:hover{{background:#6aa335;box-shadow:0 4px 16px var(--accent-glow);transform:translateY(-1px);}}
+
+.care-section-title{{
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:10px;margin-bottom:4px;
+}}
+.care-section-title .care-badge{{
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:3px 10px;
+  border-radius:99px;background:var(--danger-dim);color:var(--danger);border:1px solid rgba(229,115,115,0.3);
+}}
+.care-section-title .care-badge.warn{{background:var(--warn-dim);color:#c27a3e;border-color:rgba(226,167,111,0.3);}}
+.care-section-title .care-badge.ok{{background:var(--surface-2);color:var(--accent);border-color:var(--accent-glow);}}
+
+/* Pflege-Karten */
+.care-card{{
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  padding:20px;display:flex;align-items:center;gap:16px;
+  transition:all var(--transition);box-shadow:0 4px 16px rgba(45,71,57,0.03);
+  position:relative;overflow:hidden;
+}}
+.care-card::before{{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+  background:var(--accent);border-radius:0;transition:background .3s;
+}}
+.care-card.overdue::before{{background:var(--danger);}}
+.care-card.soon::before{{background:var(--warn);}}
+.care-card.done::before{{background:var(--muted2);}}
+.care-card:hover{{box-shadow:0 8px 32px rgba(45,71,57,0.07);transform:translateY(-1px);}}
+
+.care-card-emoji{{font-size:28px;flex-shrink:0;background:var(--bg);padding:10px;border-radius:var(--r);border:1px solid var(--border);}}
+.care-card-info{{flex:1;min-width:0}}
+.care-card-name{{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;}}
+.care-card-meta{{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}}
+.care-chip{{
+  font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;
+  background:var(--surface-2);color:var(--muted);border:1px solid var(--border);
+}}
+.care-chip.overdue{{background:var(--danger-dim);color:var(--danger);border-color:rgba(229,115,115,0.3);}}
+.care-chip.soon{{background:var(--warn-dim);color:#c27a3e;border-color:rgba(226,167,111,0.3);}}
+.care-chip.ok{{background:var(--surface-2);color:var(--accent);border-color:var(--accent-glow);}}
+
+/* Moisture bar */
+.moisture-wrap{{display:flex;align-items:center;gap:8px;}}
+.moisture-label{{font-size:11px;font-weight:600;color:var(--muted);min-width:64px;}}
+.moisture-track{{flex:1;height:6px;border-radius:3px;background:rgba(45,71,57,0.08);overflow:hidden;}}
+.moisture-fill{{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.34,1.56,.64,1);}}
+
+.care-card-actions{{display:flex;flex-direction:column;gap:8px;flex-shrink:0;}}
+.care-btn{{
+  padding:9px 16px;font-size:12px;font-weight:600;border-radius:var(--r);
+  border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
+  transition:all var(--transition);cursor:pointer;white-space:nowrap;
+  box-shadow:0 2px 8px rgba(45,71,57,0.02);
+}}
+.care-btn:hover{{background:var(--bg);transform:translateY(-1px);}}
+.care-btn.water{{border-color:rgba(100,181,246,0.5);color:#1976d2;background:rgba(100,181,246,0.08);}}
+.care-btn.water:hover{{background:rgba(100,181,246,0.15);box-shadow:0 4px 12px rgba(100,181,246,0.15);}}
+.care-btn.fertilize{{border-color:var(--accent-glow);color:var(--accent);background:var(--surface-2);}}
+.care-btn.fertilize:hover{{background:var(--surface-3);box-shadow:0 4px 12px var(--accent-dim);}}
+.care-btn.done-btn{{opacity:.5;pointer-events:none;}}
+
+/* Historie */
+.care-history{{
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  overflow:hidden;box-shadow:0 4px 16px rgba(45,71,57,0.03);
+}}
+.care-history-header{{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:10px;
+}}
+.history-entry{{
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  border-bottom:1px solid var(--border);font-size:13px;
+  transition:background .2s;
+}}
+.history-entry:last-child{{border-bottom:none}}
+.history-entry:hover{{background:var(--bg);}}
+.history-icon{{font-size:16px;flex-shrink:0;}}
+.history-text{{flex:1;color:var(--text);font-weight:500;}}
+.history-time{{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}}
+
+.care-empty{{
+  text-align:center;padding:48px 24px;color:var(--muted);
+  background:var(--surface-solid);border:1px dashed var(--border-2);border-radius:var(--rx);
+}}
+.care-empty .ce-icon{{font-size:48px;margin-bottom:12px;opacity:.5}}
+.care-empty p{{font-size:14px;font-weight:500;line-height:1.6;}}
 
 /* ── TOAST & TOOLTIP ── */
 #tooltip{{
@@ -524,6 +684,9 @@ input,select{{font-family:inherit}}
   <button class="tab" data-tab="library" onclick="switchTab('library')">
     <span class="tab-icon">📚</span> Pflanzen-Bibliothek
   </button>
+  <button class="tab" data-tab="care" onclick="switchTab('care')">
+    <span class="tab-icon">🌱</span> Pflege-Kalender
+  </button>
 </div>
 
 <!-- MAIN -->
@@ -565,6 +728,24 @@ input,select{{font-family:inherit}}
     <div class="lib-grid" id="lib-grid"></div>
   </div>
 
+  <!-- CARE VIEW -->
+  <div id="care-view">
+    <div class="care-header">
+      <div>
+        <h2>🌱 Pflege-Kalender</h2>
+        <div class="care-header-sub" id="care-sub-label">Lade Pflegedaten…</div>
+      </div>
+      <div class="care-header-actions">
+        <button class="care-mass-btn" onclick="waterAllDue()">💧 Alle fälligen gießen</button>
+        <button class="care-mass-btn primary" onclick="refreshCare()">🔄 Aktualisieren</button>
+      </div>
+    </div>
+
+    <div id="care-overdue-section"></div>
+    <div id="care-soon-section"></div>
+    <div id="care-history-section"></div>
+  </div>
+
   <!-- RIGHT SIDEBAR -->
   <div id="right-sidebar">
     <div id="rsb-empty">
@@ -595,7 +776,9 @@ const NOW_MONTH    = NOW.getMonth();
 // STATE
 // ============================================================
 let plants          = [];
-let positions       = {{}};   // plantIdx -> {{floor, x, y}}
+let positions       = {{}};
+let careData        = {{}};  // plantIdx -> {{lastWatered: ISO, lastFertilized: ISO}}
+let careHistory     = [];    // [{{type:'water'|'fertilize', plantIdx, name, emoji, time:ISO}}]
 let activePIdx      = null;
 let currentFloor    = "EG";
 let currentTab      = "planer";
@@ -635,7 +818,6 @@ $("month-label").textContent = MONTHS_DE[NOW_MONTH]+" "+NOW.getFullYear();
 // ============================================================
 // ★ ASTRONOMISCHE LICHTSIMULATION
 // ============================================================
-
 function calcSunPosition(date) {{
   const JD = date / 86400000 + 2440587.5;
   const n  = JD - 2451545.0;
@@ -671,21 +853,24 @@ function calcSunPosition(date) {{
 
 function seasonalFactor(month) {{
   const rad = (month/12)*2*Math.PI - Math.PI/2;
-  const elev = 18 + 23*(Math.sin(rad)+1)/2 + 23;  
+  const elev = 18 + 23*(Math.sin(rad)+1)/2 + 23;
   return Math.sin(elev*Math.PI/180);
 }}
 
 function windowAzimuth(side, buildingNorthAzimuth) {{
-  const sideMap = {{"N":0,"E":90,"S":180,"W":270}};
-  const baseAz  = sideMap[side] || 180;
-  return (baseAz + buildingNorthAzimuth + 180) % 360;
+  // buildingNorthAzimuth ist der geogr. Azimut, in den das Gebäude-Nord zeigt.
+  // Fenster auf Seite N zeigen in dieselbe Richtung wie das Gebäude-Nord.
+  // Fenster auf Seite E zeigen 90° im Uhrzeigersinn dazu, usw.
+  const sideOffset = {{"N":0,"E":90,"S":180,"W":270}};
+  const offset = sideOffset[side] ?? 180;
+  return (buildingNorthAzimuth + offset) % 360;
 }}
 
 function windowIncidenceFactor(winAz, sunAz, sunElev) {{
-  if(sunElev <= 0) return 0;       
+  if(sunElev <= 0) return 0;
   const diff = Math.abs(((winAz - sunAz + 540) % 360) - 180);
   const cosInc = Math.cos(diff * Math.PI/180);
-  if(cosInc <= 0) return 0;        
+  if(cosInc <= 0) return 0;
   return cosInc * Math.sin(sunElev * Math.PI/180);
 }}
 
@@ -705,43 +890,87 @@ function updateSunInfo() {{
 }}
 
 // ============================================================
-// ERWEITERTES LICHT-MODELL
+// ★ PHYSIKALISCH KORREKTE LICHTSIMULATION MIT GEBÄUDEHÜLLE
 // ============================================================
-function px2rel(px, p1, p2) {{ return (px-p1)/(p2-p1); }}
 
 function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
   const denom = (bx-ax)*(dy-cy)-(by-ay)*(dx-cx);
   if(Math.abs(denom)<1e-10) return false;
   const t = ((cx-ax)*(dy-cy)-(cy-ay)*(dx-cx))/denom;
   const u = ((cx-ax)*(by-ay)-(cy-ay)*(bx-ax))/denom;
-  return t>=0&&t<=1&&u>=0&&u<=1;
+  return t>1e-9&&t<1-1e-9&&u>=0&&u<=1;
 }}
 
-function isOccluded(px,py, wx,wy, floor) {{
-  const fd  = FLOOR_DATA[floor];
-  const fx1=fd.floorX1, fy1=fd.floorY1, fx2=fd.floorX2, fy2=fd.floorY2;
-  const toAbsX = r => fx1+r*(fx2-fx1);
-  const toAbsY = r => fy1+r*(fy2-fy1);
-  const pAX=toAbsX(px), pAY=toAbsY(py), wAX=toAbsX(wx), wAY=toAbsY(wy);
+/**
+ * Prüft, ob ein Punkt INNERHALB der Gebäudehülle liegt.
+ * Nutzt Ray-Casting gegen die äußeren + inneren Wände.
+ */
+function isInsideBuilding(px, py, fd) {{
+  // Alle Außenwand-Segmente + Fensterbereiche bilden zusammen den Umriss.
+  // Wir verwenden das Bounding-Box-Rechteck (floorX1..X2, floorY1..Y2)
+  // als Näherung — Punkte außerhalb sind draußen.
+  return px >= fd.floorX1 && px <= fd.floorX2 && py >= fd.floorY1 && py <= fd.floorY2;
+}}
+
+/**
+ * Prüft ob der Sichtstrahl von Punkt P zu Fenstermitte W
+ * durch eine INNENWAND blockiert wird.
+ */
+function isBlockedByInnerWall(pAX, pAY, wAX, wAY, fd) {{
   for(const wall of fd.walls) {{
     if(segmentsIntersect(pAX,pAY,wAX,wAY, wall.x1,wall.y1,wall.x2,wall.y2)) return true;
   }}
   return false;
 }}
 
+/**
+ * Prüft ob der Sichtstrahl von Punkt P zu Fenstermitte W
+ * durch eine AUSSENWAND blockiert wird (d.h. das Fenster ist auf falscher Seite).
+ * Da die Fenstermitte exakt auf der Außenwand liegt, reicht es zu prüfen ob
+ * andere Außenwand-Segmente (nicht das Fenster selbst) den Strahl kreuzen.
+ */
+function isBlockedByOuterWall(pAX, pAY, wAX, wAY, fd) {{
+  for(const seg of fd.outerWalls) {{
+    if(segmentsIntersect(pAX,pAY,wAX,wAY, seg.x1,seg.y1,seg.x2,seg.y2)) return true;
+  }}
+  return false;
+}}
+
+function px2rel(px, p1, p2) {{ return (px-p1)/(p2-p1); }}
+
 function computeLichtFull(px, py, floor) {{
   const fd      = FLOOR_DATA[floor];
   const pxM     = fd.realW, pyM = fd.realH;
   const bldAz   = fd.buildingNorthAzimuth || 0;
+
+  // Absoluter Punkt im Bildkoordinatensystem
+  const pAX = fd.floorX1 + px*(fd.floorX2-fd.floorX1);
+  const pAY = fd.floorY1 + py*(fd.floorY2-fd.floorY1);
+
   let geoTotal  = 0;
   let astroTotal= 0;
   const windowHits = [];
 
   for(const w of fd.windows) {{
-    const wx = px2rel((w.x1+w.x2)/2, fd.floorX1, fd.floorX2);
-    const wy = px2rel((w.y1+w.y2)/2, fd.floorY1, fd.floorY2);
+    // Mittelpunkt des Fensters (absolut)
+    const wAX = (w.x1+w.x2)/2;
+    const wAY = (w.y1+w.y2)/2;
 
-    if(isOccluded(px,py,wx,wy,floor)) {{ windowHits.push({{side:w.side,contrib:0,occluded:true}}); continue; }}
+    // Fenster-Mittelpunkt als relative Koordinate (für Distanzberechnung)
+    const wx = px2rel(wAX, fd.floorX1, fd.floorX2);
+    const wy = px2rel(wAY, fd.floorY1, fd.floorY2);
+
+    // 1. Blockiert durch Innenwand?
+    const blockedInner = isBlockedByInnerWall(pAX, pAY, wAX, wAY, fd);
+    // 2. Blockiert durch Außenwand (Licht kommt von außen durch die falsche Wand)?
+    const blockedOuter = isBlockedByOuterWall(pAX, pAY, wAX, wAY, fd);
+
+    const occluded = blockedInner || blockedOuter;
+
+    if(occluded) {{
+      windowHits.push({{side:w.side, contrib:0, occluded:true}});
+      continue;
+    }}
 
     const dxM  = (px-wx)*pxM, dyM = (py-wy)*pyM;
     const distM= Math.sqrt(dxM*dxM+dyM*dyM);
@@ -754,6 +983,7 @@ function computeLichtFull(px, py, floor) {{
 
     const winAz    = windowAzimuth(w.side, bldAz);
     const incFactor= windowIncidenceFactor(winAz, sunState.azimuth, sunState.elevation);
+    // Diffuses Tageslicht (kommt immer durch offene Fenster, auch wenn Sonne nicht direkt drauf)
     const diffuse  = 0.25 * wF;
     const astroContrib = (incFactor * sunState.factor * wF + diffuse) / (1 + 0.15*distM);
     astroTotal += astroContrib;
@@ -796,7 +1026,7 @@ const STATUS_CFG = {{
 }};
 
 // ============================================================
-// LIGHT MAP (Canvas overlay)
+// LIGHT MAP (Canvas overlay) — NUR INNENRAUM beleuchten
 // ============================================================
 function drawLightMap() {{
   const img    = $("floor-img");
@@ -816,7 +1046,7 @@ function drawLightMap() {{
     for(let ix=fd.floorX1; ix<=fd.floorX2; ix+=step) {{
       const rx=(ix-fd.floorX1)/fw, ry=(iy-fd.floorY1)/fh;
       const lv = computeLicht(rx, ry, currentFloor);
-      const alpha=(lv/10)*0.25; // Etwas weicher für Biophilic Style
+      const alpha=(lv/10)*0.25;
       const r = Math.round(lv/10*251), g=222, b=Math.round((1-lv/10)*128+74);
       ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
       ctx.fillRect(ix,iy,step,step);
@@ -853,10 +1083,10 @@ async function loadPlants() {{
   }} catch(e) {{
     console.warn("CSV-Fehler:",e);
     plants = [
-      {{name:"Monstera Deliciosa",licht:7,giessen:3,dungen:4,umtopfen:"Alle 2 Jahre",info:"Robuste Zimmerpflanze",emoji:"🌿"}},
-      {{name:"Sukkulente",licht:9,giessen:14,dungen:8,umtopfen:"Alle 3 Jahre",info:"Viel Sonne",emoji:"🌵"}},
-      {{name:"Farn",licht:3,giessen:2,dungen:3,umtopfen:"Jährlich",info:"Schattig & feucht",emoji:"🌿"}},
-      {{name:"Orchidee",licht:6,giessen:10,dungen:6,umtopfen:"Alle 2 Jahre",info:"Indirektes Licht",emoji:"🌺"}},
+      {{name:"Monstera Deliciosa",licht:7,giessen:3,dungen:4,umtopfen:"Alle 2 Jahre",info:"Robuste Zimmerpflanze",emoji:"🌿",giessAll:{{}},duengAll:{{}}}},
+      {{name:"Sukkulente",licht:9,giessen:14,dungen:8,umtopfen:"Alle 3 Jahre",info:"Viel Sonne",emoji:"🌵",giessAll:{{}},duengAll:{{}}}},
+      {{name:"Farn",licht:3,giessen:2,dungen:3,umtopfen:"Jährlich",info:"Schattig & feucht",emoji:"🌿",giessAll:{{}},duengAll:{{}}}},
+      {{name:"Orchidee",licht:6,giessen:10,dungen:6,umtopfen:"Alle 2 Jahre",info:"Indirektes Licht",emoji:"🌺",giessAll:{{}},duengAll:{{}}}},
     ];
     setStatus(false,"Offline-Modus");
   }}
@@ -864,6 +1094,7 @@ async function loadPlants() {{
   $("inv-count").textContent = plants.length;
 
   loadPositionsLocal();
+  loadCareData();
 
   renderInventory();
   renderLibrary();
@@ -928,35 +1159,44 @@ function splitCSVLine(line) {{
 // ★ PERSISTENZ
 // ============================================================
 function savePositionsLocal() {{
-  try {{
-    localStorage.setItem("pflanzen_positions_v2", JSON.stringify(positions));
-  }} catch(e) {{ console.warn("localStorage write failed:", e); }}
+  try {{ localStorage.setItem("pflanzen_positions_v2", JSON.stringify(positions)); }}
+  catch(e) {{ console.warn("localStorage write failed:", e); }}
 }}
 
 function loadPositionsLocal() {{
   try {{
     const raw = localStorage.getItem("pflanzen_positions_v2");
-    if(raw) {{
-      positions = JSON.parse(raw);
-    }}
+    if(raw) positions = JSON.parse(raw);
   }} catch(e) {{ positions = {{}}; }}
 }}
 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9Vf0xJ4gJPFt6j3SaQQjW2PKT29upU-UxmyoioOEs_upOXVA0MgKGmu17yZQm0uuM/exec";  
+function saveCareData() {{
+  try {{
+    localStorage.setItem("pflanzen_care_v1", JSON.stringify(careData));
+    localStorage.setItem("pflanzen_history_v1", JSON.stringify(careHistory.slice(0,100)));
+  }} catch(e) {{ console.warn("care save failed:", e); }}
+}}
+
+function loadCareData() {{
+  try {{
+    const rc = localStorage.getItem("pflanzen_care_v1");
+    if(rc) careData = JSON.parse(rc);
+    const rh = localStorage.getItem("pflanzen_history_v1");
+    if(rh) careHistory = JSON.parse(rh);
+  }} catch(e) {{ careData={{}}; careHistory=[]; }}
+}}
+
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9Vf0xJ4gJPFt6j3SaQQjW2PKT29upU-UxmyoioOEs_upOXVA0MgKGmu17yZQm0uuM/exec";
 
 async function savePositionsToSheets() {{
-  savePositionsLocal();  
-
+  savePositionsLocal();
   if(!APPS_SCRIPT_URL) return;
-
   const payload = Object.entries(positions).map(([idx,pos])=>{{
     return {{ idx:parseInt(idx), floor:pos.floor, x:pos.x, y:pos.y }};
   }});
-
   try {{
     await fetch(APPS_SCRIPT_URL, {{
-      method:"POST",
-      mode:"no-cors",
+      method:"POST", mode:"no-cors",
       headers:{{"Content-Type":"application/json"}},
       body: JSON.stringify(payload),
     }});
@@ -977,12 +1217,16 @@ function debouncedSave() {{
 function switchTab(tab) {{
   currentTab=tab;
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===tab));
-  const isPlaner=tab==="planer";
+  const isPlaner = tab==="planer";
+  const isLibrary= tab==="library";
+  const isCare   = tab==="care";
   $("left-sidebar").classList.toggle("hidden",!isPlaner);
   $("right-sidebar").classList.toggle("hidden",!isPlaner);
   $("map-area").style.display=isPlaner?"block":"none";
-  $("library-view").classList.toggle("active",!isPlaner);
-  if(!isPlaner) renderLibrary();
+  $("library-view").classList.toggle("active",isLibrary);
+  $("care-view").classList.toggle("active",isCare);
+  if(isLibrary) renderLibrary();
+  if(isCare) renderCare();
 }}
 
 // ============================================================
@@ -1267,7 +1511,7 @@ mapArea.addEventListener("drop",e=>{{
 }});
 
 // ============================================================
-// PIN DRAG 
+// PIN DRAG
 // ============================================================
 function setupPinDrag(pin,idx) {{
   let startX,startY,startPX,startPY,dragging=false;
@@ -1300,7 +1544,7 @@ function setupPinDrag(pin,idx) {{
   pin.addEventListener("pointerup",e=>{{
     if(!dragging) return;
     dragging=false; pin.classList.remove("dragging");
-    debouncedSave();  
+    debouncedSave();
     render();
     if(activePIdx===idx) renderDetail(idx);
   }});
@@ -1356,7 +1600,6 @@ function renderLibrary() {{
         </div>
       </div>
       ${{statusChip}}
-
       <div class="lib-light-row">
         <div class="lib-light-icon">☀️</div>
         <div class="lib-light-bar-wrap">
@@ -1372,9 +1615,7 @@ function renderLibrary() {{
           ${{ist?ist+"/10":"—"}}
         </div>
       </div>
-
       <div class="lib-divider"></div>
-
       <div class="lib-care-grid">
         <div class="lib-care-cell">
           <div class="lib-care-cell-lbl">💧 Gießen (${{MONTHS_DE[NOW_MONTH]}})</div>
@@ -1393,7 +1634,6 @@ function renderLibrary() {{
           <div class="lib-care-cell-val" style="font-size:14px">${{p.umtopfen||"—"}}</div>
         </div>
       </div>
-
       <div class="lib-card-footer">
         <button class="show-on-map-btn" data-pidx="${{i}}">🗺️ Auf Karte zeigen</button>
       </div>
@@ -1420,6 +1660,296 @@ function filterLibrary(val) {{ libraryFilter=val; renderLibrary(); }}
 // CLICK OUTSIDE → DESELECT
 // ============================================================
 $("map-area").addEventListener("click",()=>{{activePIdx=null;render();renderInventory();showEmptyDetail();}});
+
+// ============================================================
+// ★ PFLEGE-KALENDER
+// ============================================================
+
+/**
+ * Parst einen Intervall-Wert aus dem CSV (z.B. "3", "14", "—")
+ * und gibt Tage als Zahl zurück, oder null wenn nicht bekannt.
+ */
+function parseIntervalDays(val) {{
+  if(!val || val==="—" || val.trim()==="") return null;
+  const n = parseFloat(val);
+  return isNaN(n) ? null : n;
+}}
+
+/**
+ * Berechnet für eine Pflanze das nächste Fälligkeitsdatum
+ * basierend auf letztem Ereignis und Intervall (in Tagen).
+ * Gibt ein Objekt {{nextDate, overdueDays, moisturePct}} zurück.
+ */
+function getCareStatus(plantIdx, type) {{
+  const p = plants[plantIdx];
+  const monthName = MONTHS_DE[NOW_MONTH];
+  const intervalDays = type==='water'
+    ? parseIntervalDays(p.giessen)
+    : parseIntervalDays(p.dungen);
+
+  if(!intervalDays) return null;
+
+  const cd = careData[plantIdx] || {{}};
+  const lastStr = type==='water' ? cd.lastWatered : cd.lastFertilized;
+  const lastDate = lastStr ? new Date(lastStr) : null;
+  const now = new Date();
+
+  let nextDate;
+  let overdueDays = 0;
+  let moisturePct = 50; // Default wenn keine Daten
+
+  if(lastDate) {{
+    nextDate = new Date(lastDate.getTime() + intervalDays*24*3600*1000);
+    const diffMs = now - nextDate;
+    overdueDays = Math.max(0, Math.floor(diffMs / (24*3600*1000)));
+    // Feuchtigkeit nimmt linear ab: 100% direkt nach Gießen, 0% wenn überfällig
+    const elapsed = (now - lastDate) / (1000*3600*24);
+    moisturePct = Math.max(0, Math.min(100, Math.round((1 - elapsed/intervalDays)*100)));
+  }} else {{
+    // Noch nie gemacht → sofort fällig
+    nextDate = new Date(now.getTime() - 24*3600*1000);
+    overdueDays = 1;
+    moisturePct = 0;
+  }}
+
+  return {{ nextDate, overdueDays, intervalDays, moisturePct }};
+}}
+
+function formatRelDate(date) {{
+  const now = new Date();
+  const diffDays = Math.round((date - now) / (24*3600*1000));
+  if(diffDays < -1) return `${{Math.abs(diffDays)}} Tage überfällig`;
+  if(diffDays === -1) return "Gestern fällig";
+  if(diffDays === 0) return "Heute fällig";
+  if(diffDays === 1) return "Morgen";
+  if(diffDays <= 3) return `In ${{diffDays}} Tagen`;
+  return date.toLocaleDateString("de-DE", {{day:"2-digit",month:"2-digit"}});
+}}
+
+function formatAbsDate(isoStr) {{
+  if(!isoStr) return "—";
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("de-DE", {{day:"2-digit",month:"2-digit",year:"numeric"}})
+    + " " + d.toLocaleTimeString("de-DE",{{hour:"2-digit",minute:"2-digit"}});
+}}
+
+function doWater(plantIdx) {{
+  if(!careData[plantIdx]) careData[plantIdx]={{}};
+  const now = new Date().toISOString();
+  careData[plantIdx].lastWatered = now;
+  careHistory.unshift({{
+    type:'water', plantIdx,
+    name: plants[plantIdx].name,
+    emoji: plants[plantIdx].emoji,
+    time: now
+  }});
+  saveCareData();
+  renderCare();
+  showToast(`💧 ${{plants[plantIdx].name}} gegossen`);
+}}
+
+function doFertilize(plantIdx) {{
+  if(!careData[plantIdx]) careData[plantIdx]={{}};
+  const now = new Date().toISOString();
+  careData[plantIdx].lastFertilized = now;
+  careHistory.unshift({{
+    type:'fertilize', plantIdx,
+    name: plants[plantIdx].name,
+    emoji: plants[plantIdx].emoji,
+    time: now
+  }});
+  saveCareData();
+  renderCare();
+  showToast(`🌿 ${{plants[plantIdx].name}} gedüngt`);
+}}
+
+function waterAllDue() {{
+  let count = 0;
+  plants.forEach((p,i) => {{
+    const ws = getCareStatus(i, 'water');
+    if(ws && ws.overdueDays > 0) {{
+      if(!careData[i]) careData[i]={{}};
+      careData[i].lastWatered = new Date().toISOString();
+      careHistory.unshift({{type:'water',plantIdx:i,name:p.name,emoji:p.emoji,time:careData[i].lastWatered}});
+      count++;
+    }}
+  }});
+  saveCareData();
+  renderCare();
+  showToast(`💧 ${{count}} Pflanzen gegossen`);
+}}
+
+function refreshCare() {{ renderCare(); }}
+
+function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
+  const p = plants[plantIdx];
+  const cd = careData[plantIdx] || {{}};
+
+  // Determine card urgency class
+  const wOver = waterStatus && waterStatus.overdueDays > 0;
+  const fOver = fertilizeStatus && fertilizeStatus.overdueDays > 0;
+  let cardClass = "care-card";
+  if(wOver || fOver) cardClass += " overdue";
+
+  // Water chip
+  let waterChip = "";
+  if(waterStatus) {{
+    const cls = waterStatus.overdueDays > 0 ? "overdue" : "ok";
+    const label = formatRelDate(waterStatus.nextDate);
+    waterChip = `<span class="care-chip ${{cls}}">💧 ${{label}}</span>`;
+  }}
+
+  // Fertilize chip
+  let fertChip = "";
+  if(fertilizeStatus) {{
+    const cls = fertilizeStatus.overdueDays > 0 ? "overdue" : "ok";
+    const label = formatRelDate(fertilizeStatus.nextDate);
+    fertChip = `<span class="care-chip ${{cls}}">🌿 ${{label}}</span>`;
+  }}
+
+  // Moisture bar
+  let moistureBar = "";
+  if(waterStatus) {{
+    const pct = waterStatus.moisturePct;
+    const color = pct>60 ? 'var(--accent)' : pct>30 ? 'var(--warn)' : 'var(--danger)';
+    moistureBar = `
+      <div class="moisture-wrap">
+        <span class="moisture-label">Feuchtigkeit</span>
+        <div class="moisture-track">
+          <div class="moisture-fill" style="width:${{pct}}%;background:${{color}}"></div>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:var(--muted);min-width:36px;text-align:right;">${{pct}}%</span>
+      </div>
+    `;
+  }}
+
+  // Action buttons
+  const waterBtn = waterStatus
+    ? `<button class="care-btn water" onclick="doWater(${{plantIdx}})">💧 Gießen</button>`
+    : "";
+  const fertBtn = fertilizeStatus
+    ? `<button class="care-btn fertilize" onclick="doFertilize(${{plantIdx}})">🌿 Düngen</button>`
+    : "";
+
+  const lastW = cd.lastWatered ? `Zuletzt: ${{formatAbsDate(cd.lastWatered)}}` : "Noch nie gegossen";
+  const lastF = cd.lastFertilized ? `Zuletzt: ${{formatAbsDate(cd.lastFertilized)}}` : "Noch nie gedüngt";
+
+  return `
+    <div class="${{cardClass}}">
+      <div class="care-card-emoji">${{p.emoji}}</div>
+      <div class="care-card-info">
+        <div class="care-card-name">${{p.name}}</div>
+        <div class="care-card-meta">
+          ${{waterChip}}${{fertChip}}
+        </div>
+        ${{moistureBar}}
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;">
+          <span>💧 ${{lastW}}</span>
+          ${{fertilizeStatus?`<span>🌿 ${{lastF}}</span>`:''}}
+        </div>
+      </div>
+      <div class="care-card-actions">
+        ${{waterBtn}}
+        ${{fertBtn}}
+      </div>
+    </div>
+  `;
+}}
+
+function renderCare() {{
+  const overdueWater = [];
+  const soonWater = [];
+  const overdueFert = [];
+  const soonFert = [];
+  const now = new Date();
+  const in3days = new Date(now.getTime() + 3*24*3600*1000);
+
+  plants.forEach((p, i) => {{
+    const ws = getCareStatus(i, 'water');
+    const fs = getCareStatus(i, 'fertilize');
+    const wOverdue = ws && ws.overdueDays > 0;
+    const fOverdue = fs && fs.overdueDays > 0;
+    const wSoon = ws && !wOverdue && ws.nextDate <= in3days;
+    const fSoon = fs && !fOverdue && fs.nextDate <= in3days;
+
+    if(wOverdue || fOverdue) overdueWater.push({{idx:i, ws, fs}});
+    else if(wSoon || fSoon) soonWater.push({{idx:i, ws, fs}});
+  }});
+
+  // Count due items
+  const dueCount = overdueWater.length;
+  const soonCount = soonWater.length;
+  $("care-sub-label").textContent =
+    `${{plants.length}} Pflanzen · ${{dueCount}} fällig · ${{soonCount}} in den nächsten 3 Tagen`;
+
+  // Section: Overdue / Due Today
+  const overdueSection = $("care-overdue-section");
+  if(overdueWater.length > 0) {{
+    const cardsHTML = overdueWater.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("");
+    overdueSection.innerHTML = `
+      <div class="care-section-title">
+        ⚠️ Fällig & Überfällig
+        <span class="care-badge">${{overdueWater.length}} Pflanze${{overdueWater.length!==1?'n':''}}</span>
+      </div>
+      ${{cardsHTML}}
+    `;
+  }} else {{
+    overdueSection.innerHTML = `
+      <div class="care-section-title">⚠️ Fällig & Überfällig <span class="care-badge ok">Alles erledigt ✓</span></div>
+      <div class="care-empty"><div class="ce-icon">🎉</div><p>Alle Pflanzen sind versorgt!<br>Gute Arbeit.</p></div>
+    `;
+  }}
+
+  // Section: Coming up (next 3 days)
+  const soonSection = $("care-soon-section");
+  if(soonWater.length > 0) {{
+    const cardsHTML = soonWater.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("");
+    soonSection.innerHTML = `
+      <div class="care-section-title">
+        📅 In den nächsten 3 Tagen
+        <span class="care-badge warn">${{soonWater.length}} Pflanze${{soonWater.length!==1?'n':''}}</span>
+      </div>
+      ${{cardsHTML}}
+    `;
+  }} else {{
+    soonSection.innerHTML = ``;
+  }}
+
+  // Section: History
+  const histSection = $("care-history-section");
+  if(careHistory.length > 0) {{
+    const entries = careHistory.slice(0,20).map(h => {{
+      const icon = h.type==='water' ? '💧' : '🌿';
+      const label = h.type==='water' ? 'gegossen' : 'gedüngt';
+      return `
+        <div class="history-entry">
+          <span class="history-icon">${{icon}}</span>
+          <span class="history-text">${{h.emoji}} ${{h.name}} ${{label}}</span>
+          <span class="history-time">${{formatAbsDate(h.time)}}</span>
+        </div>
+      `;
+    }}).join("");
+
+    histSection.innerHTML = `
+      <div class="care-history">
+        <div class="care-history-header">
+          📋 Pflege-Historie
+          <span style="font-family:'DM Sans';font-size:12px;font-weight:500;color:var(--muted);margin-left:auto;">${{careHistory.length}} Einträge</span>
+        </div>
+        ${{entries}}
+      </div>
+    `;
+  }} else {{
+    histSection.innerHTML = `
+      <div class="care-history">
+        <div class="care-history-header">📋 Pflege-Historie</div>
+        <div style="padding:24px;text-align:center;color:var(--muted);font-size:14px;font-weight:500;">
+          Noch keine Aktionen aufgezeichnet.
+        </div>
+      </div>
+    `;
+  }}
+}}
 
 // ============================================================
 // BOOT
