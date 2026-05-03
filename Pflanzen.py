@@ -851,34 +851,72 @@ function calcSunPosition(date) {{
   return {{ azimuth:az, elevation:elevDeg, transmittance:transmit, factor:transmit }};
 }}
 
-function seasonalFactor(month) {{
-  const rad = (month/12)*2*Math.PI - Math.PI/2;
-  const elev = 18 + 23*(Math.sin(rad)+1)/2 + 23;
-  return Math.sin(elev*Math.PI/180);
+// ============================================================
+// ★ PHYSIKALISCH KORREKTE LICHTSIMULATION
+// Modell-Übersicht:
+//   1. Fenster-Sampling: jedes Fenster in N Punkte aufgeteilt,
+//      nicht nur Mittelpunkt → korrekte Lichtverteilung entlang Fensterfront
+//   2. Okklusion: Sichtstrahl Pflanze→Samplingpunkt wird gegen
+//      Außenwände UND Innenwände geprüft (Segment-Intersection)
+//   3. Tageszeit: Licht = 0 nachts; tagsüber skaliert nach
+//      Sonnen-Azimut, Elevation und atmosphärischer Transmission
+//   4. Einfallswinkel & Raumtiefe: Licht dringt bei tiefem Sonnenstand
+//      weiter in den Raum ein (cos(elevation)-Gewichtung)
+//   5. Diffuses Himmelslicht: Nordfenster bekommen Grundlicht,
+//      Südfenster mehr direktes Licht — tageszeit-unabhängig
+//   6. Saisonaler Faktor: Sonnenstand im Winter/Sommer beeinflusst
+//      wie weit Licht in den Raum eindringt (elevation-abhängig)
+//   7. Wandreflexion: einfaches 1-Bounce-Modell (helle Wände = +15%)
+// ============================================================
+
+// Anzahl Sampling-Punkte pro Fenster (ungerade = Mittelpunkt inklusive)
+const WIN_SAMPLES = 7;
+
+// Diffuses Himmelslicht-Anteil (0–1): auch ohne direkte Sonne verfügbar.
+// Entspricht bedecktem Himmel / Streulicht. Nachts = 0.
+function skyDiffuse(sunElevDeg) {{
+  // Himmelslicht beginnt bei Sonnenaufgang (elev ≥ 0) und steigt
+  // mit Elevation leicht an — es bleibt aber auch bei elev=0 noch vorhanden.
+  if(sunElevDeg <= -6) return 0;          // Bürgerliche Dämmerung: kein nutzbares Licht
+  if(sunElevDeg <= 0)  return 0.05;       // Dämmerung: minimales Streulicht
+  return 0.10 + 0.05 * Math.min(1, sunElevDeg / 30); // 0.10–0.15 tagsüber
 }}
 
+// Geographischer Azimut, in den ein Fenster auf Seite "side" schaut
 function windowAzimuth(side, buildingNorthAzimuth) {{
-  // buildingNorthAzimuth ist der geogr. Azimut, in den das Gebäude-Nord zeigt.
-  // Fenster auf Seite N zeigen in dieselbe Richtung wie das Gebäude-Nord.
-  // Fenster auf Seite E zeigen 90° im Uhrzeigersinn dazu, usw.
   const sideOffset = {{"N":0,"E":90,"S":180,"W":270}};
   const offset = sideOffset[side] ?? 180;
   return (buildingNorthAzimuth + offset) % 360;
 }}
 
-function windowIncidenceFactor(winAz, sunAz, sunElev) {{
-  if(sunElev <= 0) return 0;
-  const diff = Math.abs(((winAz - sunAz + 540) % 360) - 180);
-  const cosInc = Math.cos(diff * Math.PI/180);
-  if(cosInc <= 0) return 0;
-  return cosInc * Math.sin(sunElev * Math.PI/180);
+// Einfallsfaktor der direkten Sonne auf eine Fensterfläche.
+// Berücksichtigt: Winkel zwischen Fenster-Normal und Sonnenazimut,
+// sowie Sonnenelevation (sin = Anteil senkrecht auf Fensterfläche).
+function directSunFactor(winAz, sunAz, sunElevDeg) {{
+  if(sunElevDeg <= 0) return 0;
+  const diff    = Math.abs(((winAz - sunAz + 540) % 360) - 180);
+  const cosHoriz = Math.cos(diff * Math.PI / 180);
+  if(cosHoriz <= 0) return 0;   // Sonne hinter dem Fenster
+  const sinElev = Math.sin(sunElevDeg * Math.PI / 180);
+  return cosHoriz * sinElev;    // Lambertsche Einstrahlung
+}}
+
+// Wie tief dringt Licht bei gegebenem Sonnenstand in den Raum?
+// Tiefer Sonnenstand (Morgen/Abend) → Licht strahlt flach und weit.
+// Hoher Sonnenstand (Mittags) → Licht fällt steil, dringt kaum ein.
+// Rückgabe: Faktor 0–1, der den Abstandsabfall moduliert.
+function roomPenetrationFactor(sunElevDeg, winSide, buildingNorthAzimuth) {{
+  if(sunElevDeg <= 0) return 0;
+  // Bei tiefer Sonne (10°) → Licht geht weit rein → Abfall langsamer
+  // Bei hoher Sonne (70°) → Licht geht kaum rein → Abfall schneller
+  // Für Südseite ist hohe Sommersonne das Problem; für Nord kaum relevant
+  const elev = Math.max(5, Math.min(80, sunElevDeg));
+  return 1 - (elev - 5) / 80; // 0.94 bei 10°, 0.06 bei 70°
 }}
 
 function updateSunInfo() {{
   const now = new Date();
   sunState  = calcSunPosition(now);
-  const sf  = seasonalFactor(NOW_MONTH);
-  sunState.seasonalFactor = sf;
 
   const elev = sunState.elevation.toFixed(1);
   const az   = sunState.azimuth.toFixed(0);
@@ -889,16 +927,10 @@ function updateSunInfo() {{
   }}
 }}
 
-// ============================================================
-// ★ PHYSIKALISCH KORREKTE LICHTSIMULATION MIT GEBÄUDEHÜLLE
-// ============================================================
-
-/**
- * Prüft ob Segment AB das Segment CD schneidet.
- * Beide Endpunkte werden mit einem Epsilon ausgeschlossen, damit ein Punkt
- * direkt auf dem Schnitt (z.B. Fenstermittelpunkt auf Außenwand) NICHT
- * als Schnitt gilt — wir wollen nur echte Kreuzungen dazwischen.
- */
+// ── SEGMENT-SCHNITT ──────────────────────────────────────────
+// Prüft ob Strecke AB die Strecke CD schneidet.
+// Endpunkte selbst gelten NICHT als Schnitt (Epsilon-Ausschluss),
+// damit der Samplingpunkt auf der Außenwand nicht als Blocker gilt.
 function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
   const denom = (bx-ax)*(dy-cy)-(by-ay)*(dx-cx);
   if(Math.abs(denom)<1e-9) return false;
@@ -908,164 +940,154 @@ function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
   return t>eps && t<1-eps && u>eps && u<1-eps;
 }}
 
-/**
- * Ray-Casting: Gibt zurück ob Punkt (px,py) innerhalb des durch die
- * Außenwand-Segmente (outerWalls + Fenster als offene Lücken) definierten
- * Polygons liegt.
- * Wir konstruieren das vollständige Polygon aus outerWalls + windows,
- * und testen mit einem horizontalen Strahl nach rechts.
- */
-function isInsideFloor(pAX, pAY, fd) {{
-  // Schnelles Bounding-Box-Test zuerst
-  if(pAX < fd.floorX1 || pAX > fd.floorX2 || pAY < fd.floorY1 || pAY > fd.floorY2) return false;
-  // Alle Außenwand-Segmente (inkl. Fenster) zusammen
-  const allSegs = [...fd.outerWalls, ...fd.windows.map(w=>
-    ({{x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2}})
-  )];
-  // Horizontaler Ray nach rechts: (pAX,pAY) → (∞,pAY)
-  const rayX2 = fd.floorX2 + 100;
-  let crosses = 0;
-  for(const seg of allSegs) {{
-    // Prüfe ob der horizontale Strahl dieses Segment kreuzt
-    const minY = Math.min(seg.y1,seg.y2), maxY = Math.max(seg.y1,seg.y2);
-    if(pAY <= minY || pAY > maxY) continue;
-    // x-Koordinate des Schnittpunkts
-    if(Math.abs(seg.y2-seg.y1) < 1e-9) continue;
-    const xIntersect = seg.x1 + (pAY-seg.y1)*(seg.x2-seg.x1)/(seg.y2-seg.y1);
-    if(xIntersect > pAX) crosses++;
-  }}
-  return (crosses % 2) === 1;
-}}
-
-/**
- * Prüft ob der Sichtstrahl von Pflanze (pAX,pAY) zum Fenstermittelpunkt (wAX,wAY)
- * durch eine INNENWAND blockiert wird.
- */
-function isBlockedByInnerWall(pAX, pAY, wAX, wAY, fd) {{
-  for(const wall of fd.walls) {{
-    if(segmentsIntersect(pAX,pAY,wAX,wAY, wall.x1,wall.y1,wall.x2,wall.y2)) return true;
+// Prüft ob Sichtstrahl Pflanze→Samplingpunkt durch eine Innenwand blockiert
+function isBlockedByInnerWall(pAX, pAY, sAX, sAY, fd) {{
+  for(const w of fd.walls) {{
+    if(segmentsIntersect(pAX,pAY,sAX,sAY, w.x1,w.y1,w.x2,w.y2)) return true;
   }}
   return false;
 }}
 
-/**
- * Prüft ob der Sichtstrahl von Pflanze (pAX,pAY) zum Fenstermittelpunkt (wAX,wAY)
- * durch eine AUSSENWAND blockiert wird.
- *
- * Kritischer Fix: Da der Fenstermittelpunkt EXAKT auf der Außenwand liegt,
- * würde ein naiver Strahl-Test diesen Endpunkt nie als Kreuzung zählen (t≈1 → excluded).
- * Wir verlängern den Strahl leicht ÜBER das Fenster hinaus (Faktor 1.05) und prüfen
- * dann ob diese Verlängerung die äußere Hülle verlässt — d.h. ob der Strahl überhaupt
- * durch die richtige Öffnung tritt.
- *
- * Korrekte Logik: Das Licht kommt von AUSSEN. Damit ein Fenster Licht liefern kann,
- * muss der Strahl Pflanze→Fenster durch KEINE andere Außenwand schneiden.
- * Der Endpunkt (Fenstermittelpunkt) liegt auf der Außenwand selbst — das ist erlaubt.
- * Alle anderen Außenwand-Segmente dazwischen blockieren.
- */
-function isBlockedByOuterWall(pAX, pAY, wAX, wAY, fd) {{
+// Prüft ob Sichtstrahl Pflanze→Samplingpunkt durch eine Außenwand blockiert.
+// (Samplingpunkt liegt exakt auf der Außenwand, daher kein Selbst-Schnitt.)
+function isBlockedByOuterWall(pAX, pAY, sAX, sAY, fd) {{
   for(const seg of fd.outerWalls) {{
-    if(segmentsIntersect(pAX,pAY,wAX,wAY, seg.x1,seg.y1,seg.x2,seg.y2)) return true;
+    if(segmentsIntersect(pAX,pAY,sAX,sAY, seg.x1,seg.y1,seg.x2,seg.y2)) return true;
   }}
   return false;
 }}
 
 function px2rel(px, p1, p2) {{ return (px-p1)/(p2-p1); }}
 
+// ── KERN-LICHTBERECHNUNG ─────────────────────────────────────
 function computeLichtFull(px, py, floor) {{
-  const fd      = FLOOR_DATA[floor];
-  const pxM     = fd.realW, pyM = fd.realH;
-  const bldAz   = fd.buildingNorthAzimuth || 0;
-  const fw      = fd.floorX2 - fd.floorX1;
-  const fh      = fd.floorY2 - fd.floorY1;
+  const fd    = FLOOR_DATA[floor];
+  const fw    = fd.floorX2 - fd.floorX1;
+  const fh    = fd.floorY2 - fd.floorY1;
+  const realW = fd.realW;   // Meter horizontal
+  const realH = fd.realH;   // Meter vertikal
+  const bldAz = fd.buildingNorthAzimuth || 0;
 
-  // Absoluter Punkt im Bildkoordinatensystem
+  // Pflanzenpunkt in absoluten Bildpixeln
   const pAX = fd.floorX1 + px * fw;
   const pAY = fd.floorY1 + py * fh;
 
-  // Sicherheitscheck: Punkt muss innerhalb der Etage liegen
-  // (kleine Toleranz für Randpunkte)
-  const margin = 2;
+  // Sicherheitscheck (Randtoleranzen)
+  const margin = 4;
   if(pAX < fd.floorX1-margin || pAX > fd.floorX2+margin ||
      pAY < fd.floorY1-margin || pAY > fd.floorY2+margin) {{
-    return {{ score:1, components:{{geometric:0,astronomical:0,seasonal:0}}, windowHits:[] }};
+    return {{ score:1, components:{{}}, windowHits:[] }};
   }}
 
-  let geoTotal  = 0;
-  let astroTotal= 0;
+  // Aktuelle Sonnenwerte
+  const sunElevDeg = sunState.elevation;
+  const sunAzDeg   = sunState.azimuth;
+  const sunDirect  = sunState.factor;          // Atmosphärische Transmission (0–1)
+  const skyDiff    = skyDiffuse(sunElevDeg);   // Diffuses Himmelslicht (0–0.15)
+
+  // Wandreflexions-Bonus: helle Wände streuen Licht weiter.
+  // Einfaches 1-Bounce-Modell: +15% auf den Gesamtbetrag.
+  const wallReflectance = 0.15;
+
+  let totalIlluminance = 0;   // Summierte Beleuchtungsstärke (normiert)
   const windowHits = [];
 
   for(const w of fd.windows) {{
-    // Mittelpunkt des Fensters (absolut)
-    const wAX = (w.x1+w.x2)/2;
-    const wAY = (w.y1+w.y2)/2;
+    // Fensterausrichtung
+    const winAz = windowAzimuth(w.side, bldAz);
 
-    // Fenster-Mittelpunkt als relative Koordinate (für Distanzberechnung in Metern)
-    const wx = px2rel(wAX, fd.floorX1, fd.floorX2);
-    const wy = px2rel(wAY, fd.floorY1, fd.floorY2);
+    // ── MULTI-SAMPLING entlang der Fensterfront ──────────────
+    // Fenster ist ein Liniensegment im Bildraum.
+    // Wir legen WIN_SAMPLES gleichmäßige Punkte darauf.
+    let winContrib      = 0;
+    let samplesVisible  = 0;
+    let totalSamples    = 0;
+    let bestIncFactor   = 0;
 
-    // ── OKKLUSIONS-PRÜFUNG ──────────────────────────────────────
-    // 1. Blockiert durch Innenwand? (Strahl schneidet Innenwand-Segment)
-    const blockedInner = isBlockedByInnerWall(pAX, pAY, wAX, wAY, fd);
-    // 2. Blockiert durch andere Außenwand-Segmente?
-    //    (Der Strahl muss "durch die Wand gehen" um das Fenster zu erreichen)
-    const blockedOuter = isBlockedByOuterWall(pAX, pAY, wAX, wAY, fd);
+    for(let s=0; s<WIN_SAMPLES; s++) {{
+      const t = WIN_SAMPLES===1 ? 0.5 : s/(WIN_SAMPLES-1);
+      const sAX = w.x1 + t*(w.x2-w.x1);
+      const sAY = w.y1 + t*(w.y2-w.y1);
 
-    const occluded = blockedInner || blockedOuter;
+      totalSamples++;
 
-    if(occluded) {{
-      windowHits.push({{side:w.side, contrib:0, occluded:true}});
-      continue;
+      // ── OKKLUSIONS-PRÜFUNG ────────────────────────────────
+      if(isBlockedByInnerWall(pAX,pAY,sAX,sAY,fd)) continue;
+      if(isBlockedByOuterWall(pAX,pAY,sAX,sAY,fd)) continue;
+
+      samplesVisible++;
+
+      // Distanz in Metern (reale Welt)
+      const dxM   = (px - px2rel(sAX,fd.floorX1,fd.floorX2)) * realW;
+      const dyM   = (py - px2rel(sAY,fd.floorY1,fd.floorY2)) * realH;
+      const distM = Math.sqrt(dxM*dxM + dyM*dyM);
+
+      // ── DIREKTES SONNENLICHT ──────────────────────────────
+      // Einfallsfaktor: wie senkrecht trifft die Sonne das Fenster?
+      const incFactor = directSunFactor(winAz, sunAzDeg, sunElevDeg);
+      bestIncFactor = Math.max(bestIncFactor, incFactor);
+
+      // Raumdurchdringung: bei tiefem Sonnenstand dringt Licht weiter
+      // → geringerer Abstandsabfall in Raumtiefe
+      const penetration = roomPenetrationFactor(sunElevDeg, w.side, bldAz);
+      // k variiert zwischen 0.2 (tiefe Sonne, weit) und 0.8 (hohe Sonne, nah)
+      const kDirect = 0.2 + 0.6*(1-penetration);
+      const directContrib = incFactor * sunDirect / (1 + kDirect * distM * distM);
+
+      // ── DIFFUSES HIMMELSLICHT ─────────────────────────────
+      // Kommt von der gesamten Himmelshemisphäre → unabhängig vom
+      // genauen Sonnenazimut, aber schwächer als direktes Licht.
+      // Nordfenster profitieren davon besonders (wenig direkte Sonne).
+      // Abstandsabfall langsamer als direktes Licht (gleichmäßigere Streuung).
+      const kDiffuse = 0.3;
+      const diffuseContrib = skyDiff / (1 + kDiffuse * distM);
+
+      winContrib += directContrib + diffuseContrib;
     }}
 
-    // ── GEOMETRISCHER BEITRAG ────────────────────────────────────
-    // Distanz in Metern (reale Welt)
-    const dxM   = (px-wx)*pxM, dyM = (py-wy)*pyM;
-    const distM = Math.sqrt(dxM*dxM+dyM*dyM);
+    // Durchschnitt über alle Samplingpunkte
+    // (sichtbare + verdeckte — verdeckte liefern 0, das mittelt korrekt)
+    if(totalSamples > 0) {{
+      const avgContrib = winContrib / totalSamples;
 
-    // Fenstergröße: normiert auf 200px Referenz, max 1.0
-    const winSz = Math.sqrt((w.x2-w.x1)**2+(w.y2-w.y1)**2);
-    const wF    = Math.min(1, winSz/200);
+      // Fenstergröße in Metern: echte physikalische Größe
+      const winPxLen = Math.sqrt((w.x2-w.x1)**2 + (w.y2-w.y1)**2);
+      // Fenster sind Linien → Länge in Bildpixeln → umrechnen in Meter
+      // Das Fenster geht entweder horizontal oder vertikal:
+      const isVertical = Math.abs(w.x2-w.x1) < Math.abs(w.y2-w.y1);
+      const winMeter = isVertical
+        ? (winPxLen / fh) * realH
+        : (winPxLen / fw) * realW;
+      // Normiere auf Referenzfenster von 1m Breite/Höhe; max-Faktor 3m
+      const winSizeFactor = Math.min(3, winMeter) / 1.0;
 
-    // Abstandsabnahme: 1/(1 + k*d²) — quadratisches Abklingen
-    // k=0.5 liefert realistischere Werte als k=0.35 (weniger Aufhellung in Raumtiefe)
-    const geoContrib = wF / (1 + 0.5*distM*distM);
-    geoTotal += geoContrib;
-
-    // ── ASTRONOMISCHER BEITRAG ───────────────────────────────────
-    const winAz    = windowAzimuth(w.side, bldAz);
-    const incFactor= windowIncidenceFactor(winAz, sunState.azimuth, sunState.elevation);
-    // Diffuses Himmelslicht (tageszeitunabhängig, kleiner Grundbeitrag)
-    const diffuse  = 0.15 * wF;
-    // Direktes Sonnenlicht + Diffus, ebenfalls mit Abstandsabnahme
-    const astroContrib = (incFactor * sunState.factor * wF + diffuse) / (1 + 0.2*distM);
-    astroTotal += astroContrib;
+      totalIlluminance += avgContrib * winSizeFactor;
+    }}
 
     windowHits.push({{
-      side: w.side,
-      winAz: winAz.toFixed(0),
-      incFactor: incFactor.toFixed(2),
-      geoContrib: geoContrib,
-      astroContrib: astroContrib,
-      occluded: false,
+      side:       w.side,
+      winAz:      winAz.toFixed(0),
+      incFactor:  bestIncFactor.toFixed(2),
+      visRatio:   (samplesVisible/totalSamples).toFixed(2),
+      occluded:   samplesVisible === 0,
     }});
   }}
 
-  const seasonal = seasonalFactor(NOW_MONTH);
+  // Wandreflexion: globaler Bonus (einfaches 1-Bounce-Modell)
+  totalIlluminance *= (1 + wallReflectance);
 
-  // ── SCORE-BERECHNUNG ─────────────────────────────────────────
-  // Kombinierter Rohwert: 60% geometrisch (Raumgeometrie), 40% astronomisch (Sonnenstand)
-  const combined = 0.6*geoTotal + 0.4*astroTotal;
-
-  // Skalierungsfaktor: Ein einzelnes mittelgroßes Fenster direkt daneben ergibt ~7/10.
-  // Ein großes Fenster direkt daneben ergibt max ~9/10.
-  // Mehrere Fenster ohne Abstand können theoretisch 10/10 erreichen.
-  // Faktor 18 (statt früher 40) verhindert, dass 2 Westfenster sofort 10/10 geben.
-  const score = Math.min(10, Math.max(1, Math.round(combined*18*10)/10));
+  // ── SCORE-SKALIERUNG ─────────────────────────────────────────────────
+  // Referenzwerte (bei optimalem Sonnenstand, direkt am Fenster):
+  //   1 Fenster (1m) direkt daneben → ~8/10
+  //   2 Fenster oder großes Fenster → bis 10/10
+  //   Raumtiefe 4m → ~3–4/10
+  //   Nachts (skyDiff≈0, sunDirect=0) → 1/10 (Minimum)
+  const scaleFactor = 22;
+  const score = Math.min(10, Math.max(1, Math.round(totalIlluminance * scaleFactor * 10) / 10));
 
   return {{
     score,
-    components: {{ geometric: geoTotal, astronomical: astroTotal, seasonal }},
+    components: {{ totalIlluminance, skyDiff, sunDirect }},
     windowHits,
   }};
 }}
@@ -1381,11 +1403,19 @@ function renderDetail(idx) {{
   let astroHTML="";
   if(lf) {{
     const winChips=lf.windowHits.map(w=>{{
-      const bright=w.incFactor>0.3&&!w.occluded;
+      const visRatio = parseFloat(w.visRatio||0);
+      const bright = !w.occluded && parseFloat(w.incFactor)>0.2;
+      const partialLabel = visRatio>0&&visRatio<1 ? ` (${{Math.round(visRatio*100)}}%)` : "";
       return `<span class="win-chip ${{bright?"hit":""}}">
-        ${{w.side}}${{w.occluded?" (verdeckt)":w.incFactor>0?" ☀️":""}}
+        ${{w.side}}${{w.occluded?" (verdeckt)": bright?" ☀️":""}}${{partialLabel}}
       </span>`;
     }}).join("");
+
+    const nightMode = sunState.elevation <= -6;
+    const dawnMode  = sunState.elevation <= 0 && !nightMode;
+    const timeLabel = nightMode ? "🌙 Nacht" : dawnMode ? "🌅 Dämmerung" : "☀️ Tageslicht";
+    const skyPct    = (lf.components.skyDiff * 100 / 0.15).toFixed(0); // 0–100%
+    const dirPct    = (lf.components.sunDirect * 100).toFixed(0);
 
     astroHTML=`
       <div class="astro-panel">
@@ -1400,15 +1430,15 @@ function renderDetail(idx) {{
             <div class="astro-cell-val">${{sunState.azimuth.toFixed(0)}}<span class="astro-cell-unit">°</span></div>
           </div>
           <div class="astro-cell">
-            <div class="astro-cell-lbl">Intensität</div>
-            <div class="astro-cell-val">${{(sunState.factor*100).toFixed(0)}}<span class="astro-cell-unit">%</span></div>
+            <div class="astro-cell-lbl">Direkt. Sonne</div>
+            <div class="astro-cell-val">${{dirPct}}<span class="astro-cell-unit">%</span></div>
           </div>
           <div class="astro-cell">
-            <div class="astro-cell-lbl">Saison</div>
-            <div class="astro-cell-val">${{(lf.components.seasonal*100).toFixed(0)}}<span class="astro-cell-unit">%</span></div>
+            <div class="astro-cell-lbl">Himmelslicht</div>
+            <div class="astro-cell-val">${{skyPct}}<span class="astro-cell-unit">%</span></div>
           </div>
         </div>
-        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:4px">Einflussreiche Fenster:</div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:4px">${{timeLabel}} · Fenster-Sichtbarkeit:</div>
         <div class="window-chips">${{winChips}}</div>
       </div>
     `;
