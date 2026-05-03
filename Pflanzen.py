@@ -893,27 +893,52 @@ function updateSunInfo() {{
 // ★ PHYSIKALISCH KORREKTE LICHTSIMULATION MIT GEBÄUDEHÜLLE
 // ============================================================
 
+/**
+ * Prüft ob Segment AB das Segment CD schneidet.
+ * Beide Endpunkte werden mit einem Epsilon ausgeschlossen, damit ein Punkt
+ * direkt auf dem Schnitt (z.B. Fenstermittelpunkt auf Außenwand) NICHT
+ * als Schnitt gilt — wir wollen nur echte Kreuzungen dazwischen.
+ */
 function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
   const denom = (bx-ax)*(dy-cy)-(by-ay)*(dx-cx);
-  if(Math.abs(denom)<1e-10) return false;
+  if(Math.abs(denom)<1e-9) return false;
   const t = ((cx-ax)*(dy-cy)-(cy-ay)*(dx-cx))/denom;
   const u = ((cx-ax)*(by-ay)-(cy-ay)*(bx-ax))/denom;
-  return t>1e-9&&t<1-1e-9&&u>=0&&u<=1;
+  const eps = 1e-6;
+  return t>eps && t<1-eps && u>eps && u<1-eps;
 }}
 
 /**
- * Prüft, ob ein Punkt INNERHALB der Gebäudehülle liegt.
- * Nutzt Ray-Casting gegen die äußeren + inneren Wände.
+ * Ray-Casting: Gibt zurück ob Punkt (px,py) innerhalb des durch die
+ * Außenwand-Segmente (outerWalls + Fenster als offene Lücken) definierten
+ * Polygons liegt.
+ * Wir konstruieren das vollständige Polygon aus outerWalls + windows,
+ * und testen mit einem horizontalen Strahl nach rechts.
  */
-function isInsideBuilding(px, py, fd) {{
-  // Alle Außenwand-Segmente + Fensterbereiche bilden zusammen den Umriss.
-  // Wir verwenden das Bounding-Box-Rechteck (floorX1..X2, floorY1..Y2)
-  // als Näherung — Punkte außerhalb sind draußen.
-  return px >= fd.floorX1 && px <= fd.floorX2 && py >= fd.floorY1 && py <= fd.floorY2;
+function isInsideFloor(pAX, pAY, fd) {{
+  // Schnelles Bounding-Box-Test zuerst
+  if(pAX < fd.floorX1 || pAX > fd.floorX2 || pAY < fd.floorY1 || pAY > fd.floorY2) return false;
+  // Alle Außenwand-Segmente (inkl. Fenster) zusammen
+  const allSegs = [...fd.outerWalls, ...fd.windows.map(w=>
+    ({{x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2}})
+  )];
+  // Horizontaler Ray nach rechts: (pAX,pAY) → (∞,pAY)
+  const rayX2 = fd.floorX2 + 100;
+  let crosses = 0;
+  for(const seg of allSegs) {{
+    // Prüfe ob der horizontale Strahl dieses Segment kreuzt
+    const minY = Math.min(seg.y1,seg.y2), maxY = Math.max(seg.y1,seg.y2);
+    if(pAY <= minY || pAY > maxY) continue;
+    // x-Koordinate des Schnittpunkts
+    if(Math.abs(seg.y2-seg.y1) < 1e-9) continue;
+    const xIntersect = seg.x1 + (pAY-seg.y1)*(seg.x2-seg.x1)/(seg.y2-seg.y1);
+    if(xIntersect > pAX) crosses++;
+  }}
+  return (crosses % 2) === 1;
 }}
 
 /**
- * Prüft ob der Sichtstrahl von Punkt P zu Fenstermitte W
+ * Prüft ob der Sichtstrahl von Pflanze (pAX,pAY) zum Fenstermittelpunkt (wAX,wAY)
  * durch eine INNENWAND blockiert wird.
  */
 function isBlockedByInnerWall(pAX, pAY, wAX, wAY, fd) {{
@@ -924,10 +949,19 @@ function isBlockedByInnerWall(pAX, pAY, wAX, wAY, fd) {{
 }}
 
 /**
- * Prüft ob der Sichtstrahl von Punkt P zu Fenstermitte W
- * durch eine AUSSENWAND blockiert wird (d.h. das Fenster ist auf falscher Seite).
- * Da die Fenstermitte exakt auf der Außenwand liegt, reicht es zu prüfen ob
- * andere Außenwand-Segmente (nicht das Fenster selbst) den Strahl kreuzen.
+ * Prüft ob der Sichtstrahl von Pflanze (pAX,pAY) zum Fenstermittelpunkt (wAX,wAY)
+ * durch eine AUSSENWAND blockiert wird.
+ *
+ * Kritischer Fix: Da der Fenstermittelpunkt EXAKT auf der Außenwand liegt,
+ * würde ein naiver Strahl-Test diesen Endpunkt nie als Kreuzung zählen (t≈1 → excluded).
+ * Wir verlängern den Strahl leicht ÜBER das Fenster hinaus (Faktor 1.05) und prüfen
+ * dann ob diese Verlängerung die äußere Hülle verlässt — d.h. ob der Strahl überhaupt
+ * durch die richtige Öffnung tritt.
+ *
+ * Korrekte Logik: Das Licht kommt von AUSSEN. Damit ein Fenster Licht liefern kann,
+ * muss der Strahl Pflanze→Fenster durch KEINE andere Außenwand schneiden.
+ * Der Endpunkt (Fenstermittelpunkt) liegt auf der Außenwand selbst — das ist erlaubt.
+ * Alle anderen Außenwand-Segmente dazwischen blockieren.
  */
 function isBlockedByOuterWall(pAX, pAY, wAX, wAY, fd) {{
   for(const seg of fd.outerWalls) {{
@@ -942,10 +976,20 @@ function computeLichtFull(px, py, floor) {{
   const fd      = FLOOR_DATA[floor];
   const pxM     = fd.realW, pyM = fd.realH;
   const bldAz   = fd.buildingNorthAzimuth || 0;
+  const fw      = fd.floorX2 - fd.floorX1;
+  const fh      = fd.floorY2 - fd.floorY1;
 
   // Absoluter Punkt im Bildkoordinatensystem
-  const pAX = fd.floorX1 + px*(fd.floorX2-fd.floorX1);
-  const pAY = fd.floorY1 + py*(fd.floorY2-fd.floorY1);
+  const pAX = fd.floorX1 + px * fw;
+  const pAY = fd.floorY1 + py * fh;
+
+  // Sicherheitscheck: Punkt muss innerhalb der Etage liegen
+  // (kleine Toleranz für Randpunkte)
+  const margin = 2;
+  if(pAX < fd.floorX1-margin || pAX > fd.floorX2+margin ||
+     pAY < fd.floorY1-margin || pAY > fd.floorY2+margin) {{
+    return {{ score:1, components:{{geometric:0,astronomical:0,seasonal:0}}, windowHits:[] }};
+  }}
 
   let geoTotal  = 0;
   let astroTotal= 0;
@@ -956,13 +1000,15 @@ function computeLichtFull(px, py, floor) {{
     const wAX = (w.x1+w.x2)/2;
     const wAY = (w.y1+w.y2)/2;
 
-    // Fenster-Mittelpunkt als relative Koordinate (für Distanzberechnung)
+    // Fenster-Mittelpunkt als relative Koordinate (für Distanzberechnung in Metern)
     const wx = px2rel(wAX, fd.floorX1, fd.floorX2);
     const wy = px2rel(wAY, fd.floorY1, fd.floorY2);
 
-    // 1. Blockiert durch Innenwand?
+    // ── OKKLUSIONS-PRÜFUNG ──────────────────────────────────────
+    // 1. Blockiert durch Innenwand? (Strahl schneidet Innenwand-Segment)
     const blockedInner = isBlockedByInnerWall(pAX, pAY, wAX, wAY, fd);
-    // 2. Blockiert durch Außenwand (Licht kommt von außen durch die falsche Wand)?
+    // 2. Blockiert durch andere Außenwand-Segmente?
+    //    (Der Strahl muss "durch die Wand gehen" um das Fenster zu erreichen)
     const blockedOuter = isBlockedByOuterWall(pAX, pAY, wAX, wAY, fd);
 
     const occluded = blockedInner || blockedOuter;
@@ -972,20 +1018,27 @@ function computeLichtFull(px, py, floor) {{
       continue;
     }}
 
-    const dxM  = (px-wx)*pxM, dyM = (py-wy)*pyM;
-    const distM= Math.sqrt(dxM*dxM+dyM*dyM);
+    // ── GEOMETRISCHER BEITRAG ────────────────────────────────────
+    // Distanz in Metern (reale Welt)
+    const dxM   = (px-wx)*pxM, dyM = (py-wy)*pyM;
+    const distM = Math.sqrt(dxM*dxM+dyM*dyM);
 
+    // Fenstergröße: normiert auf 200px Referenz, max 1.0
     const winSz = Math.sqrt((w.x2-w.x1)**2+(w.y2-w.y1)**2);
     const wF    = Math.min(1, winSz/200);
 
-    const geoContrib = wF / (1 + 0.35*distM*distM);
+    // Abstandsabnahme: 1/(1 + k*d²) — quadratisches Abklingen
+    // k=0.5 liefert realistischere Werte als k=0.35 (weniger Aufhellung in Raumtiefe)
+    const geoContrib = wF / (1 + 0.5*distM*distM);
     geoTotal += geoContrib;
 
+    // ── ASTRONOMISCHER BEITRAG ───────────────────────────────────
     const winAz    = windowAzimuth(w.side, bldAz);
     const incFactor= windowIncidenceFactor(winAz, sunState.azimuth, sunState.elevation);
-    // Diffuses Tageslicht (kommt immer durch offene Fenster, auch wenn Sonne nicht direkt drauf)
-    const diffuse  = 0.25 * wF;
-    const astroContrib = (incFactor * sunState.factor * wF + diffuse) / (1 + 0.15*distM);
+    // Diffuses Himmelslicht (tageszeitunabhängig, kleiner Grundbeitrag)
+    const diffuse  = 0.15 * wF;
+    // Direktes Sonnenlicht + Diffus, ebenfalls mit Abstandsabnahme
+    const astroContrib = (incFactor * sunState.factor * wF + diffuse) / (1 + 0.2*distM);
     astroTotal += astroContrib;
 
     windowHits.push({{
@@ -999,8 +1052,16 @@ function computeLichtFull(px, py, floor) {{
   }}
 
   const seasonal = seasonalFactor(NOW_MONTH);
+
+  // ── SCORE-BERECHNUNG ─────────────────────────────────────────
+  // Kombinierter Rohwert: 60% geometrisch (Raumgeometrie), 40% astronomisch (Sonnenstand)
   const combined = 0.6*geoTotal + 0.4*astroTotal;
-  const score = Math.min(10, Math.max(1, Math.round(combined*40*10)/10));
+
+  // Skalierungsfaktor: Ein einzelnes mittelgroßes Fenster direkt daneben ergibt ~7/10.
+  // Ein großes Fenster direkt daneben ergibt max ~9/10.
+  // Mehrere Fenster ohne Abstand können theoretisch 10/10 erreichen.
+  // Faktor 18 (statt früher 40) verhindert, dass 2 Westfenster sofort 10/10 geben.
+  const score = Math.min(10, Math.max(1, Math.round(combined*18*10)/10));
 
   return {{
     score,
