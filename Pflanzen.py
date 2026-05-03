@@ -7,37 +7,29 @@ import json, math
 # ============================================================
 st.set_page_config(layout="wide", page_title="Pflanzen-Planer Pro", page_icon="🌿")
 
+# stApp Background an das neue "Soft Cream" (Biophilic) anpassen
 st.markdown("""
 <style>
   #MainMenu, header, footer { visibility: hidden; }
   .block-container { padding: 0 !important; max-width: 100% !important; }
-  .stApp { background: #0f1117; }
+  .stApp { background: #FCFAF7; } 
 </style>
 """, unsafe_allow_html=True)
 
 SHEET_ID  = "1cbOPNq-CrYrin-U0OkUJ5AE2AWF6Ba7RqIHlVOtUCK0"
 CSV_URL   = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-# Google Sheets JSON write endpoint (via Apps Script Web App or gspread)
-# Positions werden als separates Sheet "Positionen" gespeichert:
-# Spalten: PlantIdx, Floor, X, Y
 POSITIONS_SHEET_CSV = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 
 GITHUB_BASE = "https://raw.githubusercontent.com/simondereck1-hue/Pflanzen-bersicht/main"
 
 # ============================================================
 # STANDORT: Rielingshausen (71672)
-# Lat: 48.9° N, Lon: 9.3° O
 # ============================================================
 LAT_DEG = 48.9
 LON_DEG = 9.3
 
 # ============================================================
-# FLOOR METADATA  (aus Maße.docx)
-# Süd-Nord-Vektoren aus Dokument extrahiert und in Winkel umgerechnet
-# EG:    Süden (1233,775) → Norden (1267,771)  → dx=34, dy=-4
-# 1.OG:  Süden (1221,768) → Norden (1255,703)  → dx=34, dy=-65
-# 2.OG:  Süden (1267,744) → Norden (1293,691)  → dx=26, dy=-53
-# Azimut des Gebäudes = Winkel des Nord-Vektors von der Y-Achse
+# FLOOR METADATA
 # ============================================================
 FLOOR_DATA = {
     "EG": {
@@ -45,9 +37,7 @@ FLOOR_DATA = {
         "imgW": 1312, "imgH": 808,
         "floorX1": 170, "floorY1": 5, "floorX2": 1100, "floorY2": 570,
         "realW": 10, "realH": 6,
-        # Gebäudeausrichtung: Winkel des Gebäude-Nord relativ zu geographischem Nord (Grad, im Uhrzeigersinn)
-        # Vektor EG: dx=34, dy=-4 → atan2(34,-4) → ~97° → Gebäude leicht nach Ost-Nordost gedreht
-        "buildingNorthAzimuth": math.degrees(math.atan2(34, -(-4))) % 360,  # ~96.7°
+        "buildingNorthAzimuth": math.degrees(math.atan2(34, -(-4))) % 360,
         "windows": [
             {"x1":170,"y1":95,  "x2":170, "y2":470, "side":"W"},
             {"x1":900,"y1":570, "x2":1000,"y2":570, "side":"S"},
@@ -65,7 +55,6 @@ FLOOR_DATA = {
         "imgW": 1300, "imgH": 800,
         "floorX1": 110, "floorY1": 0, "floorX2": 1150, "floorY2": 620,
         "realW": 10, "realH": 6,
-        # Vektor 1.OG: dx=34, dy=-65 → atan2(34, 65) = ~27.6° → Gebäude-Nord-Azimut ≈ 27.6°
         "buildingNorthAzimuth": math.degrees(math.atan2(34, 65)) % 360,
         "windows": [
             {"x1":110,"y1":110,"x2":110,"y2":175,"side":"W"},
@@ -88,7 +77,6 @@ FLOOR_DATA = {
         "imgW": 1348, "imgH": 784,
         "floorX1": 210, "floorY1": 10, "floorX2": 1100, "floorY2": 580,
         "realW": 10, "realH": 6,
-        # Vektor 2.OG: dx=26, dy=-53 → atan2(26, 53) ≈ 26.1°
         "buildingNorthAzimuth": math.degrees(math.atan2(26, 53)) % 360,
         "windows": [
             {"x1":210,"y1":210,"x2":210,"y2":375,"side":"W"},
@@ -106,7 +94,7 @@ FLOOR_DATA = {
 FLOOR_DATA_JSON = json.dumps(FLOOR_DATA)
 
 # ============================================================
-# HTML / JS APP
+# HTML / JS APP - BIOPHILIC DESIGN UPDATE
 # ============================================================
 html_app = f"""<!DOCTYPE html>
 <html lang="de">
@@ -114,371 +102,400 @@ html_app = f"""<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-/* ── TOKENS ── */
+/* ── TOKENS (Biophilic Palette) ── */
 :root {{
-  --bg:#0f1117; --surface:#171b26; --surface-2:#1e2433; --surface-3:#232940;
-  --border:rgba(255,255,255,0.07); --border-2:rgba(255,255,255,0.12);
-  --accent:#4ade80; --accent-dim:rgba(74,222,128,0.12); --accent-glow:rgba(74,222,128,0.35);
-  --warn:#fbbf24; --warn-dim:rgba(251,191,36,0.12);
-  --danger:#f87171; --danger-dim:rgba(248,113,113,0.12);
-  --text:#f0f4f8; --muted:#6b7a99; --muted2:#4a5568;
-  --r:12px; --rs:8px; --rx:16px;
-  --transition:.22s cubic-bezier(.4,0,.2,1);
-  --sidebar-w:300px;
-  --header-h:52px; --tab-h:46px;
+  --bg: #FCFAF7; /* Soft Cream */
+  --surface: rgba(255, 255, 255, 0.85); /* Glassmorphism Base */
+  --surface-solid: #FFFFFF;
+  --surface-2: #F1F8E9; /* Sage Green Light */
+  --surface-3: #E8F5E9; /* Sage Green Slightly Darker */
+  --border: rgba(45, 71, 57, 0.08); /* Soft Deep Forest border */
+  --border-2: rgba(45, 71, 57, 0.15);
+  
+  --accent: #7CB342; /* Vibrant Sage / Fresh Green */
+  --accent-dim: rgba(124, 179, 66, 0.15); 
+  --accent-glow: rgba(124, 179, 66, 0.35);
+  
+  --warn: #E2A76F; /* Earthly Clay */
+  --warn-dim: rgba(226, 167, 111, 0.15);
+  
+  --danger: #E57373; /* Soft Coral */
+  --danger-dim: rgba(229, 115, 115, 0.15);
+  
+  --text: #2D4739; /* Deep Forest */
+  --muted: #688E7B; /* Muted Forest */
+  --muted2: #9EB5A8;
+  
+  --r: 16px; --rs: 12px; --rx: 24px;
+  --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sidebar-w: 340px;
+  --header-h: 68px; --tab-h: 56px;
 }}
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
 html,body{{width:100%;height:100%;overflow:hidden}}
-body{{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}}
+body{{
+  font-family:'DM Sans',sans-serif;
+  background: var(--bg);
+  background-image: radial-gradient(circle at 0% 0%, rgba(241, 248, 233, 0.8) 0%, transparent 40%),
+                    radial-gradient(circle at 100% 100%, rgba(232, 245, 233, 0.8) 0%, transparent 40%);
+  color:var(--text);display:flex;flex-direction:column;
+}}
 button{{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}}
 input,select{{font-family:inherit}}
 
 /* ── HEADER ── */
 #header{{
-  height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0;z-index:200;
+  height:var(--header-h);background:var(--surface);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+  box-shadow: 0 4px 30px rgba(45, 71, 57, 0.04);
+  display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;z-index:200;
 }}
-.logo{{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;color:var(--accent);letter-spacing:-.5px}}
-.logo-sep{{color:var(--border-2);font-size:20px}}
+.logo{{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--accent);letter-spacing:-.5px}}
+.logo-sep{{color:var(--border-2);font-size:20px;font-weight:300;}}
 .header-meta{{display:flex;align-items:center;gap:14px;margin-left:auto}}
-.sun-info{{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
-  background:var(--surface-2);border:1px solid var(--border);border-radius:99px;padding:4px 12px}}
-.sun-dot{{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 8px var(--warn);flex-shrink:0}}
-.status-wrap{{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}}
-.sdot{{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:background .3s}}
-.sdot.ok{{background:var(--accent);box-shadow:0 0 8px var(--accent)}}
+.sun-info{{
+  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text);
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:99px;
+  padding:6px 16px;box-shadow: 0 2px 10px rgba(45, 71, 57, 0.03);
+}}
+.sun-dot{{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 10px var(--warn);flex-shrink:0}}
+.status-wrap{{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:500;}}
+.sdot{{width:8px;height:8px;border-radius:50%;background:var(--muted2);transition:background .3s}}
+.sdot.ok{{background:var(--accent);box-shadow:0 0 10px var(--accent)}}
 
 /* ── TABS ── */
 #tabs{{
-  height:var(--tab-h);background:var(--surface);border-bottom:1px solid var(--border);
-  display:flex;align-items:flex-end;padding:0 20px;gap:4px;flex-shrink:0;z-index:150;
+  height:var(--tab-h);background:transparent;
+  display:flex;align-items:center;justify-content:flex-start;padding:0 24px;gap:10px;flex-shrink:0;z-index:150;
+  margin-top: 12px;
 }}
 .tab{{
-  padding:10px 18px;font-size:13px;font-weight:500;color:var(--muted);
-  border-radius:var(--rs) var(--rs) 0 0;cursor:pointer;
-  border:1px solid transparent;border-bottom:none;transition:all var(--transition);
-  position:relative;bottom:-1px;
+  padding:12px 24px;font-size:14px;font-weight:600;color:var(--muted);
+  border-radius:99px;cursor:pointer;
+  background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border:1px solid var(--border);transition:all var(--transition);
+  box-shadow: 0 2px 10px rgba(45, 71, 57, 0.02);
 }}
-.tab:hover{{color:var(--text);background:var(--surface-2)}}
-.tab.active{{color:var(--accent);background:var(--bg);border-color:var(--border);border-bottom:1px solid var(--bg)}}
-.tab-icon{{margin-right:7px}}
+.tab:hover{{color:var(--text);background:rgba(255, 255, 255, 0.9);transform:translateY(-2px);box-shadow: 0 6px 16px rgba(45, 71, 57, 0.05);}}
+.tab.active{{color:var(--text);background:var(--surface-solid);border-color:var(--accent);box-shadow: 0 4px 16px var(--accent-dim);}}
+.tab-icon{{margin-right:8px;font-size:16px;}}
 
 /* ── MAIN ── */
-#main{{display:flex;flex:1;overflow:hidden;position:relative}}
+#main{{display:flex;flex:1;overflow:hidden;position:relative;padding:0 16px 16px 16px;gap:16px;}}
 
-/* ── LEFT SIDEBAR (Inventory) ── */
-#left-sidebar{{
-  width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);
+/* ── SIDEBARS (Floating Panels) ── */
+#left-sidebar, #right-sidebar{{
+  width:var(--sidebar-w);background:var(--surface);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border:1px solid rgba(255,255,255,0.6);
+  border-radius: var(--rx);
+  box-shadow: 0 12px 40px rgba(45, 71, 57, 0.05);
   display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
 }}
-#left-sidebar.hidden{{display:none}}
+#left-sidebar.hidden, #right-sidebar.hidden{{display:none}}
+
 .sidebar-header{{
-  padding:16px 16px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;
-  color:var(--muted);text-transform:uppercase;letter-spacing:.08em;
+  padding:20px 20px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  color:var(--text);letter-spacing:.02em;
   border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px;
 }}
 .sidebar-header span{{flex:1}}
 .inv-search{{
-  margin:10px 12px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border);
-  border-radius:var(--rs);color:var(--text);font-size:13px;width:calc(100% - 24px);
+  margin:16px;padding:10px 16px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-size:14px;width:calc(100% - 32px);
+  box-shadow: inset 0 2px 4px rgba(45,71,57,0.02); transition: border-color .3s;
 }}
-.inv-search::placeholder{{color:var(--muted)}}
-.inv-search:focus{{outline:none;border-color:var(--accent)}}
+.inv-search::placeholder{{color:var(--muted2)}}
+.inv-search:focus{{outline:none;border-color:var(--accent);box-shadow: 0 0 0 3px var(--accent-dim);}}
 
-.inv-group{{padding:8px 0}}
+.inv-group{{padding:12px 0 4px 0}}
 .inv-group-label{{
-  padding:4px 14px 6px;font-size:11px;color:var(--muted2);text-transform:uppercase;letter-spacing:.07em
+  padding:4px 20px 8px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;
 }}
-/* FIX: alle Inventar-Einträge sind immer klickbar & selektierbar */
 .inv-item{{
-  display:flex;align-items:center;gap:9px;padding:8px 14px;cursor:pointer;
-  transition:background var(--transition);user-select:none;
+  display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;
+  transition:all var(--transition);user-select:none; border-left: 3px solid transparent;
 }}
-.inv-item:hover{{background:var(--surface-2)}}
-.inv-item.dragging-source{{opacity:.4}}
-.inv-item.selected{{background:var(--accent-dim);border-left:2px solid var(--accent);padding-left:12px}}
-.inv-item.placed-elsewhere{{opacity:.75}}
-.inv-emoji{{font-size:18px;width:24px;text-align:center}}
-.inv-name{{font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.inv-item:hover{{background:rgba(255,255,255,0.5);}}
+.inv-item.dragging-source{{opacity:.4; transform: scale(0.95);}}
+.inv-item.selected{{background:var(--surface-solid);border-left:3px solid var(--accent);box-shadow: 0 4px 12px rgba(45,71,57,0.03);}}
+.inv-item.placed-elsewhere{{opacity:.6}}
+.inv-emoji{{font-size:20px;width:28px;text-align:center;background:var(--surface-2);border-radius:8px;padding:4px;}}
+.inv-name{{font-size:14px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 .inv-badge{{
-  font-size:10px;padding:2px 7px;border-radius:99px;
+  font-size:11px;padding:4px 10px;border-radius:99px;font-weight:600;
   background:var(--surface-3);color:var(--muted);white-space:nowrap
 }}
-.inv-badge.placed-badge{{background:var(--accent-dim);color:var(--accent)}}
+.inv-badge.placed-badge{{background:var(--surface-solid);border: 1px solid var(--accent-glow);color:var(--accent)}}
 .inv-floor-switcher{{
-  margin:auto 14px 14px;padding:6px 10px;
-  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);
-  display:flex;gap:6px;flex-shrink:0
+  margin:auto 16px 16px;padding:6px;
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  display:flex;gap:4px;flex-shrink:0; box-shadow: 0 4px 16px rgba(45,71,57,0.03);
 }}
 .floor-btn{{
-  flex:1;padding:7px 4px;font-size:12px;font-weight:500;
-  border-radius:var(--rs);transition:all var(--transition);color:var(--muted)
+  flex:1;padding:10px 8px;font-size:13px;font-weight:600;
+  border-radius:var(--r);transition:all var(--transition);color:var(--muted)
 }}
-.floor-btn:hover{{background:var(--surface-3);color:var(--text)}}
-.floor-btn.active{{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-glow)}}
+.floor-btn:hover{{background:var(--surface-2);color:var(--text)}}
+.floor-btn.active{{background:var(--accent);color:#fff;box-shadow:0 4px 12px var(--accent-glow);}}
 
 /* ── MAP AREA ── */
 #map-area{{
   flex:1;position:relative;overflow:hidden;
-  background:radial-gradient(ellipse at 20% 50%,rgba(74,222,128,.04) 0%,transparent 60%),var(--bg);
+  background:radial-gradient(ellipse at 50% 50%,rgba(124,179,66,.05) 0%,transparent 70%);
+  border-radius: var(--rx);
+  box-shadow: inset 0 0 30px rgba(45,71,57,0.02);
 }}
 #map-canvas{{
   position:absolute;top:50%;left:50%;
   transform:translate(-50%,-50%);
+  border-radius: 12px;
 }}
 #floor-img{{
   position:absolute;inset:0;width:100%;height:100%;
-  object-fit:contain;pointer-events:none;user-select:none;opacity:.9;
+  object-fit:contain;pointer-events:none;user-select:none;opacity:0.95;
 }}
 #light-canvas{{
   position:absolute;inset:0;width:100%;height:100%;
-  pointer-events:none;opacity:.55;
+  pointer-events:none;opacity:.65; mix-blend-mode: multiply;
 }}
 #map-canvas.drag-over{{
-  outline:2px dashed var(--accent);outline-offset:4px;
+  outline:3px dashed var(--accent);outline-offset:8px; border-radius: 16px;
+  background: rgba(124,179,66,0.05);
 }}
 
-/* ── PLANT PINS ── */
+/* ── PLANT PINS (Organic & Bouncy) ── */
 .plant-pin{{
   position:absolute;display:flex;flex-direction:column;align-items:center;
   cursor:grab;user-select:none;touch-action:none;z-index:10;
-  transition:transform var(--transition),filter var(--transition);
+  transition:transform 0.1s;
 }}
-.plant-pin:hover{{z-index:50;filter:drop-shadow(0 4px 16px rgba(74,222,128,.5))}}
-.plant-pin.dragging{{cursor:grabbing;z-index:100;transition:none;filter:drop-shadow(0 8px 24px rgba(74,222,128,.7))}}
-.plant-pin.active .pin-bubble{{background:var(--accent);color:#0f1117;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}}
+.plant-pin:hover{{z-index:50;}}
+.plant-pin.dragging{{cursor:grabbing;z-index:100;}}
+.plant-pin.active .pin-bubble{{background:var(--surface-solid);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim), 0 8px 24px rgba(45,71,57,0.1);transform:scale(1.15);}}
 .plant-pin.highlight-pulse .pin-bubble{{animation:highlightPulse 1.5s ease-in-out 3}}
-@keyframes highlightPulse{{0%,100%{{box-shadow:0 0 0 0 var(--accent-glow)}}50%{{box-shadow:0 0 0 12px rgba(74,222,128,0)}}}}
+@keyframes highlightPulse{{0%,100%{{box-shadow:0 0 0 0 var(--accent-glow)}}50%{{box-shadow:0 0 0 16px rgba(124,179,66,0)}}}}
 .pin-bubble{{
-  width:40px;height:40px;border-radius:50%;background:var(--surface-2);
-  border:2px solid rgba(74,222,128,.35);display:flex;align-items:center;justify-content:center;
-  font-size:19px;transition:all var(--transition);box-shadow:0 2px 12px rgba(0,0,0,.4);
+  width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.9); backdrop-filter:blur(4px);
+  border:2px solid var(--accent-glow);display:flex;align-items:center;justify-content:center;
+  font-size:22px;transition:transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s;
+  box-shadow:0 4px 16px rgba(45,71,57,0.08);
 }}
-.pin-indicator{{width:8px;height:8px;border-radius:50%;margin-top:3px;background:var(--muted);transition:background .3s}}
-.pin-indicator.ideal{{background:var(--accent);box-shadow:0 0 6px var(--accent)}}
-.pin-indicator.ok{{background:var(--warn);box-shadow:0 0 6px var(--warn)}}
-.pin-indicator.bad{{background:var(--danger);box-shadow:0 0 6px var(--danger)}}
-.pin-label{{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap;max-width:72px;overflow:hidden;text-overflow:ellipsis;text-align:center}}
+.plant-pin:hover .pin-bubble{{transform:scale(1.2);box-shadow:0 8px 24px rgba(124,179,66,0.25);border-color:var(--accent);}}
+.plant-pin.dragging .pin-bubble{{transform:scale(1.1) translateY(-5px);box-shadow:0 12px 30px rgba(124,179,66,0.3);}}
+.pin-indicator{{width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--muted);transition:background .3s;border:2px solid #fff;}}
+.pin-indicator.ideal{{background:var(--accent);box-shadow:0 0 8px var(--accent)}}
+.pin-indicator.ok{{background:var(--warn);box-shadow:0 0 8px var(--warn)}}
+.pin-indicator.bad{{background:var(--danger);box-shadow:0 0 8px var(--danger)}}
+.pin-label{{
+  font-size:11px;font-weight:600;color:var(--text);margin-top:4px;white-space:nowrap;
+  max-width:80px;overflow:hidden;text-overflow:ellipsis;text-align:center;
+  background:rgba(255,255,255,0.8);padding:3px 8px;border-radius:8px;backdrop-filter:blur(4px);
+  box-shadow:0 2px 8px rgba(45,71,57,0.05);
+}}
 .pin-light-badge{{
-  font-size:9px;padding:1px 5px;border-radius:99px;margin-top:2px;
-  background:var(--surface-2);color:var(--muted);font-variant-numeric:tabular-nums;
+  font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;margin-top:4px;
+  background:var(--surface-solid);color:var(--muted);font-variant-numeric:tabular-nums;
+  box-shadow:0 2px 6px rgba(45,71,57,0.04);
 }}
 
 /* ── RIGHT SIDEBAR (Detail) ── */
-#right-sidebar{{
-  width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);
-  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
-}}
-#right-sidebar.hidden{{display:none}}
-#rsb-empty{{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);padding:24px;text-align:center}}
-#rsb-empty .empty-icon{{font-size:44px;opacity:.35}}
-#rsb-detail{{flex:1;display:none;flex-direction:column;overflow-y:auto;padding:20px;gap:16px}}
+#rsb-empty{{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);padding:32px;text-align:center}}
+#rsb-empty .empty-icon{{font-size:54px;opacity:.5;filter:grayscale(0.5);}}
+#rsb-detail{{flex:1;display:none;flex-direction:column;overflow-y:auto;padding:24px;gap:20px}}
 #rsb-detail.visible{{display:flex}}
-#rsb-detail::-webkit-scrollbar{{width:4px}}
-#rsb-detail::-webkit-scrollbar-thumb{{background:var(--border);border-radius:2px}}
+#rsb-detail::-webkit-scrollbar{{width:6px}}
+#rsb-detail::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:3px}}
 
-.plant-hdr{{display:flex;align-items:flex-start;gap:12px}}
-.big-emoji{{font-size:38px;flex-shrink:0;line-height:1}}
-.plant-hdr-text h2{{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;line-height:1.2}}
-.coords-row{{font-size:11px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}}
+.plant-hdr{{display:flex;align-items:flex-start;gap:16px}}
+.big-emoji{{font-size:42px;flex-shrink:0;line-height:1;background:var(--surface-solid);padding:12px;border-radius:var(--r);box-shadow:0 4px 16px rgba(45,71,57,0.04);}}
+.plant-hdr-text h2{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1.2;color:var(--text);}}
+.coords-row{{font-size:12px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums;font-weight:500;}}
 .floor-tag{{
-  display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;
-  background:var(--surface-2);color:var(--muted);margin-top:4px;
+  display:inline-block;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;
+  background:var(--surface-solid);color:var(--text);margin-top:8px;border:1px solid var(--border);
+  box-shadow:0 2px 8px rgba(45,71,57,0.02);
 }}
-.score-badge{{border-radius:var(--r);padding:13px;display:flex;align-items:center;gap:12px;background:var(--surface-2)}}
-.score-badge .sc-icon{{font-size:24px}}
-.score-badge .sc-text h3{{font-family:'Syne',sans-serif;font-size:14px;font-weight:600}}
-.score-badge .sc-text p{{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4}}
-.score-badge.ideal{{border:1px solid rgba(74,222,128,.3);background:var(--accent-dim)}}
+.score-badge{{border-radius:var(--rx);padding:16px;display:flex;align-items:center;gap:16px;background:var(--surface-solid);box-shadow:0 4px 16px rgba(45,71,57,0.03);}}
+.score-badge .sc-icon{{font-size:28px}}
+.score-badge .sc-text h3{{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}}
+.score-badge .sc-text p{{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}}
+.score-badge.ideal{{border:1px solid var(--accent-glow);background:var(--surface-solid);}}
 .score-badge.ideal .sc-text h3{{color:var(--accent)}}
-.score-badge.ok{{border:1px solid rgba(251,191,36,.3);background:var(--warn-dim)}}
+.score-badge.ok{{border:1px solid rgba(226,167,111,0.4);background:var(--surface-solid);}}
 .score-badge.ok .sc-text h3{{color:var(--warn)}}
-.score-badge.bad{{border:1px solid rgba(248,113,113,.3);background:var(--danger-dim)}}
+.score-badge.bad{{border:1px solid rgba(229,115,115,0.4);background:var(--surface-solid);}}
 .score-badge.bad .sc-text h3{{color:var(--danger)}}
 
-/* Astronomische Licht-Sektion */
+/* Botanische & Astronomische Licht-Sektion */
 .astro-panel{{
-  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r);
-  padding:13px;display:flex;flex-direction:column;gap:8px
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 16px rgba(45,71,57,0.03);
 }}
-.astro-title{{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px}}
-.astro-grid{{display:grid;grid-template-columns:1fr 1fr;gap:7px}}
-.astro-cell{{background:var(--surface-3);border-radius:var(--rs);padding:9px 11px}}
-.astro-cell-lbl{{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}}
-.astro-cell-val{{font-family:'Syne',sans-serif;font-size:18px;font-weight:700}}
-.astro-cell-unit{{font-size:11px;font-weight:400;color:var(--muted);margin-left:2px}}
-.window-chips{{display:flex;gap:5px;flex-wrap:wrap}}
+.astro-title{{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}}
+.astro-grid{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+.astro-cell{{background:var(--bg);border-radius:var(--r);padding:12px}}
+.astro-cell-lbl{{font-size:10px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}}
+.astro-cell-val{{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text)}}
+.astro-cell-unit{{font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}}
+.window-chips{{display:flex;gap:6px;flex-wrap:wrap}}
 .win-chip{{
-  font-size:10px;padding:3px 8px;border-radius:99px;background:var(--surface-3);
+  font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--bg);
   border:1px solid var(--border);color:var(--muted);
 }}
-.win-chip.hit{{background:var(--warn-dim);border-color:rgba(251,191,36,.4);color:var(--warn)}}
+.win-chip.hit{{background:var(--warn-dim);border-color:rgba(226,167,111,0.4);color:#d38e53;}}
 
-.light-bar-wrap{{display:flex;flex-direction:column;gap:7px}}
-.lbw-label{{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}}
-.lbw-track{{height:6px;border-radius:3px;background:var(--surface-2);position:relative;overflow:hidden}}
-.lbw-fill{{height:100%;border-radius:3px;background:var(--accent);transition:width .5s cubic-bezier(.4,0,.2,1)}}
-.lbw-needle{{position:absolute;top:0;bottom:0;width:2px;background:rgba(255,255,255,.5);border-radius:1px}}
+/* Licht-Balken (Fitness-App Style) */
+.light-bar-wrap{{display:flex;flex-direction:column;gap:10px;background:var(--surface-solid);padding:16px;border-radius:var(--rx);border:1px solid var(--border);box-shadow:0 4px 16px rgba(45,71,57,0.03);}}
+.lbw-label{{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--text)}}
+.lbw-track{{height:12px;border-radius:6px;background:rgba(45,71,57,0.05);position:relative;overflow:hidden}}
+.lbw-fill{{height:100%;border-radius:6px;background:linear-gradient(90deg, var(--accent-glow), var(--accent));transition:width .8s cubic-bezier(.34, 1.56, .64, 1)}}
+.lbw-needle{{position:absolute;top:-2px;bottom:-2px;width:4px;background:#fff;border-radius:2px;box-shadow:0 0 4px rgba(0,0,0,0.2);}}
 
-.data-grid{{display:grid;grid-template-columns:1fr 1fr;gap:9px}}
-.dc{{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--rs);padding:13px}}
-.dc-lbl{{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}}
-.dc-val{{font-family:'Syne',sans-serif;font-size:20px;font-weight:700}}
-.dc-unit{{font-size:12px;font-weight:400;color:var(--muted);margin-left:3px}}
+.data-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
+.dc{{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:0 4px 16px rgba(45,71,57,0.02);}}
+.dc-lbl{{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}}
+.dc-val{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text)}}
+.dc-unit{{font-size:13px;font-weight:500;color:var(--muted);margin-left:4px}}
 
-.action-row{{display:flex;gap:8px;margin-top:4px}}
+.action-row{{display:flex;gap:10px;margin-top:8px}}
 .act-btn{{
-  flex:1;padding:9px;border-radius:var(--rs);font-size:12px;font-weight:500;
-  transition:all var(--transition);border:1px solid var(--border);background:var(--surface-2);color:var(--muted);
+  flex:1;padding:12px;border-radius:var(--r);font-size:13px;font-weight:600;
+  transition:all var(--transition);border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
+  box-shadow:0 2px 8px rgba(45,71,57,0.02);
 }}
-.act-btn:hover{{background:var(--surface-3);color:var(--text)}}
-.act-btn.primary{{background:var(--accent-dim);border-color:var(--accent-glow);color:var(--accent)}}
-.act-btn.primary:hover{{background:rgba(74,222,128,.25)}}
-.act-btn.danger-btn{{background:var(--danger-dim);border-color:rgba(248,113,113,.3);color:var(--danger)}}
-.act-btn.danger-btn:hover{{background:rgba(248,113,113,.2)}}
+.act-btn:hover{{background:var(--bg);transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,71,57,0.05);}}
+.act-btn.primary{{background:var(--accent);border-color:var(--accent);color:#fff;}}
+.act-btn.primary:hover{{background:#6aa335;box-shadow:0 4px 16px var(--accent-glow);}}
+.act-btn.danger-btn{{background:var(--surface-solid);border-color:rgba(229,115,115,0.4);color:var(--danger)}}
+.act-btn.danger-btn:hover{{background:var(--danger-dim);}}
 
-/* ── LIBRARY VIEW – VERBESSERTE KACHELN ── */
-#library-view{{display:none;flex:1;overflow-y:auto;padding:24px;flex-direction:column;gap:20px}}
+/* ── LIBRARY VIEW – HOCHWERTIGE PRODUKTKARTEN ── */
+#library-view{{display:none;flex:1;overflow-y:auto;padding:24px 32px;flex-direction:column;gap:24px}}
 #library-view.active{{display:flex}}
-#library-view::-webkit-scrollbar{{width:4px}}
-#library-view::-webkit-scrollbar-thumb{{background:var(--border);border-radius:2px}}
-.lib-header{{display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap}}
-.lib-header h2{{font-family:'Syne',sans-serif;font-size:22px;font-weight:800}}
-.lib-header-sub{{font-size:13px;color:var(--muted);margin-top:2px}}
-.lib-search{{
-  margin-left:auto;padding:10px 16px;background:var(--surface-2);border:1px solid var(--border);
-  border-radius:var(--rx);color:var(--text);font-size:14px;width:260px;
-}}
-.lib-search::placeholder{{color:var(--muted)}}
-.lib-search:focus{{outline:none;border-color:var(--accent)}}
+#library-view::-webkit-scrollbar{{width:8px}}
+#library-view::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:4px}}
 
-/* Grid: größere Kacheln, besseres Layout */
-.lib-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}}
+.lib-header{{display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;background:var(--surface);padding:24px;border-radius:var(--rx);border:1px solid var(--border);backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(45,71,57,0.04);}}
+.lib-header h2{{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);}}
+.lib-header-sub{{font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}}
+.lib-search{{
+  margin-left:auto;padding:12px 20px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:99px;color:var(--text);font-size:15px;width:300px;
+  box-shadow:inset 0 2px 6px rgba(45,71,57,0.02);transition:all .3s;
+}}
+.lib-search::placeholder{{color:var(--muted2)}}
+.lib-search:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);}}
+
+/* Grid: Viel White Space */
+.lib-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:24px;padding-bottom:32px;}}
 
 .lib-card{{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--rx);
-  padding:22px;display:flex;flex-direction:column;gap:16px;position:relative;
-  transition:border-color var(--transition),box-shadow var(--transition),transform var(--transition);
-  cursor:default;
+  background:var(--surface-solid);border:1px solid rgba(255,255,255,0.8);border-radius:var(--rx);
+  padding:28px;display:flex;flex-direction:column;gap:20px;position:relative;
+  transition:all var(--transition); cursor:default;
+  box-shadow:0 8px 24px rgba(45,71,57,0.04);
 }}
 .lib-card:hover{{
-  border-color:var(--border-2);
-  box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 0 1px rgba(74,222,128,.06);
-  transform:translateY(-2px);
+  border-color:var(--accent-glow);
+  box-shadow:0 16px 48px rgba(45,71,57,0.08);
+  transform:translateY(-4px);
 }}
-/* Farbakzent-Balken oben */
-.lib-card::before{{
-  content:'';position:absolute;top:0;left:22px;right:22px;height:2px;
-  border-radius:0 0 2px 2px;background:linear-gradient(90deg,var(--accent),transparent);
-  opacity:0;transition:opacity var(--transition);
-}}
-.lib-card:hover::before{{opacity:1}}
-
 .lib-card-top{{display:flex;align-items:flex-start;gap:16px}}
 .lib-card-emoji-wrap{{
-  width:56px;height:56px;border-radius:var(--r);background:var(--surface-2);
+  width:64px;height:64px;border-radius:var(--r);background:var(--bg);
   border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
-  font-size:30px;flex-shrink:0;
+  font-size:34px;flex-shrink:0;box-shadow:inset 0 2px 8px rgba(45,71,57,0.02);
 }}
 .lib-card-meta{{flex:1;min-width:0}}
-.lib-card-name{{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;line-height:1.2;margin-bottom:4px}}
+.lib-card-name{{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;line-height:1.2;color:var(--text);margin-bottom:6px}}
 .lib-card-loc{{
-  display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+  display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);
 }}
-.lib-card-loc-dot{{width:5px;height:5px;border-radius:50%;background:var(--muted2);flex-shrink:0}}
-.lib-card-loc-dot.placed{{background:var(--accent)}}
+.lib-card-loc-dot{{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}}
+.lib-card-loc-dot.placed{{background:var(--accent);box-shadow:0 0 6px var(--accent);}}
 
-/* Lichtanzeige in der Kachel */
-.lib-light-row{{display:flex;align-items:center;gap:10px}}
-.lib-light-icon{{font-size:15px;flex-shrink:0}}
+/* Lichtanzeige Wellness-Style */
+.lib-light-row{{display:flex;align-items:center;gap:12px;background:var(--bg);padding:12px 16px;border-radius:var(--r);}}
+.lib-light-icon{{font-size:18px;flex-shrink:0}}
 .lib-light-bar-wrap{{flex:1}}
-.lib-light-bar-track{{height:5px;border-radius:3px;background:var(--surface-3);position:relative;overflow:hidden}}
-.lib-light-bar-fill{{height:100%;border-radius:3px;transition:width .5s}}
-.lib-light-labels{{display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);margin-top:3px}}
+.lib-light-bar-track{{height:8px;border-radius:4px;background:rgba(45,71,57,0.06);position:relative;overflow:hidden}}
+.lib-light-bar-fill{{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34, 1.56, .64, 1)}}
+.lib-light-labels{{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted);margin-top:6px}}
 .lib-light-score{{
-  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
-  min-width:42px;text-align:right;flex-shrink:0
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:700;
+  min-width:44px;text-align:right;flex-shrink:0
 }}
 
-.lib-divider{{height:1px;background:var(--border);margin:0 -2px}}
+.lib-divider{{height:1px;background:var(--border);margin:0}}
 
 /* Pflege-Grid */
-.lib-care-grid{{display:grid;grid-template-columns:1fr 1fr;gap:8px}}
+.lib-care-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
 .lib-care-cell{{
-  background:var(--surface-2);border-radius:var(--rs);padding:10px 12px;
-  display:flex;flex-direction:column;gap:3px;
+  background:var(--bg);border-radius:var(--rs);padding:12px 16px;
+  display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);
 }}
-.lib-care-cell-lbl{{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em}}
-.lib-care-cell-val{{font-size:14px;font-weight:600;color:var(--text)}}
-.lib-care-cell-unit{{font-size:10px;color:var(--muted);margin-left:2px;font-weight:400}}
+.lib-care-cell-lbl{{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}}
+.lib-care-cell-val{{font-size:15px;font-weight:700;color:var(--text)}}
+.lib-care-cell-unit{{font-size:11px;color:var(--muted);margin-left:3px;font-weight:500}}
 
 /* Status-Chip */
 .lib-status-chip{{
-  display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
-  border-radius:99px;font-size:11px;font-weight:500;
+  display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+  border-radius:99px;font-size:12px;font-weight:600;
 }}
-.lib-status-chip.ideal{{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(74,222,128,.25)}}
-.lib-status-chip.ok{{background:var(--warn-dim);color:var(--warn);border:1px solid rgba(251,191,36,.25)}}
-.lib-status-chip.bad{{background:var(--danger-dim);color:var(--danger);border:1px solid rgba(248,113,113,.25)}}
-.lib-status-chip.none{{background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}}
+.lib-status-chip.ideal{{background:var(--surface-solid);color:var(--accent);border:1px solid var(--accent-glow);box-shadow:0 2px 8px var(--accent-dim);}}
+.lib-status-chip.ok{{background:var(--surface-solid);color:#d38e53;border:1px solid rgba(226,167,111,0.4);box-shadow:0 2px 8px var(--warn-dim);}}
+.lib-status-chip.bad{{background:var(--surface-solid);color:var(--danger);border:1px solid rgba(229,115,115,0.4);box-shadow:0 2px 8px var(--danger-dim);}}
+.lib-status-chip.none{{background:var(--surface-solid);color:var(--muted);border:1px solid var(--border)}}
 
-.lib-card-footer{{display:flex;align-items:center;gap:8px}}
+.lib-card-footer{{display:flex;align-items:center;gap:12px;margin-top:auto;}}
 .show-on-map-btn{{
-  flex:1;padding:10px;border-radius:var(--rs);font-size:12px;font-weight:500;
-  background:var(--surface-2);border:1px solid var(--border);color:var(--muted);
-  transition:all var(--transition);
+  flex:1;padding:12px;border-radius:var(--r);font-size:13px;font-weight:600;
+  background:var(--surface-solid);border:1px solid var(--border);color:var(--text);
+  transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);
 }}
-.show-on-map-btn:hover{{background:var(--accent-dim);border-color:var(--accent-glow);color:var(--accent)}}
-.save-dot{{
-  width:6px;height:6px;border-radius:50%;background:var(--muted2);
-  transition:background .3s;flex-shrink:0;
+.show-on-map-btn:hover{{background:var(--bg);border-color:var(--accent-glow);color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,71,57,0.05);}}
+
+/* ── TOAST & TOOLTIP ── */
+#tooltip{{
+  position:fixed;z-index:500;pointer-events:none;
+  background:rgba(255,255,255,0.95);backdrop-filter:blur(8px);border:1px solid var(--border-2);
+  border-radius:var(--rs);padding:10px 14px;font-size:12px;font-weight:600;color:var(--text);
+  box-shadow:0 8px 24px rgba(45,71,57,0.08);opacity:0;transition:opacity .15s;
+  max-width:240px;
 }}
-.save-dot.saving{{background:var(--warn);box-shadow:0 0 6px var(--warn);animation:savePulse .8s infinite}}
-.save-dot.saved{{background:var(--accent)}}
-@keyframes savePulse{{0%,100%{{opacity:.5}}50%{{opacity:1}}}}
+#tooltip.visible{{opacity:1}}
+
+#save-toast{{
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  background:var(--surface-solid);border:1px solid var(--accent-glow);
+  border-radius:var(--r);padding:14px 20px;font-size:14px;font-weight:600;color:var(--text);
+  box-shadow:0 8px 32px rgba(124,179,66,0.15);
+  transform:translateY(30px);opacity:0;
+  transition:all .4s cubic-bezier(.34, 1.56, .64, 1);
+  display:flex;align-items:center;gap:10px;
+}}
+#save-toast.show{{transform:translateY(0);opacity:1}}
 
 /* ── LOADING ── */
 #loading{{
   position:fixed;inset:0;z-index:9999;background:var(--bg);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-  transition:opacity .4s,visibility .4s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  transition:opacity .6s,visibility .6s;
 }}
 #loading.hidden{{opacity:0;visibility:hidden}}
-#loading .ld-icon{{font-size:44px;animation:pulse 1.5s ease-in-out infinite}}
-#loading p{{font-size:14px;color:var(--muted)}}
-@keyframes pulse{{0%,100%{{opacity:.4}}50%{{opacity:1}}}}
-
-/* ── TOOLTIP ── */
-#tooltip{{
-  position:fixed;z-index:500;pointer-events:none;
-  background:var(--surface-3);border:1px solid var(--border-2);
-  border-radius:var(--rs);padding:8px 12px;font-size:12px;
-  box-shadow:0 4px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s;
-  max-width:220px;
-}}
-#tooltip.visible{{opacity:1}}
-
-/* ── SAVE TOAST ── */
-#save-toast{{
-  position:fixed;bottom:20px;right:20px;z-index:999;
-  background:var(--surface-3);border:1px solid var(--border-2);
-  border-radius:var(--r);padding:10px 16px;font-size:12px;
-  box-shadow:0 4px 20px rgba(0,0,0,.5);
-  transform:translateY(20px);opacity:0;
-  transition:all .3s cubic-bezier(.4,0,.2,1);
-  display:flex;align-items:center;gap:8px;
-}}
-#save-toast.show{{transform:translateY(0);opacity:1}}
-
-::-webkit-scrollbar{{width:4px;height:4px}}
-::-webkit-scrollbar-thumb{{background:var(--border);border-radius:2px}}
+#loading .ld-icon{{font-size:54px;animation:pulse 2s ease-in-out infinite}}
+#loading p{{font-size:16px;font-weight:500;color:var(--text)}}
+@keyframes pulse{{0%,100%{{transform:scale(1);opacity:.6}}50%{{transform:scale(1.1);opacity:1}}}}
 </style>
 </head>
 <body>
 
-<div id="loading"><div class="ld-icon">🌿</div><p>Pflanzendaten werden geladen…</p></div>
+<div id="loading"><div class="ld-icon">🌿</div><p>Natürliches Umfeld wird geladen…</p></div>
 <div id="tooltip"></div>
 <div id="save-toast">💾 <span id="toast-msg">Gespeichert</span></div>
 
@@ -486,7 +503,7 @@ input,select{{font-family:inherit}}
 <div id="header">
   <span class="logo">🌿 Pflanzen-Planer Pro</span>
   <span class="logo-sep">|</span>
-  <span style="font-size:13px;color:var(--muted)" id="month-label"></span>
+  <span style="font-size:14px;font-weight:500;color:var(--text)" id="month-label"></span>
   <div class="header-meta">
     <div class="sun-info">
       <div class="sun-dot"></div>
@@ -502,10 +519,10 @@ input,select{{font-family:inherit}}
 <!-- TABS -->
 <div id="tabs">
   <button class="tab active" data-tab="planer" onclick="switchTab('planer')">
-    <span class="tab-icon">🗺️</span>Grundriss-Planer
+    <span class="tab-icon">🗺️</span> Grundriss-Planer
   </button>
   <button class="tab" data-tab="library" onclick="switchTab('library')">
-    <span class="tab-icon">📚</span>Pflanzen-Bibliothek
+    <span class="tab-icon">📚</span> Pflanzen-Bibliothek
   </button>
 </div>
 
@@ -516,7 +533,7 @@ input,select{{font-family:inherit}}
   <div id="left-sidebar">
     <div class="sidebar-header">
       <span>🪴 Inventar</span>
-      <span id="inv-count" style="font-size:11px;background:var(--surface-2);padding:2px 7px;border-radius:99px;font-weight:400"></span>
+      <span id="inv-count" style="font-size:12px;background:var(--surface-2);color:var(--text);padding:4px 10px;border-radius:99px;font-weight:600"></span>
     </div>
     <input class="inv-search" id="inv-search" type="text" placeholder="Suchen…" oninput="filterInventory(this.value)">
     <div id="inv-list" style="flex:1;overflow-y:auto"></div>
@@ -528,10 +545,10 @@ input,select{{font-family:inherit}}
   </div>
 
   <!-- MAP AREA -->
-  <div id="map-area" style="flex:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at 20% 50%,rgba(74,222,128,.04) 0%,transparent 60%),var(--bg)">
+  <div id="map-area">
     <div id="map-canvas">
       <img id="floor-img" src="" alt="Grundriss" draggable="false"
-           onerror="this.src='https://placehold.co/1100x600/171b26/4ade80?text=Grundriss+nicht+gefunden'">
+           onerror="this.src='https://placehold.co/1100x600/FCFAF7/7CB342?text=Grundriss+nicht+gefunden'">
       <canvas id="light-canvas"></canvas>
     </div>
   </div>
@@ -552,7 +569,7 @@ input,select{{font-family:inherit}}
   <div id="right-sidebar">
     <div id="rsb-empty">
       <div class="empty-icon">🪴</div>
-      <p style="font-size:13px;line-height:1.6;color:var(--muted)">Klicke auf eine Pflanze<br>für Details &amp; Pflegehinweise.</p>
+      <p style="font-size:14px;line-height:1.6;color:var(--muted);font-weight:500;">Klicke auf eine Pflanze<br>für Details &amp; Pflegehinweise.</p>
     </div>
     <div id="rsb-detail"></div>
   </div>
@@ -601,8 +618,8 @@ function setStatus(ok, msg) {{
 function showTooltip(msg, x, y) {{
   const t = $("tooltip");
   t.textContent = msg;
-  t.style.left = (x+12)+"px";
-  t.style.top  = (y+12)+"px";
+  t.style.left = (x+16)+"px";
+  t.style.top  = (y+16)+"px";
   t.classList.add("visible");
 }}
 function hideTooltip() {{ $("tooltip").classList.remove("visible"); }}
@@ -617,34 +634,25 @@ $("month-label").textContent = MONTHS_DE[NOW_MONTH]+" "+NOW.getFullYear();
 
 // ============================================================
 // ★ ASTRONOMISCHE LICHTSIMULATION
-// Standort: 48.9°N, 9.3°O — Rielingshausen
-// Bibliothek: reine JS-Implementierung (kein pvlib nötig)
-// Algorithmus: NREL SPA (vereinfacht) / Astronomical Algorithms (Meeus)
 // ============================================================
 
-/** Sonnenstand berechnen für gegebenes Datum & Uhrzeit (lokale Zeit) */
 function calcSunPosition(date) {{
-  // Julianisches Datum
   const JD = date / 86400000 + 2440587.5;
   const n  = JD - 2451545.0;
 
-  // Ekliptikale Länge (Grad)
   const L  = (280.460 + 0.9856474*n) % 360;
   const g  = ((357.528 + 0.9856003*n) % 360) * Math.PI/180;
   const lam= (L + 1.915*Math.sin(g) + 0.020*Math.sin(2*g)) * Math.PI/180;
   const eps = (23.439 - 0.0000004*n) * Math.PI/180;
 
-  // Deklination & Rektaszension
   const sinDec = Math.sin(eps)*Math.sin(lam);
   const dec    = Math.asin(sinDec);
   const RA     = Math.atan2(Math.cos(eps)*Math.sin(lam), Math.cos(lam));
 
-  // Stundenwinkel (Greenwich Mean Sidereal Time)
   const GMST = (6.697375 + 0.0657098242*n + (date.getUTCHours()+(date.getUTCMinutes()+date.getUTCSeconds()/60)/60)) % 24;
   const LMST = (GMST*15 + LON_DEG_VAL) % 360;
   const HA   = (LMST - RA*180/Math.PI) * Math.PI/180;
 
-  // Elevation & Azimut
   const sinElev = Math.sin(LAT_RAD)*Math.sin(dec) + Math.cos(LAT_RAD)*Math.cos(dec)*Math.cos(HA);
   const elev    = Math.asin(sinElev);
   const cosAz   = (Math.sin(dec) - Math.sin(elev)*Math.sin(LAT_RAD)) / (Math.cos(elev)*Math.cos(LAT_RAD));
@@ -653,45 +661,34 @@ function calcSunPosition(date) {{
 
   const elevDeg = elev * 180/Math.PI;
 
-  // Luftmassenfaktor (Kasten-Formel) → reduziert Licht bei flachem Winkel
   let airmass = 1;
   if(elevDeg > 0) airmass = 1 / (Math.sin(elev) + 0.50572*Math.pow(elevDeg+6.07995,-1.6364));
 
-  // Transmissivität Atmosphäre (vereinfacht, klarer Tag)
   const transmit = elevDeg > 0 ? Math.pow(0.7, Math.pow(airmass, 0.678)) : 0;
 
   return {{ azimuth:az, elevation:elevDeg, transmittance:transmit, factor:transmit }};
 }}
 
-/** Jahres-Lichtsaisonkurve: mittlere Tageslichtintensität für aktuellen Monat */
 function seasonalFactor(month) {{
-  // Approximation der mittleren Sonnen-Elevation bei Mittag für Rielingshausen
-  // Min Dezember (~18°), Max Juni (~64°)
   const rad = (month/12)*2*Math.PI - Math.PI/2;
-  const elev = 18 + 23*(Math.sin(rad)+1)/2 + 23;  // ~18° – ~64°
+  const elev = 18 + 23*(Math.sin(rad)+1)/2 + 23;  
   return Math.sin(elev*Math.PI/180);
 }}
 
-/** Fenster-Azimut berechnen aus Seite + Gebäudeausrichtung */
 function windowAzimuth(side, buildingNorthAzimuth) {{
-  // buildingNorthAzimuth: Winkel, den Gebäude-Nord von geograph. Nord abweicht
   const sideMap = {{"N":0,"E":90,"S":180,"W":270}};
   const baseAz  = sideMap[side] || 180;
-  // Gebäude-Koordinatensystem auf geographisches rotieren
   return (baseAz + buildingNorthAzimuth + 180) % 360;
 }}
 
-/** Licht-Einfallswinkel-Faktor: wie direkt trifft die Sonne auf das Fenster? */
 function windowIncidenceFactor(winAz, sunAz, sunElev) {{
-  if(sunElev <= 0) return 0;       // Sonne unter Horizont
+  if(sunElev <= 0) return 0;       
   const diff = Math.abs(((winAz - sunAz + 540) % 360) - 180);
-  // cos(winkel) = 1 wenn Sonne direkt vor Fenster, 0 wenn seitlich
   const cosInc = Math.cos(diff * Math.PI/180);
-  if(cosInc <= 0) return 0;        // Sonne hinter dem Fenster
+  if(cosInc <= 0) return 0;        
   return cosInc * Math.sin(sunElev * Math.PI/180);
 }}
 
-/** Aktuellen Sonnenstand berechnen & UI aktualisieren */
 function updateSunInfo() {{
   const now = new Date();
   sunState  = calcSunPosition(now);
@@ -709,7 +706,6 @@ function updateSunInfo() {{
 
 // ============================================================
 // ERWEITERTES LICHT-MODELL
-// Kombiniert: astronomischer Sonnenstand + geometrischer Abstand/Okklusion
 // ============================================================
 function px2rel(px, p1, p2) {{ return (px-p1)/(p2-p1); }}
 
@@ -733,14 +729,6 @@ function isOccluded(px,py, wx,wy, floor) {{
   return false;
 }}
 
-/**
- * Vollständige Lichtberechnung für einen Pflanzenstandort.
- * Gibt Objekt zurück: {{ score, components, windowHits }}
- *
- * score: 1–10 (Gesamtlichtwert)
- * components: {{ geometric, astronomical, seasonal }}
- * windowHits: Array von Fenster-Infos mit individuellem Beitrag
- */
 function computeLichtFull(px, py, floor) {{
   const fd      = FLOOR_DATA[floor];
   const pxM     = fd.realW, pyM = fd.realH;
@@ -755,22 +743,17 @@ function computeLichtFull(px, py, floor) {{
 
     if(isOccluded(px,py,wx,wy,floor)) {{ windowHits.push({{side:w.side,contrib:0,occluded:true}}); continue; }}
 
-    // Abstand in Metern
     const dxM  = (px-wx)*pxM, dyM = (py-wy)*pyM;
     const distM= Math.sqrt(dxM*dxM+dyM*dyM);
 
-    // Fenstergröße (normiert)
     const winSz = Math.sqrt((w.x2-w.x1)**2+(w.y2-w.y1)**2);
     const wF    = Math.min(1, winSz/200);
 
-    // Geometrischer Anteil (Abstandsabfall)
     const geoContrib = wF / (1 + 0.35*distM*distM);
     geoTotal += geoContrib;
 
-    // Astronomischer Anteil (Sonnenstand × Fensterausrichtung)
     const winAz    = windowAzimuth(w.side, bldAz);
     const incFactor= windowIncidenceFactor(winAz, sunState.azimuth, sunState.elevation);
-    // Diffus-Anteil: auch ohne direkte Sonne kommt Himmelslicht
     const diffuse  = 0.25 * wF;
     const astroContrib = (incFactor * sunState.factor * wF + diffuse) / (1 + 0.15*distM);
     astroTotal += astroContrib;
@@ -785,12 +768,7 @@ function computeLichtFull(px, py, floor) {{
     }});
   }}
 
-  // Saisonfaktor (Jahreszeit-Gewichtung)
   const seasonal = seasonalFactor(NOW_MONTH);
-
-  // Kombiniertes Modell:
-  // 60% geometrisch (verlässlicher für Innenraumplanung)
-  // 40% astronomisch (tageszeit- & saisonabhängig)
   const combined = 0.6*geoTotal + 0.4*astroTotal;
   const score = Math.min(10, Math.max(1, Math.round(combined*40*10)/10));
 
@@ -818,7 +796,7 @@ const STATUS_CFG = {{
 }};
 
 // ============================================================
-// LIGHT MAP (Canvas overlay) – mit Sonnenstand
+// LIGHT MAP (Canvas overlay)
 // ============================================================
 function drawLightMap() {{
   const img    = $("floor-img");
@@ -838,8 +816,7 @@ function drawLightMap() {{
     for(let ix=fd.floorX1; ix<=fd.floorX2; ix+=step) {{
       const rx=(ix-fd.floorX1)/fw, ry=(iy-fd.floorY1)/fh;
       const lv = computeLicht(rx, ry, currentFloor);
-      const alpha=(lv/10)*0.30;
-      // Farbe variiert je nach Lichtstärke: grün → gelb
+      const alpha=(lv/10)*0.25; // Etwas weicher für Biophilic Style
       const r = Math.round(lv/10*251), g=222, b=Math.round((1-lv/10)*128+74);
       ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
       ctx.fillRect(ix,iy,step,step);
@@ -886,7 +863,6 @@ async function loadPlants() {{
   plants.forEach((p,i)=>{{ if(!p.emoji) p.emoji=PLANT_EMOJIS[i%PLANT_EMOJIS.length]; }});
   $("inv-count").textContent = plants.length;
 
-  // Positionen aus localStorage laden (Persistenz zwischen Seitenwechseln)
   loadPositionsLocal();
 
   renderInventory();
@@ -894,7 +870,6 @@ async function loadPlants() {{
   setFloor(currentFloor);
   $("loading").classList.add("hidden");
   updateSunInfo();
-  // Sonnenstand jede Minute aktualisieren & Lichtkarte neu zeichnen
   setInterval(()=>{{ updateSunInfo(); drawLightMap(); render(); }}, 60000);
 }}
 
@@ -950,51 +925,27 @@ function splitCSVLine(line) {{
 }}
 
 // ============================================================
-// ★ PERSISTENZ: localStorage (sofort) + Google Sheets (async)
+// ★ PERSISTENZ
 // ============================================================
-
-/** Positionen in localStorage sichern (sofortige Persistenz, kein Reload-Verlust) */
 function savePositionsLocal() {{
   try {{
     localStorage.setItem("pflanzen_positions_v2", JSON.stringify(positions));
   }} catch(e) {{ console.warn("localStorage write failed:", e); }}
 }}
 
-/** Positionen aus localStorage laden */
 function loadPositionsLocal() {{
   try {{
     const raw = localStorage.getItem("pflanzen_positions_v2");
     if(raw) {{
       positions = JSON.parse(raw);
-      console.log("Positionen aus localStorage geladen:", Object.keys(positions).length);
     }}
-  }} catch(e) {{ console.warn("localStorage read failed:", e); positions = {{}}; }}
+  }} catch(e) {{ positions = {{}}; }}
 }}
 
-/**
- * Positionen als CSV-ähnliche Daten in Google Sheets schreiben.
- * Nutzt die öffentliche Google Sheets Apps Script Web App URL.
- * Falls keine Apps Script URL konfiguriert ist, wird nur localStorage genutzt.
- *
- * Einrichtung Apps Script (einmalig):
- * 1. Extensions → Apps Script
- * 2. Code.gs:
- *    function doPost(e) {{
- *      const data = JSON.parse(e.postData.contents);
- *      const ss = SpreadsheetApp.openById("SHEET_ID");
- *      const sh = ss.getSheetByName("Positionen") || ss.insertSheet("Positionen");
- *      sh.clearContents();
- *      sh.appendRow(["PlantIdx","Floor","X","Y"]);
- *      data.forEach(r => sh.appendRow([r.idx, r.floor, r.x, r.y]));
- *      return ContentService.createTextOutput("OK");
- *    }}
- * 3. Deploy als Web App (Ausführung als: Ich, Zugriff: Jeder)
- * 4. URL unten eintragen
- */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9Vf0xJ4gJPFt6j3SaQQjW2PKT29upU-UxmyoioOEs_upOXVA0MgKGmu17yZQm0uuM/exec";  // <-- Web App URL hier eintragen (optional)
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9Vf0xJ4gJPFt6j3SaQQjW2PKT29upU-UxmyoioOEs_upOXVA0MgKGmu17yZQm0uuM/exec";  
 
 async function savePositionsToSheets() {{
-  savePositionsLocal();  // sofort lokal sichern
+  savePositionsLocal();  
 
   if(!APPS_SCRIPT_URL) return;
 
@@ -1009,14 +960,12 @@ async function savePositionsToSheets() {{
       headers:{{"Content-Type":"application/json"}},
       body: JSON.stringify(payload),
     }});
-    showToast("☁️ In Google Sheets gespeichert");
+    showToast("☁️ Synchronisiert");
   }} catch(e) {{
-    console.warn("Sheets-Sync fehlgeschlagen:", e);
-    showToast("💾 Lokal gespeichert (Sheets offline)");
+    showToast("💾 Lokal gespeichert");
   }}
 }}
 
-/** Debounced save: nicht bei jedem Drag-Frame speichern, nur am Ende */
 function debouncedSave() {{
   if(saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(savePositionsToSheets, 800);
@@ -1072,7 +1021,7 @@ function render() {{
     const pin=document.createElement("div");
     pin.className="plant-pin"+(activePIdx===i?" active":"");
     pin.dataset.idx=i;
-    const tx=Math.round(pos.x*W-20), ty=Math.round(pos.y*H-20);
+    const tx=Math.round(pos.x*W-23), ty=Math.round(pos.y*H-23);
     pin.style.transform=`translate(${{tx}}px,${{ty}}px)`;
     pin.innerHTML=`
       <div class="pin-bubble">${{p.emoji}}</div>
@@ -1082,7 +1031,7 @@ function render() {{
     `;
     setupPinDrag(pin,i);
     pin.addEventListener("click",e=>{{e.stopPropagation();selectPlant(i);}});
-    pin.addEventListener("mousemove",e=>showTooltip(`${{p.name}} · Licht: ${{ist}}/10 · Bedarf: ${{p.licht}}/10 · Az: ${{sunState.azimuth.toFixed(0)}}°`,e.clientX,e.clientY));
+    pin.addEventListener("mousemove",e=>showTooltip(`${{p.name}} · Licht: ${{ist}}/10 · Bedarf: ${{p.licht}}/10`,e.clientX,e.clientY));
     pin.addEventListener("mouseleave",hideTooltip);
     canvas.appendChild(pin);
   }});
@@ -1096,7 +1045,6 @@ function selectPlant(idx) {{
   render();
   if(activePIdx!==null) renderDetail(activePIdx);
   else showEmptyDetail();
-  // Inventory-Highlight aktualisieren
   renderInventory();
 }}
 function showEmptyDetail() {{
@@ -1105,7 +1053,7 @@ function showEmptyDetail() {{
 }}
 
 // ============================================================
-// ★ RENDER DETAIL – mit astronomischer Lichtinfo
+// ★ RENDER DETAIL
 // ============================================================
 function renderDetail(idx) {{
   const p  =plants[idx];
@@ -1125,7 +1073,6 @@ function renderDetail(idx) {{
       <span class="floor-tag">📍 ${{pos.floor}}</span>`
     :`<span class="floor-tag">📦 Im Inventar</span>`;
 
-  // Astronomische Detail-Sektion
   let astroHTML="";
   if(lf) {{
     const winChips=lf.windowHits.map(w=>{{
@@ -1137,18 +1084,18 @@ function renderDetail(idx) {{
 
     astroHTML=`
       <div class="astro-panel">
-        <div class="astro-title">☀️ Astronomische Lichtanalyse</div>
+        <div class="astro-title">☀️ Lichtanalyse</div>
         <div class="astro-grid">
           <div class="astro-cell">
-            <div class="astro-cell-lbl">Sonnen-Elevation</div>
+            <div class="astro-cell-lbl">Elevation</div>
             <div class="astro-cell-val">${{sunState.elevation.toFixed(1)}}<span class="astro-cell-unit">°</span></div>
           </div>
           <div class="astro-cell">
-            <div class="astro-cell-lbl">Sonnen-Azimut</div>
+            <div class="astro-cell-lbl">Azimut</div>
             <div class="astro-cell-val">${{sunState.azimuth.toFixed(0)}}<span class="astro-cell-unit">°</span></div>
           </div>
           <div class="astro-cell">
-            <div class="astro-cell-lbl">Atmosphäre</div>
+            <div class="astro-cell-lbl">Intensität</div>
             <div class="astro-cell-val">${{(sunState.factor*100).toFixed(0)}}<span class="astro-cell-unit">%</span></div>
           </div>
           <div class="astro-cell">
@@ -1156,12 +1103,13 @@ function renderDetail(idx) {{
             <div class="astro-cell-val">${{(lf.components.seasonal*100).toFixed(0)}}<span class="astro-cell-unit">%</span></div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">Aktive Fenster:</div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:4px">Einflussreiche Fenster:</div>
         <div class="window-chips">${{winChips}}</div>
       </div>
     `;
   }}
 
+  const barColor = stat==='ideal' ? 'var(--accent)' : stat==='ok' ? 'var(--warn)' : 'var(--danger)';
   const lightHTML=ist?`
     <div class="score-badge ${{sc.cls}}">
       <div class="sc-icon">${{sc.icon}}</div>
@@ -1170,13 +1118,13 @@ function renderDetail(idx) {{
     <div class="light-bar-wrap">
       <div class="lbw-label"><span>💡 Lichtwert</span><span>${{ist}} / 10</span></div>
       <div class="lbw-track">
-        <div class="lbw-fill" style="width:${{(ist/10*100).toFixed(1)}}%;background:${{stat==='ideal'?'var(--accent)':stat==='ok'?'var(--warn)':'var(--danger)'}}"></div>
+        <div class="lbw-fill" style="width:${{(ist/10*100).toFixed(1)}}%;background:linear-gradient(90deg, var(--accent-glow), ${{barColor}})"></div>
         <div class="lbw-needle" style="left:${{(p.licht/10*100).toFixed(1)}}%"></div>
       </div>
-      <div class="lbw-label"><span style="color:var(--muted)">Bedarf: ${{p.licht}}/10</span><span style="color:var(--muted)">Verfügbar: ${{ist}}/10</span></div>
+      <div class="lbw-label"><span style="color:var(--muted);font-weight:500;">Bedarf: ${{p.licht}}/10</span><span style="color:var(--muted);font-weight:500;">Verfügbar: ${{ist}}/10</span></div>
     </div>
     ${{astroHTML}}
-  `:`<div style="font-size:13px;color:var(--muted);background:var(--surface-2);border-radius:var(--rs);padding:13px">Pflanze auf Karte platzieren, um Lichtwert zu berechnen.</div>`;
+  `:`<div style="font-size:14px;font-weight:500;color:var(--muted);background:var(--surface-solid);border-radius:var(--rx);padding:20px;text-align:center;box-shadow:0 4px 16px rgba(45,71,57,0.02);border:1px solid var(--border);">Pflanze auf Karte platzieren, um Lichtwert zu berechnen.</div>`;
 
   const removeHTML=pos?`<button class="act-btn danger-btn" onclick="removePlant(${{idx}})">🗑️ Entfernen</button>`:"";
 
@@ -1204,7 +1152,7 @@ function renderDetail(idx) {{
       </div>
       <div class="dc">
         <div class="dc-lbl">🪴 Umtopfen</div>
-        <div class="dc-val" style="font-size:13px;padding-top:4px">${{p.umtopfen||"—"}}</div>
+        <div class="dc-val" style="font-size:14px;padding-top:4px">${{p.umtopfen||"—"}}</div>
       </div>
     </div>
     <div class="action-row">
@@ -1222,7 +1170,7 @@ function removePlant(idx) {{
 }}
 
 // ============================================================
-// ★ RENDER INVENTORY – FIX: alle Items sind klickbar/selektierbar
+// ★ RENDER INVENTORY
 // ============================================================
 function renderInventory() {{
   const list  =$("inv-list");
@@ -1247,8 +1195,6 @@ function renderInventory() {{
     indices.forEach(i=>{{
       const p=plants[i];
       const item=document.createElement("div");
-      // ★ FIX: Alle Items bekommen die gleiche Basis-Klasse + optionale Modifier.
-      // "placed" blockiert NICHT mehr den Klick-Handler.
       let cls="inv-item";
       if(activePIdx===i) cls+=" selected";
       if(isOther)        cls+=" placed-elsewhere";
@@ -1265,17 +1211,14 @@ function renderInventory() {{
         ${{badgeHtml}}
       `;
 
-      // ★ FIX: Klick-Handler für ALLE Items (nicht nur unplatzierte)
       item.addEventListener("click",()=>{{
         activePIdx=i;
-        // Bei platzierten Items auf das entsprechende Stockwerk wechseln
         if(positions[i] && positions[i].floor!==currentFloor) {{
           setFloor(positions[i].floor);
         }}
         render(); renderInventory(); renderDetail(i);
       }});
 
-      // Drag nur für unplatzierte Items
       if(!isPlaced) {{
         item.draggable=true;
         item.addEventListener("dragstart",e=>{{
@@ -1324,7 +1267,7 @@ mapArea.addEventListener("drop",e=>{{
 }});
 
 // ============================================================
-// PIN DRAG (move placed plants)
+// PIN DRAG 
 // ============================================================
 function setupPinDrag(pin,idx) {{
   let startX,startY,startPX,startPY,dragging=false;
@@ -1346,7 +1289,7 @@ function setupPinDrag(pin,idx) {{
     const {{W,H,scaleX,scaleY}}=getWH();
     positions[idx].x=Math.max(0,Math.min(1,startPX+(e.clientX-startX)*scaleX/W));
     positions[idx].y=Math.max(0,Math.min(1,startPY+(e.clientY-startY)*scaleY/H));
-    const tx=Math.round(positions[idx].x*W-20), ty=Math.round(positions[idx].y*H-20);
+    const tx=Math.round(positions[idx].x*W-23), ty=Math.round(positions[idx].y*H-23);
     pin.style.transform=`translate(${{tx}}px,${{ty}}px)`;
     const ist=computeLicht(positions[idx].x,positions[idx].y,currentFloor);
     const stat=getLichtStatus(ist,plants[idx].licht);
@@ -1357,7 +1300,7 @@ function setupPinDrag(pin,idx) {{
   pin.addEventListener("pointerup",e=>{{
     if(!dragging) return;
     dragging=false; pin.classList.remove("dragging");
-    debouncedSave();  // ★ Position nach Drag speichern
+    debouncedSave();  
     render();
     if(activePIdx===idx) renderDetail(idx);
   }});
@@ -1365,7 +1308,7 @@ function setupPinDrag(pin,idx) {{
 }}
 
 // ============================================================
-// ★ LIBRARY VIEW – VERBESSERTE KACHELN
+// ★ LIBRARY VIEW
 // ============================================================
 function renderLibrary() {{
   const grid=$("lib-grid");
@@ -1385,13 +1328,11 @@ function renderLibrary() {{
     const lf=pos?computeLichtFull(pos.x,pos.y,pos.floor):null;
     const ist=lf?lf.score:null;
     const stat=ist?getLichtStatus(ist,p.licht):null;
-    const floorLabel=pos?`📍 ${{pos.floor}}`:"📦 Inventar";
+    const floorLabel=pos?`📍 ${{pos.floor}}`:"📦 Im Inventar";
 
-    // Lichtbalken-Farbe
     const barColor=stat==='ideal'?'var(--accent)':stat==='ok'?'var(--warn)':'var(--danger)';
     const lightPct=ist?(ist/10*100).toFixed(1):0;
 
-    // Status-Chip
     let statusChip="";
     if(stat) {{
       const cfg={{ideal:{{cls:"ideal",ico:"✅",lbl:"Optimaler Standort"}},ok:{{cls:"ok",ico:"⚠️",lbl:"Akzeptabler Standort"}},bad:{{cls:"bad",ico:"❌",lbl:"Zu dunkel"}}}};
@@ -1413,14 +1354,14 @@ function renderLibrary() {{
             ${{floorLabel}}
           </div>
         </div>
-        ${{statusChip}}
       </div>
+      ${{statusChip}}
 
       <div class="lib-light-row">
         <div class="lib-light-icon">☀️</div>
         <div class="lib-light-bar-wrap">
           <div class="lib-light-bar-track">
-            <div class="lib-light-bar-fill" style="width:${{lightPct}}%;background:${{ist?barColor:'var(--muted2)'}}"></div>
+            <div class="lib-light-bar-fill" style="width:${{lightPct}}%;background:${{ist?'linear-gradient(90deg, var(--accent-glow), '+barColor+')':'rgba(45,71,57,0.1)'}}"></div>
           </div>
           <div class="lib-light-labels">
             <span>Licht verfügbar</span>
@@ -1449,7 +1390,7 @@ function renderLibrary() {{
         </div>
         <div class="lib-care-cell">
           <div class="lib-care-cell-lbl">🪴 Umtopfen</div>
-          <div class="lib-care-cell-val" style="font-size:13px">${{p.umtopfen||"—"}}</div>
+          <div class="lib-care-cell-val" style="font-size:14px">${{p.umtopfen||"—"}}</div>
         </div>
       </div>
 
