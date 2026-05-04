@@ -11,7 +11,7 @@ st.markdown("""
 <style>
   #MainMenu, header, footer { visibility: hidden; }
   .block-container { padding: 0 !important; max-width: 100% !important; }
-  .stApp { background: #FCFAF7; } 
+  .stApp { background: #FCFAF7; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -27,36 +27,18 @@ LAT_DEG = 48.9
 LON_DEG = 9.3
 
 # ============================================================
-# GEBÄUDEAUSRICHTUNG: Aus Süd→Nord-Vektoren berechnet
-# EG:    Süden(1233,775) → Norden(1267,771): dx=34, dy=-4 → Azimut des Gebäude-Nordens
-# 1.OG:  Süden(1221,768) → Norden(1255,703): dx=34, dy=-65
-# 2.OG:  Süden(1267,744) → Norden(1293,691): dx=26, dy=-53
-#
-# buildingNorthAzimuth = Winkel, in den das Gebäude-Nord zeigt (in geogr. Grad)
-# atan2(dx, -dy) weil Bildkoord Y nach unten, geogr. Nord nach oben
+# GEBÄUDEAUSRICHTUNG
 # ============================================================
-
 def building_north_azimuth(sx, sy, nx, ny):
-    """Berechnet den geographischen Azimut des Gebäude-Nordens
-    aus zwei Punkten: Süden (sx,sy) und Norden (nx,ny) im Bildkoordinatensystem."""
     dx = nx - sx
-    dy = ny - sy   # Bildkoord: Y wächst nach unten
-    # In geogr. Koordinaten zeigt Nord nach oben (neg. Bild-Y)
-    # Azimut = Winkel von geogr. Nord, clockwise
+    dy = ny - sy
     az = math.degrees(math.atan2(dx, -dy)) % 360
     return az
 
-EG_BNA   = building_north_azimuth(1233, 775, 1267, 771)   # ≈ 96.7°
-OG1_BNA  = building_north_azimuth(1221, 768, 1255, 703)   # ≈ 27.6°
-OG2_BNA  = building_north_azimuth(1267, 744, 1293, 691)   # ≈ 26.1°
+EG_BNA   = building_north_azimuth(1233, 775, 1267, 771)
+OG1_BNA  = building_north_azimuth(1221, 768, 1255, 703)
+OG2_BNA  = building_north_azimuth(1267, 744, 1293, 691)
 
-# ============================================================
-# FLOOR METADATA
-# Außenwände werden jetzt explizit als geschlossene Hülle definiert.
-# Die Segmente gehen im Uhrzeigersinn um das Stockwerk.
-# Fensterbereiche werden aus der Außenwand "ausgeschnitten" -
-# d.h. dort gibt es KEIN Wandsegment, nur ein Fensterobjekt.
-# ============================================================
 FLOOR_DATA = {
     "EG": {
         "url": f"{GITHUB_BASE}/EG.png",
@@ -64,23 +46,14 @@ FLOOR_DATA = {
         "floorX1": 170, "floorY1": 5, "floorX2": 1100, "floorY2": 570,
         "realW": 10, "realH": 6,
         "buildingNorthAzimuth": EG_BNA,
-        # Außenwände: Segmente der Gebäudehülle OHNE Fensteröffnungen
-        # Seite W (x=170): y=5..95, Fenster 95..470, y=470..570
-        # Seite S (y=570): x=170..900, Fenster 900..1000, x=1000..1100
-        # Seite E (x=1100): y=570..530 (Fenster 530..340), y=340..100 (Fenster 100..33), y=33..5
-        # Seite N (y=5): x=1100..170
         "outerWalls": [
-            # West-Wand (undurchlässig oberhalb + unterhalb des Fensters)
             {"x1":170,"y1":5,   "x2":170,"y2":95},
             {"x1":170,"y1":470, "x2":170,"y2":570},
-            # Süd-Wand
             {"x1":170,"y1":570, "x2":900,"y2":570},
             {"x1":1000,"y1":570,"x2":1100,"y2":570},
-            # Ost-Wand
             {"x1":1100,"y1":570,"x2":1100,"y2":530},
             {"x1":1100,"y1":340,"x2":1100,"y2":100},
             {"x1":1100,"y1":33, "x2":1100,"y2":5},
-            # Nord-Wand
             {"x1":1100,"y1":5,  "x2":170,"y2":5},
         ],
         "windows": [
@@ -101,10 +74,6 @@ FLOOR_DATA = {
         "floorX1": 110, "floorY1": 0, "floorX2": 1150, "floorY2": 620,
         "realW": 10, "realH": 6,
         "buildingNorthAzimuth": OG1_BNA,
-        # West-Wand (x=110): y=0..110, Fenster 110..175, y=175..315, Fenster 315..515, y=515..620
-        # Süd-Wand (y=620): x=110..590, Fenster 590..740, x=740..1150
-        # Ost-Wand (x=1150): y=620..580 (Fenster 580..405), y=405..335 (Fenster 335..210), y=210..0
-        # Nord-Wand (y=0): x=1150..110
         "outerWalls": [
             {"x1":110,"y1":0,   "x2":110,"y2":110},
             {"x1":110,"y1":175, "x2":110,"y2":315},
@@ -138,10 +107,6 @@ FLOOR_DATA = {
         "floorX1": 210, "floorY1": 10, "floorX2": 1100, "floorY2": 580,
         "realW": 10, "realH": 6,
         "buildingNorthAzimuth": OG2_BNA,
-        # West-Wand (x=210): y=10..210, Fenster 210..375, y=375..580
-        # Süd-Wand (y=580): x=210..630, Fenster 630..770, x=770..1100
-        # Ost-Wand (x=1100): y=580..10 (kein Fenster)
-        # Nord-Wand (y=10): x=1100..210
         "outerWalls": [
             {"x1":210,"y1":10,  "x2":210,"y2":210},
             {"x1":210,"y1":375, "x2":210,"y2":580},
@@ -188,10 +153,13 @@ html_app = f"""<!DOCTYPE html>
   --accent: #7CB342;
   --accent-dim: rgba(124, 179, 66, 0.15);
   --accent-glow: rgba(124, 179, 66, 0.35);
+  --accent-dark: #558B2F;
   --warn: #E2A76F;
   --warn-dim: rgba(226, 167, 111, 0.15);
   --danger: #E57373;
   --danger-dim: rgba(229, 115, 115, 0.15);
+  --dli-color: #5C9BD6;
+  --dli-dim: rgba(92, 155, 214, 0.15);
   --text: #2D4739;
   --muted: #688E7B;
   --muted2: #9EB5A8;
@@ -334,6 +302,27 @@ input,select{{font-family:inherit}}
   background: rgba(124,179,66,0.05);
 }}
 
+/* DLI Toggle */
+.dli-toggle-wrap{{
+  position:absolute;top:16px;right:16px;z-index:100;
+  display:flex;gap:8px;align-items:center;
+  background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:99px;padding:6px 14px;
+  box-shadow:0 4px 16px rgba(45,71,57,0.06);
+}}
+.dli-toggle-label{{font-size:12px;font-weight:600;color:var(--muted)}}
+.dli-toggle{{
+  width:36px;height:20px;border-radius:10px;background:var(--muted2);
+  position:relative;cursor:pointer;transition:background .3s;border:none;
+}}
+.dli-toggle.on{{background:var(--dli-color);}}
+.dli-toggle::after{{
+  content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;
+  border-radius:50%;background:#fff;transition:transform .3s;
+  box-shadow:0 1px 4px rgba(0,0,0,0.15);
+}}
+.dli-toggle.on::after{{transform:translateX(16px);}}
+
 /* ── PLANT PINS ── */
 .plant-pin{{
   position:absolute;display:flex;flex-direction:column;align-items:center;
@@ -377,15 +366,49 @@ input,select{{font-family:inherit}}
 #rsb-detail::-webkit-scrollbar{{width:6px}}
 #rsb-detail::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:3px}}
 
+/* Detail Plant Image */
+.detail-img-wrap{{
+  width:100%;height:160px;border-radius:var(--rx);overflow:hidden;position:relative;
+  background:var(--surface-2);border:1px solid var(--border);
+  box-shadow:0 4px 16px rgba(45,71,57,0.04);
+}}
+.detail-img-wrap img{{width:100%;height:100%;object-fit:cover;}}
+.detail-img-fallback{{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:64px;opacity:.4;
+}}
+
 .plant-hdr{{display:flex;align-items:flex-start;gap:16px}}
 .big-emoji{{font-size:42px;flex-shrink:0;line-height:1;background:var(--surface-solid);padding:12px;border-radius:var(--r);box-shadow:0 4px 16px rgba(45,71,57,0.04);}}
 .plant-hdr-text h2{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1.2;color:var(--text);}}
+.plant-hdr-text .botanical{{font-size:12px;color:var(--muted);font-style:italic;margin-top:3px;}}
 .coords-row{{font-size:12px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums;font-weight:500;}}
 .floor-tag{{
   display:inline-block;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;
   background:var(--surface-solid);color:var(--text);margin-top:8px;border:1px solid var(--border);
   box-shadow:0 2px 8px rgba(45,71,57,0.02);
 }}
+
+/* DLI Score Panel */
+.dli-panel{{
+  background:linear-gradient(135deg, rgba(92,155,214,0.08) 0%, rgba(124,179,66,0.06) 100%);
+  border:1px solid rgba(92,155,214,0.25);border-radius:var(--rx);padding:16px;
+  display:flex;flex-direction:column;gap:12px;box-shadow:0 4px 16px rgba(92,155,214,0.06);
+}}
+.dli-panel-title{{font-size:11px;font-weight:700;color:var(--dli-color);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:6px;}}
+.dli-score-row{{display:flex;align-items:baseline;gap:8px;}}
+.dli-score-val{{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--text);}}
+.dli-score-unit{{font-size:13px;color:var(--muted);font-weight:500;}}
+.dli-bar-wrap{{display:flex;flex-direction:column;gap:6px;}}
+.dli-bar-track{{height:8px;border-radius:4px;background:rgba(45,71,57,0.08);position:relative;overflow:hidden;}}
+.dli-bar-fill{{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34,1.56,.64,1);background:linear-gradient(90deg,var(--dli-dim),var(--dli-color));}}
+.dli-bar-labels{{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted);}}
+.dli-live-row{{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.7);border-radius:var(--rs);border:1px solid var(--border);}}
+.dli-live-dot{{width:6px;height:6px;border-radius:50%;background:var(--warn);box-shadow:0 0 6px var(--warn);animation:pulse2 2s infinite;flex-shrink:0;}}
+@keyframes pulse2{{0%,100%{{opacity:1}}50%{{opacity:.4}}}}
+.dli-live-text{{font-size:12px;font-weight:600;color:var(--text);flex:1;}}
+.dli-live-val{{font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;}}
+
 .score-badge{{border-radius:var(--rx);padding:16px;display:flex;align-items:center;gap:16px;background:var(--surface-solid);box-shadow:0 4px 16px rgba(45,71,57,0.03);}}
 .score-badge .sc-icon{{font-size:28px}}
 .score-badge .sc-text h3{{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}}
@@ -425,6 +448,14 @@ input,select{{font-family:inherit}}
 .dc-lbl{{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}}
 .dc-val{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text)}}
 .dc-unit{{font-size:13px;font-weight:500;color:var(--muted);margin-left:4px}}
+/* Extra detail fields (humidity, besonderheit, besprühen) */
+.detail-extra-row{{
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;display:flex;flex-direction:column;gap:4px;
+  box-shadow:0 4px 16px rgba(45,71,57,0.02);
+}}
+.detail-extra-lbl{{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}}
+.detail-extra-val{{font-size:13px;font-weight:500;color:var(--text);line-height:1.5;}}
 
 .action-row{{display:flex;gap:10px;margin-top:8px}}
 .act-btn{{
@@ -455,27 +486,46 @@ input,select{{font-family:inherit}}
 .lib-search::placeholder{{color:var(--muted2)}}
 .lib-search:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);}}
 
-.lib-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:24px;padding-bottom:32px;}}
+.lib-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:24px;padding-bottom:32px;}}
 
+/* Premium Library Card */
 .lib-card{{
   background:var(--surface-solid);border:1px solid rgba(255,255,255,0.8);border-radius:var(--rx);
-  padding:28px;display:flex;flex-direction:column;gap:20px;position:relative;
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
   transition:all var(--transition); cursor:default;
   box-shadow:0 8px 24px rgba(45,71,57,0.04);
 }}
 .lib-card:hover{{
   border-color:var(--accent-glow);
-  box-shadow:0 16px 48px rgba(45,71,57,0.08);
-  transform:translateY(-4px);
+  box-shadow:0 20px 60px rgba(45,71,57,0.1);
+  transform:translateY(-6px);
 }}
-.lib-card-top{{display:flex;align-items:flex-start;gap:16px}}
-.lib-card-emoji-wrap{{
-  width:64px;height:64px;border-radius:var(--r);background:var(--bg);
-  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
-  font-size:34px;flex-shrink:0;box-shadow:inset 0 2px 8px rgba(45,71,57,0.02);
+.lib-card-img{{
+  width:100%;height:180px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,var(--surface-2),var(--surface-3));
+  flex-shrink:0;
 }}
-.lib-card-meta{{flex:1;min-width:0}}
-.lib-card-name{{font-family:'Syne',sans-serif;font-size:19px;font-weight:700;line-height:1.2;color:var(--text);margin-bottom:6px}}
+.lib-card-img img{{
+  width:100%;height:100%;object-fit:cover;transition:transform .6s ease;
+}}
+.lib-card:hover .lib-card-img img{{transform:scale(1.06);}}
+.lib-card-img-fallback{{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:72px;opacity:.35;
+}}
+.lib-card-img-overlay{{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(to top, rgba(45,71,57,0.6) 0%, transparent 100%);
+  padding:16px;
+}}
+.lib-card-img-overlay .lib-card-name{{
+  font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;
+  text-shadow:0 2px 8px rgba(0,0,0,0.3);
+}}
+.lib-card-img-overlay .lib-card-botanical{{font-size:12px;color:rgba(255,255,255,0.75);font-style:italic;margin-top:2px;}}
+.lib-card-body{{padding:20px;display:flex;flex-direction:column;gap:16px;}}
+
+.lib-card-top-row{{display:flex;align-items:center;gap:12px;}}
 .lib-card-loc{{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);}}
 .lib-card-loc-dot{{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}}
 .lib-card-loc-dot.placed{{background:var(--accent);box-shadow:0 0 6px var(--accent);}}
@@ -490,11 +540,26 @@ input,select{{font-family:inherit}}
 
 .lib-divider{{height:1px;background:var(--border);margin:0}}
 
-.lib-care-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
-.lib-care-cell{{background:var(--bg);border-radius:var(--rs);padding:12px 16px;display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);}}
+.lib-care-grid{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+.lib-care-cell{{background:var(--bg);border-radius:var(--rs);padding:10px 14px;display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);}}
 .lib-care-cell-lbl{{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}}
 .lib-care-cell-val{{font-size:15px;font-weight:700;color:var(--text)}}
 .lib-care-cell-unit{{font-size:11px;color:var(--muted);margin-left:3px;font-weight:500}}
+
+/* Besonderheit field in library */
+.lib-besonderheit{{
+  background:linear-gradient(135deg,rgba(124,179,66,0.04),rgba(92,155,214,0.04));
+  border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;
+  font-size:13px;color:var(--text);line-height:1.5;font-style:italic;
+  border-left:3px solid var(--accent-glow);
+}}
+.lib-besonderheit-lbl{{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;font-style:normal;}}
+
+.lib-humidity-row{{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-weight:500;}}
+.lib-humidity-badge{{
+  padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;
+  background:rgba(92,155,214,0.12);color:var(--dli-color);border:1px solid rgba(92,155,214,0.2);
+}}
 
 .lib-status-chip{{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:600;}}
 .lib-status-chip.ideal{{background:var(--surface-solid);color:var(--accent);border:1px solid var(--accent-glow);box-shadow:0 2px 8px var(--accent-dim);}}
@@ -502,7 +567,7 @@ input,select{{font-family:inherit}}
 .lib-status-chip.bad{{background:var(--surface-solid);color:var(--danger);border:1px solid rgba(229,115,115,0.4);box-shadow:0 2px 8px var(--danger-dim);}}
 .lib-status-chip.none{{background:var(--surface-solid);color:var(--muted);border:1px solid var(--border)}}
 
-.lib-card-footer{{display:flex;align-items:center;gap:12px;margin-top:auto;}}
+.lib-card-footer{{display:flex;align-items:center;gap:12px;padding:0 20px 20px;margin-top:auto;}}
 .show-on-map-btn{{
   flex:1;padding:12px;border-radius:var(--r);font-size:13px;font-weight:600;
   background:var(--surface-solid);border:1px solid var(--border);color:var(--text);
@@ -533,6 +598,68 @@ input,select{{font-family:inherit}}
 .care-mass-btn.primary{{background:var(--accent);border-color:var(--accent);color:#fff;}}
 .care-mass-btn.primary:hover{{background:#6aa335;box-shadow:0 4px 16px var(--accent-glow);transform:translateY(-1px);}}
 
+/* Care Sub-tabs */
+.care-subtabs{{
+  display:flex;gap:8px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:var(--rx);padding:6px;box-shadow:0 4px 16px rgba(45,71,57,0.03);flex-shrink:0;
+}}
+.care-subtab{{
+  flex:1;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);
+  border-radius:var(--r);transition:all var(--transition);
+}}
+.care-subtab:hover{{color:var(--text);background:var(--surface-2);}}
+.care-subtab.active{{background:var(--accent);color:#fff;box-shadow:0 4px 12px var(--accent-glow);}}
+
+/* Calendar Grid */
+#care-calendar-pane{{display:flex;flex-direction:column;gap:20px;}}
+#care-status-pane{{display:none;flex-direction:column;gap:16px;}}
+
+.calendar-wrap{{
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  overflow:hidden;box-shadow:0 8px 32px rgba(45,71,57,0.04);
+}}
+.calendar-nav{{
+  display:flex;align-items:center;justify-content:space-between;padding:20px 24px;
+  border-bottom:1px solid var(--border);
+}}
+.calendar-nav-title{{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);}}
+.calendar-nav-btn{{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface-solid);color:var(--text);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);cursor:pointer;
+}}
+.calendar-nav-btn:hover{{background:var(--surface-2);border-color:var(--accent-glow);transform:scale(1.08);}}
+.cal-grid{{display:grid;grid-template-columns:repeat(7,1fr);}}
+.cal-day-header{{
+  padding:12px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;background:var(--bg);border-bottom:1px solid var(--border);
+}}
+.cal-cell{{
+  min-height:90px;padding:10px 8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  position:relative;transition:background .2s;
+}}
+.cal-cell:nth-child(7n){{border-right:none;}}
+.cal-cell:nth-last-child(-n+7){{border-bottom:none;}}
+.cal-cell.other-month .cal-day-num{{color:var(--muted2);opacity:.5;}}
+.cal-cell.today{{background:linear-gradient(135deg,rgba(124,179,66,0.06),rgba(124,179,66,0.02));}}
+.cal-cell.today .cal-day-num{{
+  background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-weight:700;
+  box-shadow:0 2px 8px var(--accent-glow);
+}}
+.cal-day-num{{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;}}
+.cal-events{{display:flex;flex-direction:column;gap:3px;}}
+.cal-event{{
+  font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}}
+.cal-event.water{{background:rgba(100,181,246,0.15);color:#1565C0;}}
+.cal-event.fertilize{{background:var(--accent-dim);color:var(--accent-dark);}}
+.cal-event.due-water{{background:rgba(100,181,246,0.3);color:#1565C0;border:1px solid rgba(100,181,246,0.4);}}
+.cal-event.due-fertilize{{background:rgba(124,179,66,0.25);color:var(--accent-dark);border:1px solid var(--accent-glow);}}
+
+/* Care Status Pane */
 .care-section-title{{
   font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);
   display:flex;align-items:center;gap:10px;margin-bottom:4px;
@@ -560,7 +687,14 @@ input,select{{font-family:inherit}}
 .care-card.done::before{{background:var(--muted2);}}
 .care-card:hover{{box-shadow:0 8px 32px rgba(45,71,57,0.07);transform:translateY(-1px);}}
 
-.care-card-emoji{{font-size:28px;flex-shrink:0;background:var(--bg);padding:10px;border-radius:var(--r);border:1px solid var(--border);}}
+/* Care card plant thumbnail */
+.care-card-thumb{{
+  width:52px;height:52px;border-radius:var(--r);overflow:hidden;flex-shrink:0;
+  background:var(--surface-2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+}}
+.care-card-thumb img{{width:100%;height:100%;object-fit:cover;}}
+.care-card-thumb-emoji{{font-size:26px;}}
 .care-card-info{{flex:1;min-width:0}}
 .care-card-name{{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;}}
 .care-card-meta{{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}}
@@ -572,7 +706,16 @@ input,select{{font-family:inherit}}
 .care-chip.soon{{background:var(--warn-dim);color:#c27a3e;border-color:rgba(226,167,111,0.3);}}
 .care-chip.ok{{background:var(--surface-2);color:var(--accent);border-color:var(--accent-glow);}}
 
-/* Moisture bar */
+/* Progress bars for water and fertilizer */
+.care-progress-wrap{{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}}
+.care-progress-row{{display:flex;align-items:center;gap:8px;}}
+.care-progress-icon{{font-size:12px;flex-shrink:0;width:16px;}}
+.care-progress-track{{flex:1;height:5px;border-radius:3px;background:rgba(45,71,57,0.08);overflow:hidden;}}
+.care-progress-fill{{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.34,1.56,.64,1);}}
+.care-progress-fill.water{{background:linear-gradient(90deg,rgba(100,181,246,0.5),#64B5F6);}}
+.care-progress-fill.fertilize{{background:linear-gradient(90deg,var(--accent-dim),var(--accent));}}
+.care-progress-pct{{font-size:10px;font-weight:700;color:var(--muted);min-width:30px;text-align:right;}}
+
 .moisture-wrap{{display:flex;align-items:center;gap:8px;}}
 .moisture-label{{font-size:11px;font-weight:600;color:var(--muted);min-width:64px;}}
 .moisture-track{{flex:1;height:6px;border-radius:3px;background:rgba(45,71,57,0.08);overflow:hidden;}}
@@ -586,6 +729,7 @@ input,select{{font-family:inherit}}
   box-shadow:0 2px 8px rgba(45,71,57,0.02);
 }}
 .care-btn:hover{{background:var(--bg);transform:translateY(-1px);}}
+.care-btn:active{{transform:scale(0.96);}}
 .care-btn.water{{border-color:rgba(100,181,246,0.5);color:#1976d2;background:rgba(100,181,246,0.08);}}
 .care-btn.water:hover{{background:rgba(100,181,246,0.15);box-shadow:0 4px 12px rgba(100,181,246,0.15);}}
 .care-btn.fertilize{{border-color:var(--accent-glow);color:var(--accent);background:var(--surface-2);}}
@@ -709,6 +853,10 @@ input,select{{font-family:inherit}}
 
   <!-- MAP AREA -->
   <div id="map-area">
+    <div class="dli-toggle-wrap">
+      <span class="dli-toggle-label">📊 DLI-Modus</span>
+      <button class="dli-toggle" id="dli-toggle-btn" onclick="toggleDLIMode()"></button>
+    </div>
     <div id="map-canvas">
       <img id="floor-img" src="" alt="Grundriss" draggable="false"
            onerror="this.src='https://placehold.co/1100x600/FCFAF7/7CB342?text=Grundriss+nicht+gefunden'">
@@ -741,9 +889,36 @@ input,select{{font-family:inherit}}
       </div>
     </div>
 
-    <div id="care-overdue-section"></div>
-    <div id="care-soon-section"></div>
-    <div id="care-history-section"></div>
+    <!-- Sub-tabs -->
+    <div class="care-subtabs">
+      <button class="care-subtab active" id="subtab-calendar" onclick="switchCareSubtab('calendar')">📅 Kalender</button>
+      <button class="care-subtab" id="subtab-status" onclick="switchCareSubtab('status')">📋 Pflege-Status</button>
+      <button class="care-subtab" id="subtab-history" onclick="switchCareSubtab('history')">🕐 Historie</button>
+    </div>
+
+    <!-- Calendar pane -->
+    <div id="care-calendar-pane">
+      <div class="calendar-wrap">
+        <div class="calendar-nav">
+          <button class="calendar-nav-btn" onclick="changeCalMonth(-1)">‹</button>
+          <span class="calendar-nav-title" id="cal-month-title"></span>
+          <button class="calendar-nav-btn" onclick="changeCalMonth(1)">›</button>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+    </div>
+
+    <!-- Status pane -->
+    <div id="care-status-pane">
+      <div id="care-overdue-section"></div>
+      <div id="care-soon-section"></div>
+      <div id="care-all-section"></div>
+    </div>
+
+    <!-- History pane -->
+    <div id="care-history-pane" style="display:none">
+      <div id="care-history-section"></div>
+    </div>
   </div>
 
   <!-- RIGHT SIDEBAR -->
@@ -763,12 +938,14 @@ input,select{{font-family:inherit}}
 // ============================================================
 const CSV_URL     = "{CSV_URL}";
 const SHEET_ID    = "{SHEET_ID}";
+const GITHUB_BASE = "{GITHUB_BASE}";
 const FLOOR_DATA  = {FLOOR_DATA_JSON};
 const LAT_RAD     = {LAT_DEG} * Math.PI / 180;
 const LON_DEG_VAL = {LON_DEG};
 
 const PLANT_EMOJIS = ["🌿","🌱","🪴","🌺","🌸","🌻","🌵","🎋","🌴","🌳","🍀","☘️","🌾","🌼","💐","🫧","🌏","🌙","✨","🪷"];
 const MONTHS_DE    = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const DAYS_DE      = ["So","Mo","Di","Mi","Do","Fr","Sa"];
 const NOW          = new Date();
 const NOW_MONTH    = NOW.getMonth();
 
@@ -777,16 +954,21 @@ const NOW_MONTH    = NOW.getMonth();
 // ============================================================
 let plants          = [];
 let positions       = {{}};
-let careData        = {{}};  // plantIdx -> {{lastWatered: ISO, lastFertilized: ISO}}
-let careHistory     = [];    // [{{type:'water'|'fertilize', plantIdx, name, emoji, time:ISO}}]
+let careData        = {{}};
+let careHistory     = [];
 let activePIdx      = null;
 let currentFloor    = "EG";
 let currentTab      = "planer";
+let currentCareSubtab = "calendar";
 let dragSrcIdx      = null;
 let inventoryFilter = "";
 let libraryFilter   = "";
 let saveTimeout     = null;
 let sunState        = {{ azimuth:180, elevation:0, factor:0 }};
+let dliMode         = false;      // DLI overlay vs. live overlay
+let dliCache        = {{}};        // floor -> Map of "rx,ry" -> dliScore
+let calMonth        = NOW_MONTH;
+let calYear         = NOW.getFullYear();
 
 // ============================================================
 // UTILITY
@@ -852,66 +1034,116 @@ function calcSunPosition(date) {{
 }}
 
 // ============================================================
-// ★ PHYSIKALISCH KORREKTE LICHTSIMULATION
-// Modell-Übersicht:
-//   1. Fenster-Sampling: jedes Fenster in N Punkte aufgeteilt,
-//      nicht nur Mittelpunkt → korrekte Lichtverteilung entlang Fensterfront
-//   2. Okklusion: Sichtstrahl Pflanze→Samplingpunkt wird gegen
-//      Außenwände UND Innenwände geprüft (Segment-Intersection)
-//   3. Tageszeit: Licht = 0 nachts; tagsüber skaliert nach
-//      Sonnen-Azimut, Elevation und atmosphärischer Transmission
-//   4. Einfallswinkel & Raumtiefe: Licht dringt bei tiefem Sonnenstand
-//      weiter in den Raum ein (cos(elevation)-Gewichtung)
-//   5. Diffuses Himmelslicht: Nordfenster bekommen Grundlicht,
-//      Südfenster mehr direktes Licht — tageszeit-unabhängig
-//   6. Saisonaler Faktor: Sonnenstand im Winter/Sommer beeinflusst
-//      wie weit Licht in den Raum eindringt (elevation-abhängig)
-//   7. Wandreflexion: einfaches 1-Bounce-Modell (helle Wände = +15%)
+// ★ DLI (Daily Light Integral) SIMULATION
+// Simuliert Sonnenverlauf in 1h-Schritten, berechnet gewichteten
+// Tagesmittelwert (0-10) für jeden Punkt auf der Karte.
 // ============================================================
+function computeDLI(px, py, floor) {{
+  const today = new Date();
+  const year  = today.getFullYear();
+  const month = today.getMonth();
+  const day   = today.getDate();
 
-// Anzahl Sampling-Punkte pro Fenster (ungerade = Mittelpunkt inklusive)
-const WIN_SAMPLES = 7;
+  let sumScore   = 0;
+  let weightSum  = 0;
 
-// Diffuses Himmelslicht-Anteil (0–1): auch ohne direkte Sonne verfügbar.
-// Entspricht bedecktem Himmel / Streulicht. Nachts = 0.
-function skyDiffuse(sunElevDeg) {{
-  // Himmelslicht beginnt bei Sonnenaufgang (elev ≥ 0) und steigt
-  // mit Elevation leicht an — es bleibt aber auch bei elev=0 noch vorhanden.
-  if(sunElevDeg <= -6) return 0;          // Bürgerliche Dämmerung: kein nutzbares Licht
-  if(sunElevDeg <= 0)  return 0.05;       // Dämmerung: minimales Streulicht
-  return 0.10 + 0.05 * Math.min(1, sunElevDeg / 30); // 0.10–0.15 tagsüber
+  // Simuliere 24 Stunden in 1h-Schritten
+  for(let h = 0; h < 24; h++) {{
+    const dt = new Date(Date.UTC(year, month, day, h - 1, 0, 0)); // UTC offset ~-1 für MEZ
+    const sun = calcSunPosition(dt);
+    if(sun.elevation <= 0) continue; // Nacht überspringen
+
+    // Speichere sunState temporär
+    const savedState = {{...sunState}};
+    sunState = sun;
+    const score = computeLichtFull(px, py, floor).score;
+    sunState = savedState;
+
+    // Gewichtung nach Sonnenelevation (sin-Kurve = natürliche Tageskurve)
+    const weight = Math.sin(sun.elevation * Math.PI / 180);
+    sumScore  += score * weight;
+    weightSum += weight;
+  }}
+
+  if(weightSum === 0) return 1; // Polarnacht / Sonderfälle
+  return Math.min(10, Math.max(1, Math.round(sumScore / weightSum * 10) / 10));
 }}
 
-// Geographischer Azimut, in den ein Fenster auf Seite "side" schaut
+// DLI-Cache befüllen (asynchron, nach Frame)
+let dliComputeScheduled = false;
+function scheduleDLICompute(floor) {{
+  if(dliComputeScheduled) return;
+  dliComputeScheduled = true;
+  requestAnimationFrame(()=>{{
+    dliComputeScheduled = false;
+    if(!dliMode) return;
+    const fd   = FLOOR_DATA[floor];
+    const step = 0.05; // 5% Schritte = 400 Punkte pro Etage
+    const cache = {{}};
+    for(let ry=0; ry<=1.01; ry+=step) {{
+      for(let rx=0; rx<=1.01; rx+=step) {{
+        const key = `${{rx.toFixed(2)}},${{ry.toFixed(2)}}`;
+        cache[key] = computeDLI(rx, ry, floor);
+      }}
+    }}
+    dliCache[floor] = cache;
+    drawLightMap();
+  }});
+}}
+
+function getDLIScore(px, py, floor) {{
+  if(!dliCache[floor]) return null;
+  // Finde nächsten Cache-Punkt
+  const step = 0.05;
+  const rx = Math.round(px / step) * step;
+  const ry = Math.round(py / step) * step;
+  const key = `${{rx.toFixed(2)}},${{ry.toFixed(2)}}`;
+  return dliCache[floor]?.[key] ?? null;
+}}
+
+function toggleDLIMode() {{
+  dliMode = !dliMode;
+  const btn = $("dli-toggle-btn");
+  btn.classList.toggle("on", dliMode);
+  if(dliMode) {{
+    showToast("📊 DLI-Modus: Tages-Durchschnitt wird berechnet…", 3000);
+    scheduleDLICompute(currentFloor);
+  }} else {{
+    drawLightMap();
+  }}
+  render();
+}}
+
+// ============================================================
+// ★ PHYSIKALISCH KORREKTE LICHTSIMULATION
+// ============================================================
+const WIN_SAMPLES = 7;
+
+function skyDiffuse(sunElevDeg) {{
+  if(sunElevDeg <= -6) return 0;
+  if(sunElevDeg <= 0)  return 0.05;
+  return 0.10 + 0.05 * Math.min(1, sunElevDeg / 30);
+}}
+
 function windowAzimuth(side, buildingNorthAzimuth) {{
   const sideOffset = {{"N":0,"E":90,"S":180,"W":270}};
   const offset = sideOffset[side] ?? 180;
   return (buildingNorthAzimuth + offset) % 360;
 }}
 
-// Einfallsfaktor der direkten Sonne auf eine Fensterfläche.
-// Berücksichtigt: Winkel zwischen Fenster-Normal und Sonnenazimut,
-// sowie Sonnenelevation (sin = Anteil senkrecht auf Fensterfläche).
 function directSunFactor(winAz, sunAz, sunElevDeg) {{
   if(sunElevDeg <= 0) return 0;
   const diff    = Math.abs(((winAz - sunAz + 540) % 360) - 180);
   const cosHoriz = Math.cos(diff * Math.PI / 180);
-  if(cosHoriz <= 0) return 0;   // Sonne hinter dem Fenster
+  if(cosHoriz <= 0) return 0;
   const sinElev = Math.sin(sunElevDeg * Math.PI / 180);
-  return cosHoriz * sinElev;    // Lambertsche Einstrahlung
+  return cosHoriz * sinElev;
 }}
 
-// Wie tief dringt Licht bei gegebenem Sonnenstand in den Raum?
-// Tiefer Sonnenstand (Morgen/Abend) → Licht strahlt flach und weit.
-// Hoher Sonnenstand (Mittags) → Licht fällt steil, dringt kaum ein.
-// Rückgabe: Faktor 0–1, der den Abstandsabfall moduliert.
 function roomPenetrationFactor(sunElevDeg, winSide, buildingNorthAzimuth) {{
   if(sunElevDeg <= 0) return 0;
-  // Bei tiefer Sonne (10°) → Licht geht weit rein → Abfall langsamer
-  // Bei hoher Sonne (70°) → Licht geht kaum rein → Abfall schneller
-  // Für Südseite ist hohe Sommersonne das Problem; für Nord kaum relevant
   const elev = Math.max(5, Math.min(80, sunElevDeg));
-  return 1 - (elev - 5) / 80; // 0.94 bei 10°, 0.06 bei 70°
+  return 1 - (elev - 5) / 80;
 }}
 
 function updateSunInfo() {{
@@ -927,10 +1159,6 @@ function updateSunInfo() {{
   }}
 }}
 
-// ── SEGMENT-SCHNITT ──────────────────────────────────────────
-// Prüft ob Strecke AB die Strecke CD schneidet.
-// Endpunkte selbst gelten NICHT als Schnitt (Epsilon-Ausschluss),
-// damit der Samplingpunkt auf der Außenwand nicht als Blocker gilt.
 function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
   const denom = (bx-ax)*(dy-cy)-(by-ay)*(dx-cx);
   if(Math.abs(denom)<1e-9) return false;
@@ -940,7 +1168,6 @@ function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
   return t>eps && t<1-eps && u>eps && u<1-eps;
 }}
 
-// Prüft ob Sichtstrahl Pflanze→Samplingpunkt durch eine Innenwand blockiert
 function isBlockedByInnerWall(pAX, pAY, sAX, sAY, fd) {{
   for(const w of fd.walls) {{
     if(segmentsIntersect(pAX,pAY,sAX,sAY, w.x1,w.y1,w.x2,w.y2)) return true;
@@ -948,8 +1175,6 @@ function isBlockedByInnerWall(pAX, pAY, sAX, sAY, fd) {{
   return false;
 }}
 
-// Prüft ob Sichtstrahl Pflanze→Samplingpunkt durch eine Außenwand blockiert.
-// (Samplingpunkt liegt exakt auf der Außenwand, daher kein Selbst-Schnitt.)
 function isBlockedByOuterWall(pAX, pAY, sAX, sAY, fd) {{
   for(const seg of fd.outerWalls) {{
     if(segmentsIntersect(pAX,pAY,sAX,sAY, seg.x1,seg.y1,seg.x2,seg.y2)) return true;
@@ -959,46 +1184,34 @@ function isBlockedByOuterWall(pAX, pAY, sAX, sAY, fd) {{
 
 function px2rel(px, p1, p2) {{ return (px-p1)/(p2-p1); }}
 
-// ── KERN-LICHTBERECHNUNG ─────────────────────────────────────
 function computeLichtFull(px, py, floor) {{
   const fd    = FLOOR_DATA[floor];
   const fw    = fd.floorX2 - fd.floorX1;
   const fh    = fd.floorY2 - fd.floorY1;
-  const realW = fd.realW;   // Meter horizontal
-  const realH = fd.realH;   // Meter vertikal
+  const realW = fd.realW;
+  const realH = fd.realH;
   const bldAz = fd.buildingNorthAzimuth || 0;
 
-  // Pflanzenpunkt in absoluten Bildpixeln
   const pAX = fd.floorX1 + px * fw;
   const pAY = fd.floorY1 + py * fh;
 
-  // Sicherheitscheck (Randtoleranzen)
   const margin = 4;
   if(pAX < fd.floorX1-margin || pAX > fd.floorX2+margin ||
      pAY < fd.floorY1-margin || pAY > fd.floorY2+margin) {{
     return {{ score:1, components:{{}}, windowHits:[] }};
   }}
 
-  // Aktuelle Sonnenwerte
   const sunElevDeg = sunState.elevation;
   const sunAzDeg   = sunState.azimuth;
-  const sunDirect  = sunState.factor;          // Atmosphärische Transmission (0–1)
-  const skyDiff    = skyDiffuse(sunElevDeg);   // Diffuses Himmelslicht (0–0.15)
-
-  // Wandreflexions-Bonus: helle Wände streuen Licht weiter.
-  // Einfaches 1-Bounce-Modell: +15% auf den Gesamtbetrag.
+  const sunDirect  = sunState.factor;
+  const skyDiff    = skyDiffuse(sunElevDeg);
   const wallReflectance = 0.15;
 
-  let totalIlluminance = 0;   // Summierte Beleuchtungsstärke (normiert)
+  let totalIlluminance = 0;
   const windowHits = [];
 
   for(const w of fd.windows) {{
-    // Fensterausrichtung
     const winAz = windowAzimuth(w.side, bldAz);
-
-    // ── MULTI-SAMPLING entlang der Fensterfront ──────────────
-    // Fenster ist ein Liniensegment im Bildraum.
-    // Wir legen WIN_SAMPLES gleichmäßige Punkte darauf.
     let winContrib      = 0;
     let samplesVisible  = 0;
     let totalSamples    = 0;
@@ -1011,56 +1224,36 @@ function computeLichtFull(px, py, floor) {{
 
       totalSamples++;
 
-      // ── OKKLUSIONS-PRÜFUNG ────────────────────────────────
       if(isBlockedByInnerWall(pAX,pAY,sAX,sAY,fd)) continue;
       if(isBlockedByOuterWall(pAX,pAY,sAX,sAY,fd)) continue;
 
       samplesVisible++;
 
-      // Distanz in Metern (reale Welt)
       const dxM   = (px - px2rel(sAX,fd.floorX1,fd.floorX2)) * realW;
       const dyM   = (py - px2rel(sAY,fd.floorY1,fd.floorY2)) * realH;
       const distM = Math.sqrt(dxM*dxM + dyM*dyM);
 
-      // ── DIREKTES SONNENLICHT ──────────────────────────────
-      // Einfallsfaktor: wie senkrecht trifft die Sonne das Fenster?
       const incFactor = directSunFactor(winAz, sunAzDeg, sunElevDeg);
       bestIncFactor = Math.max(bestIncFactor, incFactor);
 
-      // Raumdurchdringung: bei tiefem Sonnenstand dringt Licht weiter
-      // → geringerer Abstandsabfall in Raumtiefe
       const penetration = roomPenetrationFactor(sunElevDeg, w.side, bldAz);
-      // k variiert zwischen 0.2 (tiefe Sonne, weit) und 0.8 (hohe Sonne, nah)
       const kDirect = 0.2 + 0.6*(1-penetration);
       const directContrib = incFactor * sunDirect / (1 + kDirect * distM * distM);
 
-      // ── DIFFUSES HIMMELSLICHT ─────────────────────────────
-      // Kommt von der gesamten Himmelshemisphäre → unabhängig vom
-      // genauen Sonnenazimut, aber schwächer als direktes Licht.
-      // Nordfenster profitieren davon besonders (wenig direkte Sonne).
-      // Abstandsabfall langsamer als direktes Licht (gleichmäßigere Streuung).
       const kDiffuse = 0.3;
       const diffuseContrib = skyDiff / (1 + kDiffuse * distM);
 
       winContrib += directContrib + diffuseContrib;
     }}
 
-    // Durchschnitt über alle Samplingpunkte
-    // (sichtbare + verdeckte — verdeckte liefern 0, das mittelt korrekt)
     if(totalSamples > 0) {{
       const avgContrib = winContrib / totalSamples;
-
-      // Fenstergröße in Metern: echte physikalische Größe
       const winPxLen = Math.sqrt((w.x2-w.x1)**2 + (w.y2-w.y1)**2);
-      // Fenster sind Linien → Länge in Bildpixeln → umrechnen in Meter
-      // Das Fenster geht entweder horizontal oder vertikal:
       const isVertical = Math.abs(w.x2-w.x1) < Math.abs(w.y2-w.y1);
       const winMeter = isVertical
         ? (winPxLen / fh) * realH
         : (winPxLen / fw) * realW;
-      // Normiere auf Referenzfenster von 1m Breite/Höhe; max-Faktor 3m
       const winSizeFactor = Math.min(3, winMeter) / 1.0;
-
       totalIlluminance += avgContrib * winSizeFactor;
     }}
 
@@ -1073,15 +1266,8 @@ function computeLichtFull(px, py, floor) {{
     }});
   }}
 
-  // Wandreflexion: globaler Bonus (einfaches 1-Bounce-Modell)
   totalIlluminance *= (1 + wallReflectance);
 
-  // ── SCORE-SKALIERUNG ─────────────────────────────────────────────────
-  // Referenzwerte (bei optimalem Sonnenstand, direkt am Fenster):
-  //   1 Fenster (1m) direkt daneben → ~8/10
-  //   2 Fenster oder großes Fenster → bis 10/10
-  //   Raumtiefe 4m → ~3–4/10
-  //   Nachts (skyDiff≈0, sunDirect=0) → 1/10 (Minimum)
   const scaleFactor = 22;
   const score = Math.min(10, Math.max(1, Math.round(totalIlluminance * scaleFactor * 10) / 10));
 
@@ -1109,7 +1295,7 @@ const STATUS_CFG = {{
 }};
 
 // ============================================================
-// LIGHT MAP (Canvas overlay) — NUR INNENRAUM beleuchten
+// LIGHT MAP (Canvas overlay)
 // ============================================================
 function drawLightMap() {{
   const img    = $("floor-img");
@@ -1128,10 +1314,22 @@ function drawLightMap() {{
   for(let iy=fd.floorY1; iy<=fd.floorY2; iy+=step) {{
     for(let ix=fd.floorX1; ix<=fd.floorX2; ix+=step) {{
       const rx=(ix-fd.floorX1)/fw, ry=(iy-fd.floorY1)/fh;
-      const lv = computeLicht(rx, ry, currentFloor);
-      const alpha=(lv/10)*0.25;
-      const r = Math.round(lv/10*251), g=222, b=Math.round((1-lv/10)*128+74);
-      ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
+      let lv;
+      if(dliMode) {{
+        const cached = getDLIScore(rx, ry, currentFloor);
+        lv = cached !== null ? cached : computeLicht(rx, ry, currentFloor);
+        // DLI mode: blue tint
+        const alpha = (lv/10)*0.28;
+        const r = Math.round(92 + (lv/10)*50);
+        const g = Math.round(155 + (lv/10)*30);
+        const b = Math.round(214 - (lv/10)*50);
+        ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
+      }} else {{
+        lv = computeLicht(rx, ry, currentFloor);
+        const alpha=(lv/10)*0.25;
+        const r = Math.round(lv/10*251), g=222, b=Math.round((1-lv/10)*128+74);
+        ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
+      }}
       ctx.fillRect(ix,iy,step,step);
     }}
   }}
@@ -1153,6 +1351,22 @@ $("floor-img").addEventListener("load",()=>{{onImageReady();drawLightMap();rende
 window.addEventListener("resize",onImageReady);
 
 // ============================================================
+// PLANT IMAGE URL
+// ============================================================
+function getPlantImageUrl(plantName) {{
+  const safeName = plantName.replace(/\s+/g, '%20');
+  return `${{GITHUB_BASE}}/${{safeName}}.png`;
+}}
+
+function makePlantImgTag(plant, cls, style) {{
+  const url = getPlantImageUrl(plant.name);
+  const fallback = plant.emoji || '🌿';
+  return `<img src="${{url}}" class="${{cls}}" style="${{style||''}}"
+    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+  <div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:54px;opacity:.4;">${{fallback}}</div>`;
+}}
+
+// ============================================================
 // CSV LOAD
 // ============================================================
 async function loadPlants() {{
@@ -1166,10 +1380,8 @@ async function loadPlants() {{
   }} catch(e) {{
     console.warn("CSV-Fehler:",e);
     plants = [
-      {{name:"Monstera Deliciosa",licht:7,giessen:3,dungen:4,umtopfen:"Alle 2 Jahre",info:"Robuste Zimmerpflanze",emoji:"🌿",giessAll:{{}},duengAll:{{}}}},
-      {{name:"Sukkulente",licht:9,giessen:14,dungen:8,umtopfen:"Alle 3 Jahre",info:"Viel Sonne",emoji:"🌵",giessAll:{{}},duengAll:{{}}}},
-      {{name:"Farn",licht:3,giessen:2,dungen:3,umtopfen:"Jährlich",info:"Schattig & feucht",emoji:"🌿",giessAll:{{}},duengAll:{{}}}},
-      {{name:"Orchidee",licht:6,giessen:10,dungen:6,umtopfen:"Alle 2 Jahre",info:"Indirektes Licht",emoji:"🌺",giessAll:{{}},duengAll:{{}}}},
+      {{name:"Monstera Deliciosa",botanisch:"Monstera deliciosa",licht:7,giessen:3,dungen:4,umtopfen:"Alle 2 Jahre",info:"Robuste Zimmerpflanze",emoji:"🌿",luftfeuchtigkeit:"60-80%",besprühen:"Ja",besonderheit:"Bekannt für ihre spektakulären Blattlöcher.",giessAll:{{}},duengAll:{{}}}},
+      {{name:"Sukkulente",botanisch:"Echeveria spp.",licht:9,giessen:14,dungen:8,umtopfen:"Alle 3 Jahre",info:"Viel Sonne",emoji:"🌵",luftfeuchtigkeit:"30-50%",besprühen:"Nein",besonderheit:"Speichert Wasser in Blättern – extrem pflegeleicht.",giessAll:{{}},duengAll:{{}}}},
     ];
     setStatus(false,"Offline-Modus");
   }}
@@ -1184,11 +1396,12 @@ async function loadPlants() {{
   setFloor(currentFloor);
   $("loading").classList.add("hidden");
   updateSunInfo();
+  renderCalendar();
   setInterval(()=>{{ updateSunInfo(); drawLightMap(); render(); }}, 60000);
 }}
 
 // ============================================================
-// CSV PARSE
+// CSV PARSE — erweitert mit neuen Spalten
 // ============================================================
 function parseCSV(text) {{
   const lines   = text.trim().split("\\n");
@@ -1200,34 +1413,50 @@ function parseCSV(text) {{
     }}
     return -1;
   }};
-  const colName   = col(["Pflanze","Name","name"]);
-  const colLicht  = col(["Lichtbedarf"]);
-  const colUmtopf = col(["Umtopfen"]);
+
+  const colName      = col(["Pflanze","Name","name"]);
+  const colBotanisch = col(["Botanischer","botanisch","Botanisch"]);
+  const colLicht     = col(["Lichtbedarf"]);
+  const colUmtopf    = col(["Umtopfen"]);
+  const colLuft      = col(["Luftfeuchtigkeit","Optimale Luftfeu","luftfeucht"]);
+  const colBespr     = col(["Besprühen","Bespruhen","besprühen"]);
+  const colBesond    = col(["Besonderheit","besonderheit"]);
+
   const monthName = MONTHS_DE[NOW_MONTH];
   const colGiess  = col(["Gießen_"+monthName,"Giessen_"+monthName]);
-  const colDueng  = col(["Düngen_"+monthName,"Dunegen_"+monthName]);
+  const colDueng  = col(["Düngen_"+monthName,"Dunegen_"+monthName,"Düngen_"+monthName]);
   const giessAll={{}}, duengAll={{}};
-  MONTHS_DE.forEach(m=>{{ giessAll[m]=col(["Gießen_"+m,"Giessen_"+m]); duengAll[m]=col(["Düngen_"+m,"Dunegen_"+m]); }});
+  MONTHS_DE.forEach(m=>{{
+    giessAll[m]=col(["Gießen_"+m,"Giessen_"+m]);
+    duengAll[m]=col(["Düngen_"+m,"Dunegen_"+m,"Düngen_"+m]);
+  }});
 
   return lines.slice(1).filter(l=>l.trim()).map((line,i)=>{{
     const cols=splitCSVLine(line);
+    const safeCol = (idx) => idx>=0 ? (cols[idx]||"").trim().replace(/"/g,"") : "";
+
     const obj={{
       id:i,
-      name:     colName>=0?(cols[colName]||"Pflanze "+(i+1)):"Pflanze "+(i+1),
-      licht:    colLicht>=0?(parseFloat(cols[colLicht])||5):5,
-      giessen:  colGiess>=0?(cols[colGiess]||"—"):"—",
-      dungen:   colDueng>=0?(cols[colDueng]||"—"):"—",
-      umtopfen: colUmtopf>=0?(cols[colUmtopf]||"—"):"—",
-      emoji:    PLANT_EMOJIS[i%PLANT_EMOJIS.length],
+      name:          safeCol(colName) || "Pflanze "+(i+1),
+      botanisch:     safeCol(colBotanisch),
+      licht:         parseFloat(safeCol(colLicht))||5,
+      giessen:       colGiess>=0 ? (safeCol(colGiess)||"—") : "—",
+      dungen:        colDueng>=0 ? (safeCol(colDueng)||"—") : "—",
+      umtopfen:      safeCol(colUmtopf)||"—",
+      luftfeuchtigkeit: safeCol(colLuft)||"",
+      besprühen:     safeCol(colBespr)||"",
+      besonderheit:  safeCol(colBesond)||"",
+      emoji:         PLANT_EMOJIS[i%PLANT_EMOJIS.length],
       giessAll:{{}}, duengAll:{{}},
     }};
     MONTHS_DE.forEach(m=>{{
-      obj.giessAll[m] = giessAll[m]>=0?(cols[giessAll[m]]||"—"):"—";
-      obj.duengAll[m] = duengAll[m]>=0?(cols[duengAll[m]]||"—"):"—";
+      obj.giessAll[m] = giessAll[m]>=0 ? (safeCol(giessAll[m])||"—") : "—";
+      obj.duengAll[m] = duengAll[m]>=0 ? (safeCol(duengAll[m])||"—") : "—";
     }});
     return obj;
   }});
 }}
+
 function splitCSVLine(line) {{
   const res=[]; let cur="",inQ=false;
   for(const ch of line) {{
@@ -1309,7 +1538,23 @@ function switchTab(tab) {{
   $("library-view").classList.toggle("active",isLibrary);
   $("care-view").classList.toggle("active",isCare);
   if(isLibrary) renderLibrary();
-  if(isCare) renderCare();
+  if(isCare) {{ renderCare(); renderCalendar(); }}
+}}
+
+// ============================================================
+// CARE SUB-TABS
+// ============================================================
+function switchCareSubtab(tab) {{
+  currentCareSubtab = tab;
+  ["calendar","status","history"].forEach(t=>{{
+    $("subtab-"+t).classList.toggle("active", t===tab);
+  }});
+  $("care-calendar-pane").style.display = tab==="calendar" ? "flex" : "none";
+  $("care-status-pane").style.display   = tab==="status"   ? "flex" : "none";
+  $("care-history-pane").style.display  = tab==="history"  ? "block" : "none";
+  if(tab==="calendar") renderCalendar();
+  if(tab==="status")   renderCareStatus();
+  if(tab==="history")  renderCareHistory();
 }}
 
 // ============================================================
@@ -1328,6 +1573,7 @@ function setFloor(floor) {{
   render();
   renderInventory();
   if(activePIdx!==null) renderDetail(activePIdx);
+  if(dliMode) scheduleDLICompute(floor);
 }}
 
 // ============================================================
@@ -1343,13 +1589,16 @@ function render() {{
   plants.forEach((p,i)=>{{
     const pos=positions[i];
     if(!pos||pos.floor!==currentFloor) return;
-    const ist=computeLicht(pos.x,pos.y,currentFloor);
+    const ist = dliMode
+      ? (getDLIScore(pos.x, pos.y, currentFloor) ?? computeLicht(pos.x,pos.y,currentFloor))
+      : computeLicht(pos.x,pos.y,currentFloor);
     const stat=getLichtStatus(ist,p.licht);
     const pin=document.createElement("div");
     pin.className="plant-pin"+(activePIdx===i?" active":"");
     pin.dataset.idx=i;
     const tx=Math.round(pos.x*W-23), ty=Math.round(pos.y*H-23);
     pin.style.transform=`translate(${{tx}}px,${{ty}}px)`;
+    const modeLabel = dliMode ? "DLI" : "Live";
     pin.innerHTML=`
       <div class="pin-bubble">${{p.emoji}}</div>
       <div class="pin-indicator ${{stat}}"></div>
@@ -1358,7 +1607,7 @@ function render() {{
     `;
     setupPinDrag(pin,i);
     pin.addEventListener("click",e=>{{e.stopPropagation();selectPlant(i);}});
-    pin.addEventListener("mousemove",e=>showTooltip(`${{p.name}} · Licht: ${{ist}}/10 · Bedarf: ${{p.licht}}/10`,e.clientX,e.clientY));
+    pin.addEventListener("mousemove",e=>showTooltip(`${{p.name}} · ${{modeLabel}}: ${{ist}}/10 · Bedarf: ${{p.licht}}/10`,e.clientX,e.clientY));
     pin.addEventListener("mouseleave",hideTooltip);
     canvas.appendChild(pin);
   }});
@@ -1380,26 +1629,77 @@ function showEmptyDetail() {{
 }}
 
 // ============================================================
-// ★ RENDER DETAIL
+// ★ RENDER DETAIL (mit DLI + neuen Feldern + Bild)
 // ============================================================
 function renderDetail(idx) {{
   const p  =plants[idx];
   const pos=positions[idx];
   const floor=pos?pos.floor:currentFloor;
   const lf = pos ? computeLichtFull(pos.x,pos.y,floor) : null;
-  const ist= lf ? lf.score : null;
-  const stat=ist?getLichtStatus(ist,p.licht):null;
+  const liveScore = lf ? lf.score : null;
+
+  // DLI Score
+  const dliScore = pos ? getDLIScore(pos.x, pos.y, floor) : null;
+  const primaryScore = dliMode && dliScore ? dliScore : liveScore;
+
+  const stat=primaryScore?getLichtStatus(primaryScore,p.licht):null;
   const sc  =stat?STATUS_CFG[stat]:null;
 
   $("rsb-empty").style.display="none";
   const det=$("rsb-detail");
   det.classList.add("visible");
 
+  // Plant image header
+  const imgUrl = getPlantImageUrl(p.name);
+  const imgHTML = `
+    <div class="detail-img-wrap">
+      <img src="${{imgUrl}}" style="width:100%;height:100%;object-fit:cover;"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="detail-img-fallback" style="display:none">${{p.emoji}}</div>
+    </div>
+  `;
+
   const coordsHTML=pos
     ?`<div class="coords-row">Rel. ${{(pos.x*100).toFixed(1)}}% · ${{(pos.y*100).toFixed(1)}}%</div>
       <span class="floor-tag">📍 ${{pos.floor}}</span>`
     :`<span class="floor-tag">📦 Im Inventar</span>`;
 
+  // DLI Panel
+  let dliHTML = "";
+  if(pos) {{
+    const hasCache = dliScore !== null;
+    const dliVal   = hasCache ? dliScore : "—";
+    const dliPct   = hasCache ? ((dliScore/10)*100).toFixed(0) : 0;
+    const liveVal  = liveScore !== null ? liveScore : "—";
+    const nightMode = sunState.elevation <= -6;
+    const liveLabel = nightMode ? "🌙 Nacht (kein Tageslicht)" : `${{"☀️"}} Live-Score ${{liveVal}}/10`;
+
+    dliHTML = `
+      <div class="dli-panel">
+        <div class="dli-panel-title">📊 Daily Light Integral</div>
+        <div class="dli-score-row">
+          <span class="dli-score-val">${{dliVal}}</span>
+          <span class="dli-score-unit">/ 10 Tages-Ø</span>
+        </div>
+        <div class="dli-bar-wrap">
+          <div class="dli-bar-track">
+            <div class="dli-bar-fill" style="width:${{dliPct}}%"></div>
+          </div>
+          <div class="dli-bar-labels">
+            <span>Tagesmittel</span>
+            <span>Bedarf: ${{p.licht}}/10</span>
+          </div>
+        </div>
+        <div class="dli-live-row">
+          <div class="dli-live-dot"></div>
+          <span class="dli-live-text">${{liveLabel}}</span>
+        </div>
+        ${{!hasCache ? '<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;">DLI-Modus aktivieren für Tagesberechnung</div>' : ''}}
+      </div>
+    `;
+  }}
+
+  // Astro panel
   let astroHTML="";
   if(lf) {{
     const winChips=lf.windowHits.map(w=>{{
@@ -1414,12 +1714,12 @@ function renderDetail(idx) {{
     const nightMode = sunState.elevation <= -6;
     const dawnMode  = sunState.elevation <= 0 && !nightMode;
     const timeLabel = nightMode ? "🌙 Nacht" : dawnMode ? "🌅 Dämmerung" : "☀️ Tageslicht";
-    const skyPct    = (lf.components.skyDiff * 100 / 0.15).toFixed(0); // 0–100%
+    const skyPct    = (lf.components.skyDiff * 100 / 0.15).toFixed(0);
     const dirPct    = (lf.components.sunDirect * 100).toFixed(0);
 
     astroHTML=`
       <div class="astro-panel">
-        <div class="astro-title">☀️ Lichtanalyse</div>
+        <div class="astro-title">☀️ Lichtanalyse (Live)</div>
         <div class="astro-grid">
           <div class="astro-cell">
             <div class="astro-cell-lbl">Elevation</div>
@@ -1445,29 +1745,44 @@ function renderDetail(idx) {{
   }}
 
   const barColor = stat==='ideal' ? 'var(--accent)' : stat==='ok' ? 'var(--warn)' : 'var(--danger)';
-  const lightHTML=ist?`
+  const scoreToShow = primaryScore || liveScore;
+  const lightHTML=scoreToShow?`
     <div class="score-badge ${{sc.cls}}">
       <div class="sc-icon">${{sc.icon}}</div>
       <div class="sc-text"><h3>${{sc.label}}</h3><p>${{sc.desc}}</p></div>
     </div>
     <div class="light-bar-wrap">
-      <div class="lbw-label"><span>💡 Lichtwert</span><span>${{ist}} / 10</span></div>
+      <div class="lbw-label"><span>💡 Lichtwert</span><span>${{scoreToShow}} / 10</span></div>
       <div class="lbw-track">
-        <div class="lbw-fill" style="width:${{(ist/10*100).toFixed(1)}}%;background:linear-gradient(90deg, var(--accent-glow), ${{barColor}})"></div>
+        <div class="lbw-fill" style="width:${{(scoreToShow/10*100).toFixed(1)}}%;background:linear-gradient(90deg, var(--accent-glow), ${{barColor}})"></div>
         <div class="lbw-needle" style="left:${{(p.licht/10*100).toFixed(1)}}%"></div>
       </div>
-      <div class="lbw-label"><span style="color:var(--muted);font-weight:500;">Bedarf: ${{p.licht}}/10</span><span style="color:var(--muted);font-weight:500;">Verfügbar: ${{ist}}/10</span></div>
+      <div class="lbw-label"><span style="color:var(--muted);font-weight:500;">Bedarf: ${{p.licht}}/10</span><span style="color:var(--muted);font-weight:500;">Verfügbar: ${{scoreToShow}}/10</span></div>
     </div>
+    ${{dliHTML}}
     ${{astroHTML}}
-  `:`<div style="font-size:14px;font-weight:500;color:var(--muted);background:var(--surface-solid);border-radius:var(--rx);padding:20px;text-align:center;box-shadow:0 4px 16px rgba(45,71,57,0.02);border:1px solid var(--border);">Pflanze auf Karte platzieren, um Lichtwert zu berechnen.</div>`;
+  `:`
+    ${{dliHTML || '<div style="font-size:14px;font-weight:500;color:var(--muted);background:var(--surface-solid);border-radius:var(--rx);padding:20px;text-align:center;box-shadow:0 4px 16px rgba(45,71,57,0.02);border:1px solid var(--border);">Pflanze auf Karte platzieren, um Lichtwert zu berechnen.</div>'}}
+  `;
 
   const removeHTML=pos?`<button class="act-btn danger-btn" onclick="removePlant(${{idx}})">🗑️ Entfernen</button>`:"";
 
+  // Extra fields
+  const extraHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${{p.luftfeuchtigkeit ? `<div class="detail-extra-row"><div class="detail-extra-lbl">💧 Opt. Luftfeuchtigkeit</div><div class="detail-extra-val">${{p.luftfeuchtigkeit}}</div></div>` : ''}}
+      ${{p.besprühen ? `<div class="detail-extra-row"><div class="detail-extra-lbl">🌫️ Besprühen</div><div class="detail-extra-val">${{p.besprühen}}</div></div>` : ''}}
+      ${{p.besonderheit ? `<div class="detail-extra-row"><div class="detail-extra-lbl">💡 Besonderheit</div><div class="detail-extra-val">${{p.besonderheit}}</div></div>` : ''}}
+    </div>
+  `;
+
   det.innerHTML=`
+    ${{imgHTML}}
     <div class="plant-hdr">
       <div class="big-emoji">${{p.emoji}}</div>
       <div class="plant-hdr-text">
         <h2>${{p.name}}</h2>
+        ${{p.botanisch ? `<div class="botanical">${{p.botanisch}}</div>` : ''}}
         ${{coordsHTML}}
       </div>
     </div>
@@ -1490,6 +1805,7 @@ function renderDetail(idx) {{
         <div class="dc-val" style="font-size:14px;padding-top:4px">${{p.umtopfen||"—"}}</div>
       </div>
     </div>
+    ${{extraHTML}}
     <div class="action-row">
       <button class="act-btn primary" onclick="selectPlant(${{idx}})">✓ Schließen</button>
       ${{removeHTML}}
@@ -1643,7 +1959,7 @@ function setupPinDrag(pin,idx) {{
 }}
 
 // ============================================================
-// ★ LIBRARY VIEW
+// ★ LIBRARY VIEW — Premium Cards mit Bildern & neuen Feldern
 // ============================================================
 function renderLibrary() {{
   const grid=$("lib-grid");
@@ -1677,53 +1993,80 @@ function renderLibrary() {{
       statusChip=`<span class="lib-status-chip none">📦 Nicht platziert</span>`;
     }}
 
+    const imgUrl = getPlantImageUrl(p.name);
+
+    // Besonderheit block
+    const besondHTML = p.besonderheit ? `
+      <div class="lib-besonderheit">
+        <div class="lib-besonderheit-lbl">💡 Besonderheit</div>
+        ${{p.besonderheit}}
+      </div>
+    ` : '';
+
+    // Humidity & Spray
+    const humiHTML = (p.luftfeuchtigkeit || p.besprühen) ? `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        ${{p.luftfeuchtigkeit ? `<div class="lib-humidity-row">💧 <span class="lib-humidity-badge">${{p.luftfeuchtigkeit}}</span></div>` : ''}}
+        ${{p.besprühen ? `<div class="lib-humidity-row">🌫️ Besprühen: <strong style="margin-left:4px;color:var(--text);">${{p.besprühen}}</strong></div>` : ''}}
+      </div>
+    ` : '';
+
     const card=document.createElement("div");
     card.className="lib-card";
     card.innerHTML=`
-      <div class="lib-card-top">
-        <div class="lib-card-emoji-wrap">${{p.emoji}}</div>
-        <div class="lib-card-meta">
+      <div class="lib-card-img">
+        <img src="${{imgUrl}}" alt="${{p.name}}"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="lib-card-img-fallback" style="display:none">${{p.emoji}}</div>
+        <div class="lib-card-img-overlay">
           <div class="lib-card-name">${{p.name}}</div>
-          <div class="lib-card-loc">
+          ${{p.botanisch ? `<div class="lib-card-botanical">${{p.botanisch}}</div>` : ''}}
+        </div>
+      </div>
+      <div class="lib-card-body">
+        <div class="lib-card-top-row">
+          ${{statusChip}}
+          <div class="lib-card-loc" style="margin-left:auto">
             <div class="lib-card-loc-dot ${{pos?"placed":""}}"></div>
             ${{floorLabel}}
           </div>
         </div>
-      </div>
-      ${{statusChip}}
-      <div class="lib-light-row">
-        <div class="lib-light-icon">☀️</div>
-        <div class="lib-light-bar-wrap">
-          <div class="lib-light-bar-track">
-            <div class="lib-light-bar-fill" style="width:${{lightPct}}%;background:${{ist?'linear-gradient(90deg, var(--accent-glow), '+barColor+')':'rgba(45,71,57,0.1)'}}"></div>
+        <div class="lib-light-row">
+          <div class="lib-light-icon">☀️</div>
+          <div class="lib-light-bar-wrap">
+            <div class="lib-light-bar-track">
+              <div class="lib-light-bar-fill" style="width:${{lightPct}}%;background:${{ist?'linear-gradient(90deg, var(--accent-glow), '+barColor+')':'rgba(45,71,57,0.1)'}}"></div>
+            </div>
+            <div class="lib-light-labels">
+              <span>Licht verfügbar</span>
+              <span>Bedarf: ${{p.licht}}/10</span>
+            </div>
           </div>
-          <div class="lib-light-labels">
-            <span>Licht verfügbar</span>
-            <span>Bedarf: ${{p.licht}}/10</span>
+          <div class="lib-light-score" style="color:${{ist?barColor:'var(--muted)'}}">
+            ${{ist?ist+"/10":"—"}}
           </div>
         </div>
-        <div class="lib-light-score" style="color:${{ist?barColor:'var(--muted)'}}">
-          ${{ist?ist+"/10":"—"}}
+        <div class="lib-divider"></div>
+        <div class="lib-care-grid">
+          <div class="lib-care-cell">
+            <div class="lib-care-cell-lbl">💧 Gießen (${{MONTHS_DE[NOW_MONTH]}})</div>
+            <div class="lib-care-cell-val">${{p.giessen||"—"}}<span class="lib-care-cell-unit">Tage</span></div>
+          </div>
+          <div class="lib-care-cell">
+            <div class="lib-care-cell-lbl">🌿 Düngen (${{MONTHS_DE[NOW_MONTH]}})</div>
+            <div class="lib-care-cell-val">${{p.dungen||"—"}}</div>
+          </div>
+          <div class="lib-care-cell">
+            <div class="lib-care-cell-lbl">☀️ Lichtbedarf</div>
+            <div class="lib-care-cell-val">${{p.licht}}<span class="lib-care-cell-unit">/ 10</span></div>
+          </div>
+          <div class="lib-care-cell">
+            <div class="lib-care-cell-lbl">🪴 Umtopfen</div>
+            <div class="lib-care-cell-val" style="font-size:13px">${{p.umtopfen||"—"}}</div>
+          </div>
         </div>
-      </div>
-      <div class="lib-divider"></div>
-      <div class="lib-care-grid">
-        <div class="lib-care-cell">
-          <div class="lib-care-cell-lbl">💧 Gießen (${{MONTHS_DE[NOW_MONTH]}})</div>
-          <div class="lib-care-cell-val">${{p.giessen||"—"}}<span class="lib-care-cell-unit">Tage</span></div>
-        </div>
-        <div class="lib-care-cell">
-          <div class="lib-care-cell-lbl">🌿 Düngen (${{MONTHS_DE[NOW_MONTH]}})</div>
-          <div class="lib-care-cell-val">${{p.dungen||"—"}}</div>
-        </div>
-        <div class="lib-care-cell">
-          <div class="lib-care-cell-lbl">☀️ Lichtbedarf</div>
-          <div class="lib-care-cell-val">${{p.licht}}<span class="lib-care-cell-unit">/ 10</span></div>
-        </div>
-        <div class="lib-care-cell">
-          <div class="lib-care-cell-lbl">🪴 Umtopfen</div>
-          <div class="lib-care-cell-val" style="font-size:14px">${{p.umtopfen||"—"}}</div>
-        </div>
+        ${{humiHTML}}
+        ${{besondHTML}}
       </div>
       <div class="lib-card-footer">
         <button class="show-on-map-btn" data-pidx="${{i}}">🗺️ Auf Karte zeigen</button>
@@ -1753,27 +2096,213 @@ function filterLibrary(val) {{ libraryFilter=val; renderLibrary(); }}
 $("map-area").addEventListener("click",()=>{{activePIdx=null;render();renderInventory();showEmptyDetail();}});
 
 // ============================================================
-// ★ PFLEGE-KALENDER
+// ★ PFLEGE-KALENDER — Kalender-Grid
 // ============================================================
 
-/**
- * Parst einen Intervall-Wert aus dem CSV (z.B. "3", "14", "—")
- * und gibt Tage als Zahl zurück, oder null wenn nicht bekannt.
- */
+function changeCalMonth(delta) {{
+  calMonth += delta;
+  if(calMonth > 11){{ calMonth=0; calYear++; }}
+  if(calMonth < 0) {{ calMonth=11; calYear--; }}
+  renderCalendar();
+}}
+
+function renderCalendar() {{
+  const titleEl = $("cal-month-title");
+  if(titleEl) titleEl.textContent = MONTHS_DE[calMonth]+" "+calYear;
+  const grid = $("cal-grid");
+  if(!grid) return;
+
+  // Day headers
+  let html = DAYS_DE.map(d=>`<div class="cal-day-header">${{d}}</div>`).join("");
+
+  const firstDay = new Date(calYear, calMonth, 1);
+  const lastDay  = new Date(calYear, calMonth+1, 0);
+  const startDow = firstDay.getDay(); // 0=So
+  const totalDays= lastDay.getDate();
+
+  // Pre-fill previous month days
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+  for(let d=startDow-1; d>=0; d--) {{
+    html += `<div class="cal-cell other-month"><div class="cal-day-num">${{prevLast-d}}</div></div>`;
+  }}
+
+  const todayD = NOW.getDate(), todayM = NOW.getMonth(), todayY = NOW.getFullYear();
+
+  // Collect all events for this month
+  const eventsByDay = {{}};
+
+  // Past care history events
+  careHistory.forEach(h=>{{
+    const d = new Date(h.time);
+    if(d.getMonth()===calMonth && d.getFullYear()===calYear) {{
+      const day = d.getDate();
+      if(!eventsByDay[day]) eventsByDay[day]=[];
+      eventsByDay[day].push({{ type:h.type, name:h.name, emoji:h.emoji }});
+    }}
+  }});
+
+  // Upcoming due events (next 30 days within this month)
+  plants.forEach((p,i)=>{{
+    const ws = getCareStatus(i,'water');
+    const fs = getCareStatus(i,'fertilize');
+    [['water',ws],['fertilize',fs]].forEach(([type,status])=>{{
+      if(!status) return;
+      const nd = status.nextDate;
+      if(nd.getMonth()===calMonth && nd.getFullYear()===calYear) {{
+        const day = nd.getDate();
+        if(!eventsByDay[day]) eventsByDay[day]=[];
+        eventsByDay[day].push({{ type:'due-'+type, name:p.name, emoji:p.emoji }});
+      }}
+    }});
+  }});
+
+  for(let d=1; d<=totalDays; d++) {{
+    const isToday = d===todayD && calMonth===todayM && calYear===todayY;
+    let cellClass = "cal-cell" + (isToday?" today":"");
+    const events  = eventsByDay[d] || [];
+    const evHTML  = events.slice(0,3).map(e=>{{
+      const cls = e.type==='water' ? 'water' : e.type==='fertilize' ? 'fertilize' : e.type==='due-water' ? 'due-water' : 'due-fertilize';
+      const icon = e.type.includes('water') ? '💧' : '🌿';
+      return `<div class="cal-event ${{cls}}">${{icon}} ${{e.name}}</div>`;
+    }}).join("");
+    const moreHTML = events.length>3 ? `<div class="cal-event" style="color:var(--muted);background:transparent;">+${{events.length-3}} weitere</div>` : "";
+    html += `
+      <div class="${{cellClass}}">
+        <div class="cal-day-num">${{d}}</div>
+        <div class="cal-events">${{evHTML}}${{moreHTML}}</div>
+      </div>
+    `;
+  }}
+
+  // Post-fill next month days
+  const cellsUsed = startDow + totalDays;
+  const remaining = (7 - (cellsUsed % 7)) % 7;
+  for(let d=1; d<=remaining; d++) {{
+    html += `<div class="cal-cell other-month"><div class="cal-day-num">${{d}}</div></div>`;
+  }}
+
+  grid.innerHTML = html;
+}}
+
+// ============================================================
+// ★ PFLEGE-STATUS — Liste mit Fortschrittsbalken
+// ============================================================
+function renderCareStatus() {{
+  const overdueItems  = [];
+  const soonItems     = [];
+  const allItems      = [];
+  const now = new Date();
+  const in3days = new Date(now.getTime() + 3*24*3600*1000);
+
+  plants.forEach((p, i) => {{
+    const ws = getCareStatus(i, 'water');
+    const fs = getCareStatus(i, 'fertilize');
+    const wOverdue = ws && ws.overdueDays > 0;
+    const fOverdue = fs && fs.overdueDays > 0;
+    const wSoon = ws && !wOverdue && ws.nextDate <= in3days;
+    const fSoon = fs && !fOverdue && fs.nextDate <= in3days;
+
+    const entry = {{idx:i, ws, fs}};
+    if(wOverdue || fOverdue) overdueItems.push(entry);
+    else if(wSoon || fSoon) soonItems.push(entry);
+    else allItems.push(entry);
+  }});
+
+  const dueCount  = overdueItems.length;
+  const soonCount = soonItems.length;
+  $("care-sub-label").textContent =
+    `${{plants.length}} Pflanzen · ${{dueCount}} fällig · ${{soonCount}} in den nächsten 3 Tagen`;
+
+  const overdueSection = $("care-overdue-section");
+  if(overdueItems.length > 0) {{
+    overdueSection.innerHTML = `
+      <div class="care-section-title">
+        ⚠️ Fällig & Überfällig
+        <span class="care-badge">${{overdueItems.length}} Pflanze${{overdueItems.length!==1?'n':''}}</span>
+      </div>
+      ${{overdueItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
+    `;
+  }} else {{
+    overdueSection.innerHTML = `
+      <div class="care-section-title">⚠️ Fällig & Überfällig <span class="care-badge ok">Alles erledigt ✓</span></div>
+      <div class="care-empty"><div class="ce-icon">🎉</div><p>Alle Pflanzen sind versorgt!<br>Gute Arbeit.</p></div>
+    `;
+  }}
+
+  const soonSection = $("care-soon-section");
+  if(soonItems.length > 0) {{
+    soonSection.innerHTML = `
+      <div class="care-section-title">
+        📅 In den nächsten 3 Tagen
+        <span class="care-badge warn">${{soonItems.length}} Pflanze${{soonItems.length!==1?'n':''}}</span>
+      </div>
+      ${{soonItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
+    `;
+  }} else {{
+    soonSection.innerHTML = '';
+  }}
+
+  const allSection = $("care-all-section");
+  if(allItems.length > 0) {{
+    allSection.innerHTML = `
+      <div class="care-section-title">
+        🌿 Alle anderen Pflanzen
+        <span class="care-badge ok">${{allItems.length}} versorgt</span>
+      </div>
+      ${{allItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
+    `;
+  }} else {{
+    allSection.innerHTML = '';
+  }}
+}}
+
+function renderCareHistory() {{
+  const histSection = $("care-history-section");
+  if(!histSection) return;
+  if(careHistory.length > 0) {{
+    const entries = careHistory.slice(0,50).map(h => {{
+      const icon = h.type==='water' ? '💧' : '🌿';
+      const label = h.type==='water' ? 'gegossen' : 'gedüngt';
+      return `
+        <div class="history-entry">
+          <span class="history-icon">${{icon}}</span>
+          <span class="history-text">${{h.emoji}} ${{h.name}} ${{label}}</span>
+          <span class="history-time">${{formatAbsDate(h.time)}}</span>
+        </div>
+      `;
+    }}).join("");
+    histSection.innerHTML = `
+      <div class="care-history">
+        <div class="care-history-header">
+          📋 Pflege-Historie
+          <span style="font-family:'DM Sans';font-size:12px;font-weight:500;color:var(--muted);margin-left:auto;">${{careHistory.length}} Einträge</span>
+        </div>
+        ${{entries}}
+      </div>
+    `;
+  }} else {{
+    histSection.innerHTML = `
+      <div class="care-history">
+        <div class="care-history-header">📋 Pflege-Historie</div>
+        <div style="padding:24px;text-align:center;color:var(--muted);font-size:14px;font-weight:500;">
+          Noch keine Aktionen aufgezeichnet.
+        </div>
+      </div>
+    `;
+  }}
+}}
+
+// ============================================================
+// ★ PFLEGE-KALENDER
+// ============================================================
 function parseIntervalDays(val) {{
   if(!val || val==="—" || val.trim()==="") return null;
   const n = parseFloat(val);
   return isNaN(n) ? null : n;
 }}
 
-/**
- * Berechnet für eine Pflanze das nächste Fälligkeitsdatum
- * basierend auf letztem Ereignis und Intervall (in Tagen).
- * Gibt ein Objekt {{nextDate, overdueDays, moisturePct}} zurück.
- */
 function getCareStatus(plantIdx, type) {{
   const p = plants[plantIdx];
-  const monthName = MONTHS_DE[NOW_MONTH];
   const intervalDays = type==='water'
     ? parseIntervalDays(p.giessen)
     : parseIntervalDays(p.dungen);
@@ -1787,17 +2316,15 @@ function getCareStatus(plantIdx, type) {{
 
   let nextDate;
   let overdueDays = 0;
-  let moisturePct = 50; // Default wenn keine Daten
+  let moisturePct = 50;
 
   if(lastDate) {{
     nextDate = new Date(lastDate.getTime() + intervalDays*24*3600*1000);
     const diffMs = now - nextDate;
     overdueDays = Math.max(0, Math.floor(diffMs / (24*3600*1000)));
-    // Feuchtigkeit nimmt linear ab: 100% direkt nach Gießen, 0% wenn überfällig
     const elapsed = (now - lastDate) / (1000*3600*24);
     moisturePct = Math.max(0, Math.min(100, Math.round((1 - elapsed/intervalDays)*100)));
   }} else {{
-    // Noch nie gemacht → sofort fällig
     nextDate = new Date(now.getTime() - 24*3600*1000);
     overdueDays = 1;
     moisturePct = 0;
@@ -1836,6 +2363,7 @@ function doWater(plantIdx) {{
   }});
   saveCareData();
   renderCare();
+  renderCalendar();
   showToast(`💧 ${{plants[plantIdx].name}} gegossen`);
 }}
 
@@ -1851,6 +2379,7 @@ function doFertilize(plantIdx) {{
   }});
   saveCareData();
   renderCare();
+  renderCalendar();
   showToast(`🌿 ${{plants[plantIdx].name}} gedüngt`);
 }}
 
@@ -1867,16 +2396,42 @@ function waterAllDue() {{
   }});
   saveCareData();
   renderCare();
+  renderCalendar();
   showToast(`💧 ${{count}} Pflanzen gegossen`);
 }}
 
-function refreshCare() {{ renderCare(); }}
+function refreshCare() {{ renderCare(); renderCalendar(); }}
+
+function renderCare() {{
+  if(currentCareSubtab === 'calendar') renderCalendar();
+  else if(currentCareSubtab === 'status') renderCareStatus();
+  else if(currentCareSubtab === 'history') renderCareHistory();
+  // Always update status counts for header
+  renderCareStatusCounts();
+}}
+
+function renderCareStatusCounts() {{
+  const now = new Date();
+  const in3days = new Date(now.getTime() + 3*24*3600*1000);
+  let dueCount = 0, soonCount = 0;
+  plants.forEach((p, i) => {{
+    const ws = getCareStatus(i, 'water');
+    const fs = getCareStatus(i, 'fertilize');
+    const wOverdue = ws && ws.overdueDays > 0;
+    const fOverdue = fs && fs.overdueDays > 0;
+    const wSoon = ws && !wOverdue && ws.nextDate <= in3days;
+    const fSoon = fs && !fOverdue && fs.nextDate <= in3days;
+    if(wOverdue||fOverdue) dueCount++;
+    else if(wSoon||fSoon) soonCount++;
+  }});
+  $("care-sub-label").textContent =
+    `${{plants.length}} Pflanzen · ${{dueCount}} fällig · ${{soonCount}} in den nächsten 3 Tagen`;
+}}
 
 function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
   const p = plants[plantIdx];
   const cd = careData[plantIdx] || {{}};
 
-  // Determine card urgency class
   const wOver = waterStatus && waterStatus.overdueDays > 0;
   const fOver = fertilizeStatus && fertilizeStatus.overdueDays > 0;
   let cardClass = "care-card";
@@ -1885,7 +2440,7 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
   // Water chip
   let waterChip = "";
   if(waterStatus) {{
-    const cls = waterStatus.overdueDays > 0 ? "overdue" : "ok";
+    const cls = waterStatus.overdueDays > 0 ? "overdue" : waterStatus.nextDate <= new Date(Date.now()+3*86400000) ? "soon" : "ok";
     const label = formatRelDate(waterStatus.nextDate);
     waterChip = `<span class="care-chip ${{cls}}">💧 ${{label}}</span>`;
   }}
@@ -1893,28 +2448,47 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
   // Fertilize chip
   let fertChip = "";
   if(fertilizeStatus) {{
-    const cls = fertilizeStatus.overdueDays > 0 ? "overdue" : "ok";
+    const cls = fertilizeStatus.overdueDays > 0 ? "overdue" : fertilizeStatus.nextDate <= new Date(Date.now()+3*86400000) ? "soon" : "ok";
     const label = formatRelDate(fertilizeStatus.nextDate);
     fertChip = `<span class="care-chip ${{cls}}">🌿 ${{label}}</span>`;
   }}
 
-  // Moisture bar
-  let moistureBar = "";
+  // Progress bars
+  let progressBars = "";
   if(waterStatus) {{
-    const pct = waterStatus.moisturePct;
-    const color = pct>60 ? 'var(--accent)' : pct>30 ? 'var(--warn)' : 'var(--danger)';
-    moistureBar = `
-      <div class="moisture-wrap">
-        <span class="moisture-label">Feuchtigkeit</span>
-        <div class="moisture-track">
-          <div class="moisture-fill" style="width:${{pct}}%;background:${{color}}"></div>
+    const wPct = waterStatus.moisturePct;
+    const fPct = fertilizeStatus ? fertilizeStatus.moisturePct : null;
+    progressBars = `
+      <div class="care-progress-wrap">
+        <div class="care-progress-row">
+          <span class="care-progress-icon">💧</span>
+          <div class="care-progress-track">
+            <div class="care-progress-fill water" style="width:${{wPct}}%"></div>
+          </div>
+          <span class="care-progress-pct">${{wPct}}%</span>
         </div>
-        <span style="font-size:11px;font-weight:600;color:var(--muted);min-width:36px;text-align:right;">${{pct}}%</span>
+        ${{fPct !== null ? `
+        <div class="care-progress-row">
+          <span class="care-progress-icon">🌿</span>
+          <div class="care-progress-track">
+            <div class="care-progress-fill fertilize" style="width:${{fPct}}%"></div>
+          </div>
+          <span class="care-progress-pct">${{fPct}}%</span>
+        </div>` : ''}}
       </div>
     `;
   }}
 
-  // Action buttons
+  // Plant thumbnail
+  const imgUrl = getPlantImageUrl(p.name);
+  const thumbHTML = `
+    <div class="care-card-thumb">
+      <img src="${{imgUrl}}" style="width:100%;height:100%;object-fit:cover;"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="care-card-thumb-emoji" style="display:none">${{p.emoji}}</div>
+    </div>
+  `;
+
   const waterBtn = waterStatus
     ? `<button class="care-btn water" onclick="doWater(${{plantIdx}})">💧 Gießen</button>`
     : "";
@@ -1927,14 +2501,14 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
 
   return `
     <div class="${{cardClass}}">
-      <div class="care-card-emoji">${{p.emoji}}</div>
+      ${{thumbHTML}}
       <div class="care-card-info">
         <div class="care-card-name">${{p.name}}</div>
         <div class="care-card-meta">
           ${{waterChip}}${{fertChip}}
         </div>
-        ${{moistureBar}}
-        <div style="font-size:11px;color:var(--muted);margin-top:6px;display:flex;gap:16px;flex-wrap:wrap;">
+        ${{progressBars}}
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;display:flex;gap:16px;flex-wrap:wrap;">
           <span>💧 ${{lastW}}</span>
           ${{fertilizeStatus?`<span>🌿 ${{lastF}}</span>`:''}}
         </div>
@@ -1947,104 +2521,11 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
   `;
 }}
 
-function renderCare() {{
-  const overdueWater = [];
-  const soonWater = [];
-  const overdueFert = [];
-  const soonFert = [];
-  const now = new Date();
-  const in3days = new Date(now.getTime() + 3*24*3600*1000);
-
-  plants.forEach((p, i) => {{
-    const ws = getCareStatus(i, 'water');
-    const fs = getCareStatus(i, 'fertilize');
-    const wOverdue = ws && ws.overdueDays > 0;
-    const fOverdue = fs && fs.overdueDays > 0;
-    const wSoon = ws && !wOverdue && ws.nextDate <= in3days;
-    const fSoon = fs && !fOverdue && fs.nextDate <= in3days;
-
-    if(wOverdue || fOverdue) overdueWater.push({{idx:i, ws, fs}});
-    else if(wSoon || fSoon) soonWater.push({{idx:i, ws, fs}});
-  }});
-
-  // Count due items
-  const dueCount = overdueWater.length;
-  const soonCount = soonWater.length;
-  $("care-sub-label").textContent =
-    `${{plants.length}} Pflanzen · ${{dueCount}} fällig · ${{soonCount}} in den nächsten 3 Tagen`;
-
-  // Section: Overdue / Due Today
-  const overdueSection = $("care-overdue-section");
-  if(overdueWater.length > 0) {{
-    const cardsHTML = overdueWater.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("");
-    overdueSection.innerHTML = `
-      <div class="care-section-title">
-        ⚠️ Fällig & Überfällig
-        <span class="care-badge">${{overdueWater.length}} Pflanze${{overdueWater.length!==1?'n':''}}</span>
-      </div>
-      ${{cardsHTML}}
-    `;
-  }} else {{
-    overdueSection.innerHTML = `
-      <div class="care-section-title">⚠️ Fällig & Überfällig <span class="care-badge ok">Alles erledigt ✓</span></div>
-      <div class="care-empty"><div class="ce-icon">🎉</div><p>Alle Pflanzen sind versorgt!<br>Gute Arbeit.</p></div>
-    `;
-  }}
-
-  // Section: Coming up (next 3 days)
-  const soonSection = $("care-soon-section");
-  if(soonWater.length > 0) {{
-    const cardsHTML = soonWater.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("");
-    soonSection.innerHTML = `
-      <div class="care-section-title">
-        📅 In den nächsten 3 Tagen
-        <span class="care-badge warn">${{soonWater.length}} Pflanze${{soonWater.length!==1?'n':''}}</span>
-      </div>
-      ${{cardsHTML}}
-    `;
-  }} else {{
-    soonSection.innerHTML = ``;
-  }}
-
-  // Section: History
-  const histSection = $("care-history-section");
-  if(careHistory.length > 0) {{
-    const entries = careHistory.slice(0,20).map(h => {{
-      const icon = h.type==='water' ? '💧' : '🌿';
-      const label = h.type==='water' ? 'gegossen' : 'gedüngt';
-      return `
-        <div class="history-entry">
-          <span class="history-icon">${{icon}}</span>
-          <span class="history-text">${{h.emoji}} ${{h.name}} ${{label}}</span>
-          <span class="history-time">${{formatAbsDate(h.time)}}</span>
-        </div>
-      `;
-    }}).join("");
-
-    histSection.innerHTML = `
-      <div class="care-history">
-        <div class="care-history-header">
-          📋 Pflege-Historie
-          <span style="font-family:'DM Sans';font-size:12px;font-weight:500;color:var(--muted);margin-left:auto;">${{careHistory.length}} Einträge</span>
-        </div>
-        ${{entries}}
-      </div>
-    `;
-  }} else {{
-    histSection.innerHTML = `
-      <div class="care-history">
-        <div class="care-history-header">📋 Pflege-Historie</div>
-        <div style="padding:24px;text-align:center;color:var(--muted);font-size:14px;font-weight:500;">
-          Noch keine Aktionen aufgezeichnet.
-        </div>
-      </div>
-    `;
-  }}
-}}
-
 // ============================================================
 // BOOT
 // ============================================================
+// Initialize subtab visibility
+switchCareSubtab('calendar');
 loadPlants();
 </script>
 </body>
