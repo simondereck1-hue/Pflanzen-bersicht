@@ -1,18 +1,17 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import json, math
-import pandas as pd
 
 # ============================================================
 # KONFIGURATION
 # ============================================================
-st.set_page_config(layout="wide", page_title="Plant Management System", page_icon="🌿")
+st.set_page_config(layout="wide", page_title="Pflanzen-Planer Pro", page_icon="🌿")
 
 st.markdown("""
 <style>
   #MainMenu, header, footer { visibility: hidden; }
   .block-container { padding: 0 !important; max-width: 100% !important; }
-  .stApp { background: #0D1117; }
+  .stApp { background: #FCFAF7; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -140,173 +139,155 @@ html_app = f"""<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-/* ── DATABASE DARK THEME TOKENS ── */
+/* ── TOKENS (Biophilic Palette) ── */
 :root {{
-  --bg: #0D1117;
-  --surface: #161B22;
-  --surface-2: #21262D;
-  --surface-3: #30363D;
-  --border: rgba(48, 54, 61, 0.8);
-  --border-2: rgba(48, 54, 61, 1);
-  --accent: #3FB950;
-  --accent-dim: rgba(63, 185, 80, 0.12);
-  --accent-glow: rgba(63, 185, 80, 0.3);
-  --accent-dark: #2EA043;
-  --warn: #D29922;
-  --warn-dim: rgba(210, 153, 34, 0.12);
-  --warn-bright: #E3B341;
-  --danger: #F85149;
-  --danger-dim: rgba(248, 81, 73, 0.12);
-  --danger-bright: #FF6B6B;
-  --blue: #58A6FF;
-  --blue-dim: rgba(88, 166, 255, 0.12);
-  --purple: #BC8CFF;
-  --text: #E6EDF3;
-  --text-2: #8B949E;
-  --text-3: #6E7681;
-  --r: 8px; --rs: 6px; --rx: 12px;
-  --transition: 0.2s ease;
-  --sidebar-w: 320px;
-  --header-h: 56px; --tab-h: 48px;
-  --font-mono: 'JetBrains Mono', monospace;
-  --font-sans: 'Inter', sans-serif;
+  --bg: #FCFAF7;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-solid: #FFFFFF;
+  --surface-2: #F1F8E9;
+  --surface-3: #E8F5E9;
+  --border: rgba(45, 71, 57, 0.08);
+  --border-2: rgba(45, 71, 57, 0.15);
+  --accent: #7CB342;
+  --accent-dim: rgba(124, 179, 66, 0.15);
+  --accent-glow: rgba(124, 179, 66, 0.35);
+  --accent-dark: #558B2F;
+  --warn: #E2A76F;
+  --warn-dim: rgba(226, 167, 111, 0.15);
+  --danger: #E57373;
+  --danger-dim: rgba(229, 115, 115, 0.15);
+  --dli-color: #5C9BD6;
+  --dli-dim: rgba(92, 155, 214, 0.15);
+  --text: #2D4739;
+  --muted: #688E7B;
+  --muted2: #9EB5A8;
+  --r: 16px; --rs: 12px; --rx: 24px;
+  --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sidebar-w: 340px;
+  --header-h: 68px; --tab-h: 56px;
 }}
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
 html,body{{width:100%;height:100%;overflow:hidden}}
 body{{
-  font-family: var(--font-sans);
+  font-family:'DM Sans',sans-serif;
   background: var(--bg);
-  color: var(--text);
-  display:flex;flex-direction:column;
-  font-size: 13px;
+  background-image: radial-gradient(circle at 0% 0%, rgba(241, 248, 233, 0.8) 0%, transparent 40%),
+                    radial-gradient(circle at 100% 100%, rgba(232, 245, 233, 0.8) 0%, transparent 40%);
+  color:var(--text);display:flex;flex-direction:column;
 }}
 button{{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}}
 input,select{{font-family:inherit}}
-::-webkit-scrollbar{{width:6px;height:6px}}
-::-webkit-scrollbar-track{{background:var(--surface)}}
-::-webkit-scrollbar-thumb{{background:var(--surface-3);border-radius:3px}}
-::-webkit-scrollbar-thumb:hover{{background:#484F58}}
 
 /* ── HEADER ── */
 #header{{
   height:var(--header-h);background:var(--surface);
-  border-bottom:1px solid var(--border-2);
-  display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:200;
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+  box-shadow: 0 4px 30px rgba(45, 71, 57, 0.04);
+  display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;z-index:200;
 }}
-.logo{{font-family:var(--font-mono);font-weight:700;font-size:15px;color:var(--accent);letter-spacing:-.3px;display:flex;align-items:center;gap:8px;}}
-.logo-tag{{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--accent-dim);border:1px solid var(--accent-glow);color:var(--accent);font-weight:600;letter-spacing:.05em;}}
-.header-sep{{width:1px;height:24px;background:var(--border-2);margin:0 4px;}}
-.header-meta{{display:flex;align-items:center;gap:12px;margin-left:auto}}
+.logo{{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--accent);letter-spacing:-.5px}}
+.logo-sep{{color:var(--border-2);font-size:20px;font-weight:300;}}
+.header-meta{{display:flex;align-items:center;gap:14px;margin-left:auto}}
 .sun-info{{
-  display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:var(--text-2);
-  background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
-  padding:5px 12px;font-family:var(--font-mono);
+  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text);
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:99px;
+  padding:6px 16px;box-shadow: 0 2px 10px rgba(45, 71, 57, 0.03);
 }}
-.sun-dot{{width:7px;height:7px;border-radius:50%;background:var(--warn-bright);box-shadow:0 0 8px var(--warn);flex-shrink:0}}
-.status-wrap{{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-2);font-weight:500;font-family:var(--font-mono);}}
-.sdot{{width:7px;height:7px;border-radius:50%;background:var(--text-3);transition:background .3s}}
-.sdot.ok{{background:var(--accent);box-shadow:0 0 8px var(--accent-dark)}}
-.sdot.syncing{{background:var(--blue);animation:sdot-blink 1s infinite;}}
-@keyframes sdot-blink{{0%,100%{{opacity:1}}50%{{opacity:.3}}}}
+.sun-dot{{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 10px var(--warn);flex-shrink:0}}
+.status-wrap{{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:500;}}
+.sdot{{width:8px;height:8px;border-radius:50%;background:var(--muted2);transition:background .3s}}
+.sdot.ok{{background:var(--accent);box-shadow:0 0 10px var(--accent)}}
 
 /* ── TABS ── */
 #tabs{{
-  height:var(--tab-h);background:var(--surface);
-  border-bottom:1px solid var(--border-2);
-  display:flex;align-items:center;padding:0 20px;gap:2px;flex-shrink:0;z-index:150;
+  height:var(--tab-h);background:transparent;
+  display:flex;align-items:center;justify-content:flex-start;padding:0 24px;gap:10px;flex-shrink:0;z-index:150;
+  margin-top: 12px;
 }}
 .tab{{
-  padding:8px 18px;font-size:13px;font-weight:500;color:var(--text-2);
-  border-radius:6px;cursor:pointer;
-  transition:all var(--transition);display:flex;align-items:center;gap:7px;
-  position:relative;
+  padding:12px 24px;font-size:14px;font-weight:600;color:var(--muted);
+  border-radius:99px;cursor:pointer;
+  background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border:1px solid var(--border);transition:all var(--transition);
+  box-shadow: 0 2px 10px rgba(45, 71, 57, 0.02);
 }}
-.tab:hover{{color:var(--text);background:var(--surface-2);}}
-.tab.active{{color:var(--text);background:var(--surface-2);}}
-.tab.active::after{{content:'';position:absolute;bottom:-9px;left:0;right:0;height:2px;background:var(--accent);border-radius:1px 1px 0 0;}}
-.tab-badge{{
-  font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;
-  background:var(--danger-dim);color:var(--danger-bright);border:1px solid rgba(248,81,73,0.25);
-  font-family:var(--font-mono);
-}}
-.tab-badge.warn{{background:var(--warn-dim);color:var(--warn-bright);border-color:rgba(210,153,34,0.25);}}
-.tab-badge.ok{{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-glow);display:none;}}
+.tab:hover{{color:var(--text);background:rgba(255, 255, 255, 0.9);transform:translateY(-2px);box-shadow: 0 6px 16px rgba(45, 71, 57, 0.05);}}
+.tab.active{{color:var(--text);background:var(--surface-solid);border-color:var(--accent);box-shadow: 0 4px 16px var(--accent-dim);}}
+.tab-icon{{margin-right:8px;font-size:16px;}}
 
 /* ── MAIN ── */
-#main{{display:flex;flex:1;overflow:hidden;position:relative;background:var(--bg);}}
+#main{{display:flex;flex:1;overflow:hidden;position:relative;padding:0 16px 16px 16px;gap:16px;}}
 
 /* ── SIDEBARS ── */
 #left-sidebar, #right-sidebar{{
   width:var(--sidebar-w);background:var(--surface);
-  border-right:1px solid var(--border-2);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border:1px solid rgba(255,255,255,0.6);
+  border-radius: var(--rx);
+  box-shadow: 0 12px 40px rgba(45, 71, 57, 0.05);
   display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
 }}
-#right-sidebar{{border-right:none;border-left:1px solid var(--border-2);}}
 #left-sidebar.hidden, #right-sidebar.hidden{{display:none}}
 
 .sidebar-header{{
-  padding:14px 16px 12px;font-weight:600;font-size:12px;
-  color:var(--text-2);letter-spacing:.06em;text-transform:uppercase;
+  padding:20px 20px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  color:var(--text);letter-spacing:.02em;
   border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px;
 }}
-.sidebar-header span{{flex:1;color:var(--text)}}
-.sb-count{{
-  font-size:11px;padding:2px 8px;border-radius:99px;
-  background:var(--surface-2);border:1px solid var(--border);
-  color:var(--text-2);font-family:var(--font-mono);
-}}
+.sidebar-header span{{flex:1}}
 .inv-search{{
-  margin:12px;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border-2);
-  border-radius:var(--r);color:var(--text);font-size:13px;width:calc(100% - 24px);
-  transition: border-color .2s, box-shadow .2s;
+  margin:16px;padding:10px 16px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-size:14px;width:calc(100% - 32px);
+  box-shadow: inset 0 2px 4px rgba(45,71,57,0.02); transition: border-color .3s;
 }}
-.inv-search::placeholder{{color:var(--text-3)}}
+.inv-search::placeholder{{color:var(--muted2)}}
 .inv-search:focus{{outline:none;border-color:var(--accent);box-shadow: 0 0 0 3px var(--accent-dim);}}
 
-.inv-group{{padding:4px 0}}
+.inv-group{{padding:12px 0 4px 0}}
 .inv-group-label{{
-  padding:8px 16px 6px;font-size:11px;font-weight:600;color:var(--text-3);
-  text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:6px;
+  padding:4px 20px 8px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;
 }}
-.inv-group-label::after{{content:'';flex:1;height:1px;background:var(--border);margin-left:4px;}}
 .inv-item{{
-  display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;
-  transition:all var(--transition);user-select:none;
+  display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;
+  transition:all var(--transition);user-select:none; border-left: 3px solid transparent;
 }}
-.inv-item:hover{{background:var(--surface-2);}}
-.inv-item.dragging-source{{opacity:.3; transform: scale(0.98);}}
-.inv-item.selected{{background:var(--accent-dim);}}
-.inv-item.placed-elsewhere{{opacity:.55}}
-.inv-emoji{{font-size:18px;width:26px;text-align:center}}
-.inv-name{{font-size:13px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}}
+.inv-item:hover{{background:rgba(255,255,255,0.5);}}
+.inv-item.dragging-source{{opacity:.4; transform: scale(0.95);}}
+.inv-item.selected{{background:var(--surface-solid);border-left:3px solid var(--accent);box-shadow: 0 4px 12px rgba(45,71,57,0.03);}}
+.inv-item.placed-elsewhere{{opacity:.6}}
+.inv-emoji{{font-size:20px;width:28px;text-align:center;background:var(--surface-2);border-radius:8px;padding:4px;}}
+.inv-name{{font-size:14px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 .inv-badge{{
-  font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;
-  background:var(--surface-2);color:var(--text-3);border:1px solid var(--border);
-  font-family:var(--font-mono);white-space:nowrap
+  font-size:11px;padding:4px 10px;border-radius:99px;font-weight:600;
+  background:var(--surface-3);color:var(--muted);white-space:nowrap
 }}
-.inv-badge.placed-badge{{background:var(--accent-dim);border-color:var(--accent-glow);color:var(--accent)}}
+.inv-badge.placed-badge{{background:var(--surface-solid);border: 1px solid var(--accent-glow);color:var(--accent)}}
 .inv-floor-switcher{{
-  margin:auto 12px 12px;padding:4px;
-  background:var(--surface-2);border:1px solid var(--border-2);border-radius:var(--rx);
-  display:flex;gap:3px;flex-shrink:0;
+  margin:auto 16px 16px;padding:6px;
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  display:flex;gap:4px;flex-shrink:0; box-shadow: 0 4px 16px rgba(45,71,57,0.03);
 }}
 .floor-btn{{
-  flex:1;padding:8px 6px;font-size:12px;font-weight:600;
-  border-radius:8px;transition:all var(--transition);color:var(--text-2);font-family:var(--font-mono);
+  flex:1;padding:10px 8px;font-size:13px;font-weight:600;
+  border-radius:var(--r);transition:all var(--transition);color:var(--muted)
 }}
-.floor-btn:hover{{background:var(--surface-3);color:var(--text)}}
-.floor-btn.active{{background:var(--accent);color:#0D1117;box-shadow:0 2px 8px var(--accent-dim);}}
+.floor-btn:hover{{background:var(--surface-2);color:var(--text)}}
+.floor-btn.active{{background:var(--accent);color:#fff;box-shadow:0 4px 12px var(--accent-glow);}}
 
 /* ── MAP AREA ── */
 #map-area{{
-  flex:1;position:relative;overflow:hidden;background:var(--bg);
+  flex:1;position:relative;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 50%,rgba(124,179,66,.05) 0%,transparent 70%);
+  border-radius: var(--rx);
+  box-shadow: inset 0 0 30px rgba(45,71,57,0.02);
 }}
 #map-canvas{{
   position:absolute;top:50%;left:50%;
   transform:translate(-50%,-50%);
-  border-radius: 8px;
+  border-radius: 12px;
 }}
 #floor-img{{
   position:absolute;inset:0;width:100%;height:100%;
@@ -314,27 +295,31 @@ input,select{{font-family:inherit}}
 }}
 #light-canvas{{
   position:absolute;inset:0;width:100%;height:100%;
-  pointer-events:none;opacity:.65; mix-blend-mode: screen;
+  pointer-events:none;opacity:.65; mix-blend-mode: multiply;
 }}
 #map-canvas.drag-over{{
-  outline:2px dashed var(--accent);outline-offset:4px; border-radius: 10px;
+  outline:3px dashed var(--accent);outline-offset:8px; border-radius: 16px;
+  background: rgba(124,179,66,0.05);
 }}
 
 /* DLI Toggle */
 .dli-toggle-wrap{{
-  position:absolute;top:14px;right:14px;z-index:100;
+  position:absolute;top:16px;right:16px;z-index:100;
   display:flex;gap:8px;align-items:center;
-  background:var(--surface);border:1px solid var(--border-2);border-radius:8px;padding:6px 12px;
+  background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);
+  border:1px solid var(--border);border-radius:99px;padding:6px 14px;
+  box-shadow:0 4px 16px rgba(45,71,57,0.06);
 }}
-.dli-toggle-label{{font-size:11px;font-weight:600;color:var(--text-2);font-family:var(--font-mono);}}
+.dli-toggle-label{{font-size:12px;font-weight:600;color:var(--muted)}}
 .dli-toggle{{
-  width:34px;height:18px;border-radius:9px;background:var(--surface-3);
+  width:36px;height:20px;border-radius:10px;background:var(--muted2);
   position:relative;cursor:pointer;transition:background .3s;border:none;
 }}
-.dli-toggle.on{{background:var(--blue);}}
+.dli-toggle.on{{background:var(--dli-color);}}
 .dli-toggle::after{{
-  content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;
+  content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;
   border-radius:50%;background:#fff;transition:transform .3s;
+  box-shadow:0 1px 4px rgba(0,0,0,0.15);
 }}
 .dli-toggle.on::after{{transform:translateX(16px);}}
 
@@ -346,518 +331,485 @@ input,select{{font-family:inherit}}
 }}
 .plant-pin:hover{{z-index:50;}}
 .plant-pin.dragging{{cursor:grabbing;z-index:100;}}
-.plant-pin.active .pin-bubble{{background:var(--surface-2);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim), 0 6px 20px rgba(0,0,0,0.5);transform:scale(1.12);}}
+.plant-pin.active .pin-bubble{{background:var(--surface-solid);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim), 0 8px 24px rgba(45,71,57,0.1);transform:scale(1.15);}}
 .plant-pin.highlight-pulse .pin-bubble{{animation:highlightPulse 1.5s ease-in-out 3}}
-@keyframes highlightPulse{{0%,100%{{box-shadow:0 0 0 0 var(--accent-glow)}}50%{{box-shadow:0 0 0 14px rgba(63,185,80,0)}}}}
+@keyframes highlightPulse{{0%,100%{{box-shadow:0 0 0 0 var(--accent-glow)}}50%{{box-shadow:0 0 0 16px rgba(124,179,66,0)}}}}
 .pin-bubble{{
-  width:42px;height:42px;border-radius:50%;background:var(--surface);
-  border:2px solid var(--border-2);display:flex;align-items:center;justify-content:center;
-  font-size:20px;transition:transform 0.3s ease, box-shadow 0.3s ease;
-  box-shadow:0 4px 12px rgba(0,0,0,0.4);
+  width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.9); backdrop-filter:blur(4px);
+  border:2px solid var(--accent-glow);display:flex;align-items:center;justify-content:center;
+  font-size:22px;transition:transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s;
+  box-shadow:0 4px 16px rgba(45,71,57,0.08);
 }}
-.plant-pin:hover .pin-bubble{{transform:scale(1.15);box-shadow:0 6px 20px rgba(63,185,80,0.2);border-color:var(--accent);}}
-.plant-pin.dragging .pin-bubble{{transform:scale(1.08) translateY(-4px);}}
-.pin-indicator{{width:8px;height:8px;border-radius:50%;margin-top:4px;background:var(--text-3);transition:background .3s;border:1px solid var(--bg);}}
-.pin-indicator.ideal{{background:var(--accent);}}
-.pin-indicator.ok{{background:var(--warn-bright);}}
-.pin-indicator.bad{{background:var(--danger-bright);}}
+.plant-pin:hover .pin-bubble{{transform:scale(1.2);box-shadow:0 8px 24px rgba(124,179,66,0.25);border-color:var(--accent);}}
+.plant-pin.dragging .pin-bubble{{transform:scale(1.1) translateY(-5px);box-shadow:0 12px 30px rgba(124,179,66,0.3);}}
+.pin-indicator{{width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--muted);transition:background .3s;border:2px solid #fff;}}
+.pin-indicator.ideal{{background:var(--accent);box-shadow:0 0 8px var(--accent)}}
+.pin-indicator.ok{{background:var(--warn);box-shadow:0 0 8px var(--warn)}}
+.pin-indicator.bad{{background:var(--danger);box-shadow:0 0 8px var(--danger)}}
 .pin-label{{
-  font-size:10px;font-weight:600;color:var(--text);margin-top:3px;white-space:nowrap;
+  font-size:11px;font-weight:600;color:var(--text);margin-top:4px;white-space:nowrap;
   max-width:80px;overflow:hidden;text-overflow:ellipsis;text-align:center;
-  background:rgba(22,27,34,0.9);padding:2px 7px;border-radius:4px;
-  border:1px solid var(--border);
+  background:rgba(255,255,255,0.8);padding:3px 8px;border-radius:8px;backdrop-filter:blur(4px);
+  box-shadow:0 2px 8px rgba(45,71,57,0.05);
 }}
 .pin-light-badge{{
-  font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;margin-top:2px;
-  background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);
-  font-family:var(--font-mono);
+  font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;margin-top:4px;
+  background:var(--surface-solid);color:var(--muted);font-variant-numeric:tabular-nums;
+  box-shadow:0 2px 6px rgba(45,71,57,0.04);
 }}
-
-/* ── FULL-SCREEN VIEWS ── */
-#library-view, #care-view{{
-  position:absolute;inset:0;background:var(--bg);
-  display:none;flex-direction:column;overflow:hidden;z-index:90;
-}}
-#library-view.active, #care-view.active{{display:flex;}}
-
-/* ── LIBRARY VIEW ── */
-.lib-toolbar{{
-  padding:16px 20px 12px;background:var(--surface);border-bottom:1px solid var(--border-2);
-  display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap;
-}}
-.lib-toolbar-title{{
-  font-weight:700;font-size:15px;color:var(--text);margin-right:4px;
-}}
-.lib-toolbar-sub{{font-size:12px;color:var(--text-3);font-family:var(--font-mono);}}
-.lib-filters{{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap;}}
-.lib-search{{
-  padding:7px 12px;background:var(--surface-2);border:1px solid var(--border-2);
-  border-radius:var(--r);color:var(--text);font-size:13px;min-width:180px;
-  transition:border-color .2s;
-}}
-.lib-search::placeholder{{color:var(--text-3)}}
-.lib-search:focus{{outline:none;border-color:var(--accent);}}
-.lib-select{{
-  padding:7px 10px;background:var(--surface-2);border:1px solid var(--border-2);
-  border-radius:var(--r);color:var(--text);font-size:12px;cursor:pointer;
-  transition:border-color .2s;appearance:none;padding-right:24px;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238B949E'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 8px center;
-}}
-.lib-select:focus{{outline:none;border-color:var(--accent);}}
-.lib-sort-btn{{
-  padding:7px 12px;background:var(--surface-2);border:1px solid var(--border-2);
-  border-radius:var(--r);color:var(--text-2);font-size:12px;cursor:pointer;
-  transition:all var(--transition);font-weight:500;white-space:nowrap;
-}}
-.lib-sort-btn.active{{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}}
-.lib-sort-btn:hover{{border-color:var(--text-3);color:var(--text);}}
-.lib-results-bar{{
-  padding:8px 20px;background:var(--surface);border-bottom:1px solid var(--border);
-  font-size:11px;color:var(--text-3);font-family:var(--font-mono);display:flex;align-items:center;gap:12px;flex-shrink:0;
-}}
-.lib-filter-tag{{
-  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:4px;
-  background:var(--accent-dim);border:1px solid var(--accent-glow);color:var(--accent);
-  font-size:10px;font-weight:600;cursor:pointer;transition:all var(--transition);
-}}
-.lib-filter-tag:hover{{background:rgba(248,81,73,0.1);border-color:rgba(248,81,73,0.3);color:var(--danger-bright);}}
-.lib-grid{{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-  gap:1px;background:var(--border-2);
-  overflow-y:auto;flex:1;
-}}
-.lib-card{{
-  background:var(--surface);display:flex;flex-direction:column;
-  transition:background var(--transition);cursor:pointer;
-}}
-.lib-card:hover{{background:var(--surface-2);}}
-.lib-card-img{{
-  position:relative;height:160px;overflow:hidden;background:var(--surface-2);flex-shrink:0;
-}}
-.lib-card-img img{{width:100%;height:100%;object-fit:cover;opacity:.8;transition:opacity var(--transition);}}
-.lib-card:hover .lib-card-img img{{opacity:.95;}}
-.lib-card-img-fallback{{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:52px;opacity:.3;}}
-.lib-card-img-overlay{{
-  position:absolute;bottom:0;left:0;right:0;
-  background:linear-gradient(transparent,rgba(13,17,23,0.95));padding:16px 14px 12px;
-}}
-.lib-card-name{{font-weight:700;font-size:14px;color:var(--text)}}
-.lib-card-botanical{{font-size:11px;color:var(--text-2);font-style:italic;margin-top:2px}}
-.lib-card-body{{padding:14px;flex:1;display:flex;flex-direction:column;gap:10px;}}
-.lib-card-top-row{{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}}
-.lib-status-chip{{
-  font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;
-  background:var(--surface-2);color:var(--text-3);border:1px solid var(--border);
-}}
-.lib-status-chip.ideal{{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-glow);}}
-.lib-status-chip.ok{{background:var(--warn-dim);color:var(--warn-bright);border-color:rgba(210,153,34,0.3);}}
-.lib-status-chip.bad{{background:var(--danger-dim);color:var(--danger-bright);border-color:rgba(248,81,73,0.3);}}
-.lib-card-loc{{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-2);font-family:var(--font-mono);}}
-.lib-card-loc-dot{{width:6px;height:6px;border-radius:50%;background:var(--text-3);}}
-.lib-card-loc-dot.placed{{background:var(--accent);}}
-
-/* Metrics row in library card */
-.lib-metrics-row{{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
-}}
-.lib-metric{{
-  background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
-  padding:8px 10px;
-}}
-.lib-metric-lbl{{font-size:10px;color:var(--text-3);font-weight:500;margin-bottom:3px;}}
-.lib-metric-val{{font-size:15px;font-weight:700;color:var(--text);font-family:var(--font-mono);display:flex;align-items:baseline;gap:3px;}}
-.lib-metric-unit{{font-size:10px;color:var(--text-3);font-weight:500;}}
-
-/* Light bar in library */
-.lib-light-row{{display:flex;align-items:center;gap:8px;}}
-.lib-light-bar-wrap{{flex:1}}
-.lib-light-bar-track{{height:4px;background:var(--surface-3);border-radius:2px;overflow:hidden;}}
-.lib-light-bar-fill{{height:100%;border-radius:2px;transition:width 1s ease;}}
-.lib-light-labels{{display:flex;justify-content:space-between;font-size:10px;color:var(--text-3);margin-top:3px;font-family:var(--font-mono);}}
-.lib-light-score{{font-size:13px;font-weight:700;font-family:var(--font-mono);min-width:36px;text-align:right;}}
-.lib-divider{{height:1px;background:var(--border);margin:2px 0;}}
-.lib-besonderheit{{
-  background:var(--surface-2);border:1px solid var(--border);border-left:2px solid var(--purple);
-  border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text-2);line-height:1.5;
-}}
-.lib-besonderheit-lbl{{font-size:10px;font-weight:700;color:var(--purple);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;}}
-.lib-humidity-row{{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);}}
-.lib-humidity-badge{{background:var(--blue-dim);border:1px solid rgba(88,166,255,0.25);color:var(--blue);padding:1px 7px;border-radius:4px;font-size:11px;font-family:var(--font-mono);font-weight:600;}}
-.lib-card-footer{{
-  padding:10px 14px;border-top:1px solid var(--border);flex-shrink:0;
-  display:flex;gap:8px;
-}}
-.show-on-map-btn{{
-  flex:1;padding:7px 12px;font-size:12px;font-weight:600;
-  border:1px solid var(--border-2);border-radius:6px;
-  background:var(--surface-2);color:var(--text-2);
-  transition:all var(--transition);
-}}
-.show-on-map-btn:hover{{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}}
-.show-on-map-btn.care-btn-lib{{border-color:var(--blue-dim);color:var(--blue);}}
-.show-on-map-btn.care-btn-lib:hover{{border-color:var(--blue);background:var(--blue-dim);}}
-.lib-no-results{{
-  grid-column:1/-1;text-align:center;padding:60px;color:var(--text-3);
-}}
-.lib-no-results-icon{{font-size:40px;margin-bottom:12px;opacity:.4;}}
 
 /* ── RIGHT SIDEBAR (Detail) ── */
-#rsb-empty{{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-3);padding:24px;text-align:center}}
-#rsb-empty .empty-icon{{font-size:44px;opacity:.3;}}
-#rsb-detail{{flex:1;display:none;flex-direction:column;overflow-y:auto;}}
+#rsb-empty{{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);padding:32px;text-align:center}}
+#rsb-empty .empty-icon{{font-size:54px;opacity:.5;filter:grayscale(0.5);}}
+#rsb-detail{{flex:1;display:none;flex-direction:column;overflow-y:auto;padding:24px;gap:20px}}
 #rsb-detail.visible{{display:flex}}
+#rsb-detail::-webkit-scrollbar{{width:6px}}
+#rsb-detail::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:3px}}
 
+/* Detail Plant Image */
 .detail-img-wrap{{
-  position:relative;height:160px;overflow:hidden;background:var(--surface-2);flex-shrink:0;
+  width:100%;height:160px;border-radius:var(--rx);overflow:hidden;position:relative;
+  background:var(--surface-2);border:1px solid var(--border);
+  box-shadow:0 4px 16px rgba(45,71,57,0.04);
 }}
-.detail-img-wrap img{{width:100%;height:100%;object-fit:cover;opacity:.85;}}
-.detail-img-overlay{{
-  position:absolute;inset:0;background:linear-gradient(transparent 40%,var(--surface) 100%);
+.detail-img-wrap img{{width:100%;height:100%;object-fit:cover;}}
+.detail-img-fallback{{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:64px;opacity:.4;
 }}
-.plant-hdr{{padding:14px 16px 10px;display:flex;gap:12px;align-items:flex-start;}}
-.big-emoji{{font-size:28px;}}
-.plant-hdr-text h2{{font-size:15px;font-weight:700;color:var(--text);line-height:1.3;}}
-.botanical{{font-size:11px;color:var(--text-3);font-style:italic;margin-top:2px;}}
-.plant-hdr-text .coords{{font-size:10px;color:var(--text-3);margin-top:4px;font-family:var(--font-mono);}}
 
-.score-badge{{
-  margin:0 16px 12px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);
-  background:var(--surface-2);display:flex;align-items:center;gap:10px;
+.plant-hdr{{display:flex;align-items:flex-start;gap:16px}}
+.big-emoji{{font-size:42px;flex-shrink:0;line-height:1;background:var(--surface-solid);padding:12px;border-radius:var(--r);box-shadow:0 4px 16px rgba(45,71,57,0.04);}}
+.plant-hdr-text h2{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1.2;color:var(--text);}}
+.plant-hdr-text .botanical{{font-size:12px;color:var(--muted);font-style:italic;margin-top:3px;}}
+.coords-row{{font-size:12px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums;font-weight:500;}}
+.floor-tag{{
+  display:inline-block;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;
+  background:var(--surface-solid);color:var(--text);margin-top:8px;border:1px solid var(--border);
+  box-shadow:0 2px 8px rgba(45,71,57,0.02);
 }}
-.score-badge.ideal{{border-color:rgba(63,185,80,.3);background:rgba(63,185,80,.06);}}
-.score-badge.ok{{border-color:rgba(210,153,34,.3);background:rgba(210,153,34,.06);}}
-.score-badge.bad{{border-color:rgba(248,81,73,.3);background:rgba(248,81,73,.06);}}
-.sc-icon{{font-size:20px;}}
-.sc-text h3{{font-size:13px;font-weight:600;color:var(--text);}}
-.sc-text p{{font-size:11px;color:var(--text-2);margin-top:2px;}}
 
-.light-bar-wrap{{margin:0 16px 12px;}}
-.lbw-label{{display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-bottom:5px;font-family:var(--font-mono);}}
-.lbw-track{{height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden;position:relative;}}
-.lbw-fill{{height:100%;border-radius:3px;transition:width 1s ease;}}
-.lbw-needle{{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--text-3);border-radius:1px;}}
+/* DLI Score Panel */
+.dli-panel{{
+  background:linear-gradient(135deg, rgba(92,155,214,0.08) 0%, rgba(124,179,66,0.06) 100%);
+  border:1px solid rgba(92,155,214,0.25);border-radius:var(--rx);padding:16px;
+  display:flex;flex-direction:column;gap:12px;box-shadow:0 4px 16px rgba(92,155,214,0.06);
+}}
+.dli-panel-title{{font-size:11px;font-weight:700;color:var(--dli-color);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:6px;}}
+.dli-score-row{{display:flex;align-items:baseline;gap:8px;}}
+.dli-score-val{{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--text);}}
+.dli-score-unit{{font-size:13px;color:var(--muted);font-weight:500;}}
+.dli-bar-wrap{{display:flex;flex-direction:column;gap:6px;}}
+.dli-bar-track{{height:8px;border-radius:4px;background:rgba(45,71,57,0.08);position:relative;overflow:hidden;}}
+.dli-bar-fill{{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34,1.56,.64,1);background:linear-gradient(90deg,var(--dli-dim),var(--dli-color));}}
+.dli-bar-labels{{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted);}}
+.dli-live-row{{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.7);border-radius:var(--rs);border:1px solid var(--border);}}
+.dli-live-dot{{width:6px;height:6px;border-radius:50%;background:var(--warn);box-shadow:0 0 6px var(--warn);animation:pulse2 2s infinite;flex-shrink:0;}}
+@keyframes pulse2{{0%,100%{{opacity:1}}50%{{opacity:.4}}}}
+.dli-live-text{{font-size:12px;font-weight:600;color:var(--text);flex:1;}}
+.dli-live-val{{font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;}}
 
-.data-grid{{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 12px;}}
-.dc{{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}}
-.dc-lbl{{font-size:10px;color:var(--text-3);font-weight:500;margin-bottom:4px;}}
-.dc-val{{font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--text);display:flex;align-items:baseline;gap:3px;}}
-.dc-unit{{font-size:10px;color:var(--text-3);font-weight:500;}}
-
-.detail-extra-row{{display:flex;gap:8px;padding:0 16px 8px;align-items:flex-start;}}
-.detail-extra-lbl{{font-size:11px;font-weight:600;color:var(--text-3);min-width:140px;}}
-.detail-extra-val{{font-size:12px;color:var(--text-2);}}
+.score-badge{{border-radius:var(--rx);padding:16px;display:flex;align-items:center;gap:16px;background:var(--surface-solid);box-shadow:0 4px 16px rgba(45,71,57,0.03);}}
+.score-badge .sc-icon{{font-size:28px}}
+.score-badge .sc-text h3{{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}}
+.score-badge .sc-text p{{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}}
+.score-badge.ideal{{border:1px solid var(--accent-glow);background:var(--surface-solid);}}
+.score-badge.ideal .sc-text h3{{color:var(--accent)}}
+.score-badge.ok{{border:1px solid rgba(226,167,111,0.4);background:var(--surface-solid);}}
+.score-badge.ok .sc-text h3{{color:var(--warn)}}
+.score-badge.bad{{border:1px solid rgba(229,115,115,0.4);background:var(--surface-solid);}}
+.score-badge.bad .sc-text h3{{color:var(--danger)}}
 
 .astro-panel{{
-  margin:0 16px 12px;background:var(--surface-2);border:1px solid var(--border);
-  border-radius:8px;padding:12px;
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 16px rgba(45,71,57,0.03);
 }}
-.astro-title{{font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;}}
-.astro-grid{{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;}}
-.astro-cell{{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;}}
-.astro-cell-lbl{{font-size:10px;color:var(--text-3);margin-bottom:3px;}}
-.astro-cell-val{{font-size:16px;font-weight:700;color:var(--text);font-family:var(--font-mono);}}
-.astro-cell-unit{{font-size:11px;color:var(--text-3);}}
-.window-chips{{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}}
-.win-chip{{font-size:10px;padding:2px 8px;border-radius:4px;background:var(--surface);border:1px solid var(--border);color:var(--text-3);font-family:var(--font-mono);}}
-.win-chip.hit{{background:rgba(210,153,34,.1);border-color:rgba(210,153,34,.3);color:var(--warn-bright);}}
+.astro-title{{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}}
+.astro-grid{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+.astro-cell{{background:var(--bg);border-radius:var(--r);padding:12px}}
+.astro-cell-lbl{{font-size:10px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}}
+.astro-cell-val{{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text)}}
+.astro-cell-unit{{font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}}
+.window-chips{{display:flex;gap:6px;flex-wrap:wrap}}
+.win-chip{{
+  font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--bg);
+  border:1px solid var(--border);color:var(--muted);
+}}
+.win-chip.hit{{background:var(--warn-dim);border-color:rgba(226,167,111,0.4);color:#d38e53;}}
 
-.action-row{{display:flex;gap:8px;padding:12px 16px 16px;}}
+.light-bar-wrap{{display:flex;flex-direction:column;gap:10px;background:var(--surface-solid);padding:16px;border-radius:var(--rx);border:1px solid var(--border);box-shadow:0 4px 16px rgba(45,71,57,0.03);}}
+.lbw-label{{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--text)}}
+.lbw-track{{height:12px;border-radius:6px;background:rgba(45,71,57,0.05);position:relative;overflow:hidden}}
+.lbw-fill{{height:100%;border-radius:6px;background:linear-gradient(90deg, var(--accent-glow), var(--accent));transition:width .8s cubic-bezier(.34, 1.56, .64, 1)}}
+.lbw-needle{{position:absolute;top:-2px;bottom:-2px;width:4px;background:#fff;border-radius:2px;box-shadow:0 0 4px rgba(0,0,0,0.2);}}
+
+.data-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
+.dc{{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:0 4px 16px rgba(45,71,57,0.02);}}
+.dc-lbl{{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}}
+.dc-val{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text)}}
+.dc-unit{{font-size:13px;font-weight:500;color:var(--muted);margin-left:4px}}
+/* Extra detail fields (humidity, besonderheit, besprühen) */
+.detail-extra-row{{
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;display:flex;flex-direction:column;gap:4px;
+  box-shadow:0 4px 16px rgba(45,71,57,0.02);
+}}
+.detail-extra-lbl{{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}}
+.detail-extra-val{{font-size:13px;font-weight:500;color:var(--text);line-height:1.5;}}
+
+.action-row{{display:flex;gap:10px;margin-top:8px}}
 .act-btn{{
-  flex:1;padding:9px 14px;font-size:13px;font-weight:600;border-radius:var(--r);
-  border:1px solid var(--border-2);background:var(--surface-2);color:var(--text-2);
-  transition:all var(--transition);
+  flex:1;padding:12px;border-radius:var(--r);font-size:13px;font-weight:600;
+  transition:all var(--transition);border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
+  box-shadow:0 2px 8px rgba(45,71,57,0.02);
 }}
-.act-btn:hover{{background:var(--surface-3);color:var(--text);border-color:var(--text-3);}}
-.act-btn.primary{{border-color:var(--accent-glow);color:var(--accent);background:var(--accent-dim);}}
-.act-btn.primary:hover{{background:rgba(63,185,80,.2);}}
-.act-btn.danger-btn{{border-color:rgba(248,81,73,.3);color:var(--danger);background:var(--danger-dim);}}
-.act-btn.danger-btn:hover{{background:rgba(248,81,73,.2);}}
+.act-btn:hover{{background:var(--bg);transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,71,57,0.05);}}
+.act-btn.primary{{background:var(--accent);border-color:var(--accent);color:#fff;}}
+.act-btn.primary:hover{{background:#6aa335;box-shadow:0 4px 16px var(--accent-glow);}}
+.act-btn.danger-btn{{background:var(--surface-solid);border-color:rgba(229,115,115,0.4);color:var(--danger)}}
+.act-btn.danger-btn:hover{{background:var(--danger-dim);}}
 
-/* DLI detail */
-.dli-detail{{
-  margin:0 16px 12px;background:var(--blue-dim);border:1px solid rgba(88,166,255,0.25);
-  border-radius:8px;padding:12px;
+/* ── LIBRARY VIEW ── */
+#library-view{{display:none;flex:1;overflow-y:auto;padding:24px 32px;flex-direction:column;gap:24px}}
+#library-view.active{{display:flex}}
+#library-view::-webkit-scrollbar{{width:8px}}
+#library-view::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:4px}}
+
+.lib-header{{display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;background:var(--surface);padding:24px;border-radius:var(--rx);border:1px solid var(--border);backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(45,71,57,0.04);}}
+.lib-header h2{{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);}}
+.lib-header-sub{{font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}}
+
+/* Library Filters */
+.lib-filters{{display:flex;gap:12px;margin-left:auto;align-items:center;flex-wrap:wrap;}}
+.lib-search{{
+  padding:10px 16px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:99px;color:var(--text);font-size:14px;width:240px;
+  box-shadow:inset 0 2px 6px rgba(45,71,57,0.02);transition:all .3s;
 }}
-.dli-detail-lbl{{font-size:10px;font-weight:700;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}}
-.dli-bar-wrap{{display:flex;align-items:center;gap:8px;}}
-.dli-bar-track{{flex:1;height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden;}}
-.dli-bar-fill{{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue-dim),var(--blue));transition:width 1s ease;}}
-.dli-score-val{{font-size:16px;font-weight:700;font-family:var(--font-mono);color:var(--blue);}}
+.lib-search:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);}}
+.lib-filter-sel{{
+  padding:10px 16px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:99px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;
+  box-shadow:0 2px 6px rgba(45,71,57,0.02);transition:all .3s;
+}}
+.lib-filter-sel:hover{{border-color:var(--accent-glow);}}
 
-/* ── CARE VIEW ── */
+.lib-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:24px;padding-bottom:32px;}}
+
+/* Premium Library Card */
+.lib-card{{
+  background:var(--surface-solid);border:1px solid rgba(255,255,255,0.8);border-radius:var(--rx);
+  display:flex;flex-direction:column;overflow:hidden;position:relative;
+  transition:all var(--transition); cursor:default;
+  box-shadow:0 8px 24px rgba(45,71,57,0.04);
+}}
+.lib-card:hover{{
+  border-color:var(--accent-glow);
+  box-shadow:0 20px 60px rgba(45,71,57,0.1);
+  transform:translateY(-6px);
+}}
+.lib-card-img{{
+  width:100%;height:180px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,var(--surface-2),var(--surface-3));
+  flex-shrink:0;
+}}
+.lib-card-img img{{
+  width:100%;height:100%;object-fit:cover;transition:transform .6s ease;
+}}
+.lib-card:hover .lib-card-img img{{transform:scale(1.06);}}
+.lib-card-img-fallback{{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  font-size:72px;opacity:.35;
+}}
+.lib-card-img-overlay{{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(to top, rgba(45,71,57,0.6) 0%, transparent 100%);
+  padding:16px;
+}}
+.lib-card-img-overlay .lib-card-name{{
+  font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;
+  text-shadow:0 2px 8px rgba(0,0,0,0.3);
+}}
+.lib-card-img-overlay .lib-card-botanical{{font-size:12px;color:rgba(255,255,255,0.75);font-style:italic;margin-top:2px;}}
+.lib-card-body{{padding:20px;display:flex;flex-direction:column;gap:16px;}}
+
+.lib-card-top-row{{display:flex;align-items:center;gap:12px;}}
+.lib-card-loc{{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);}}
+.lib-card-loc-dot{{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}}
+.lib-card-loc-dot.placed{{background:var(--accent);box-shadow:0 0 6px var(--accent);}}
+
+.lib-light-row{{display:flex;align-items:center;gap:12px;background:var(--bg);padding:12px 16px;border-radius:var(--r);}}
+.lib-light-icon{{font-size:18px;flex-shrink:0}}
+.lib-light-bar-wrap{{flex:1}}
+.lib-light-bar-track{{height:8px;border-radius:4px;background:rgba(45,71,57,0.06);position:relative;overflow:hidden}}
+.lib-light-bar-fill{{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34, 1.56, .64, 1)}}
+.lib-light-labels{{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted);margin-top:6px}}
+.lib-light-score{{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:44px;text-align:right;flex-shrink:0}}
+
+.lib-divider{{height:1px;background:var(--border);margin:0}}
+
+.lib-care-grid{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
+.lib-care-cell{{background:var(--bg);border-radius:var(--rs);padding:10px 14px;display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);}}
+.lib-care-cell-lbl{{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}}
+.lib-care-cell-val{{font-size:15px;font-weight:700;color:var(--text)}}
+.lib-care-cell-unit{{font-size:11px;color:var(--muted);margin-left:3px;font-weight:500}}
+
+.lib-besonderheit{{
+  background:linear-gradient(135deg,rgba(124,179,66,0.04),rgba(92,155,214,0.04));
+  border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;
+  font-size:13px;color:var(--text);line-height:1.5;font-style:italic;
+  border-left:3px solid var(--accent-glow);
+}}
+.lib-besonderheit-lbl{{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;font-style:normal;}}
+
+.lib-humidity-row{{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-weight:500;}}
+.lib-humidity-badge{{
+  padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;
+  background:rgba(92,155,214,0.12);color:var(--dli-color);border:1px solid rgba(92,155,214,0.2);
+}}
+
+.lib-status-chip{{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:600;}}
+.lib-status-chip.ideal{{background:var(--surface-solid);color:var(--accent);border:1px solid var(--accent-glow);box-shadow:0 2px 8px var(--accent-dim);}}
+.lib-status-chip.ok{{background:var(--surface-solid);color:#d38e53;border:1px solid rgba(226,167,111,0.4);box-shadow:0 2px 8px var(--warn-dim);}}
+.lib-status-chip.bad{{background:var(--surface-solid);color:var(--danger);border:1px solid rgba(229,115,115,0.4);box-shadow:0 2px 8px var(--danger-dim);}}
+.lib-status-chip.none{{background:var(--surface-solid);color:var(--muted);border:1px solid var(--border)}}
+
+.lib-card-footer{{display:flex;align-items:center;gap:12px;padding:0 20px 20px;margin-top:auto;}}
+.show-on-map-btn{{
+  flex:1;padding:12px;border-radius:var(--r);font-size:13px;font-weight:600;
+  background:var(--surface-solid);border:1px solid var(--border);color:var(--text);
+  transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);
+}}
+.show-on-map-btn:hover{{background:var(--bg);border-color:var(--accent-glow);color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,71,57,0.05);}}
+
+/* ── PFLEGE-KALENDER VIEW ── */
+#care-view{{display:none;flex:1;overflow-y:auto;padding:24px 32px;flex-direction:column;gap:20px}}
+#care-view.active{{display:flex}}
+#care-view::-webkit-scrollbar{{width:8px}}
+#care-view::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:4px}}
+
 .care-header{{
-  padding:14px 20px 12px;background:var(--surface);border-bottom:1px solid var(--border-2);
-  display:flex;align-items:center;gap:14px;flex-shrink:0;flex-wrap:wrap;
+  display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;
+  background:var(--surface);padding:24px;border-radius:var(--rx);border:1px solid var(--border);
+  backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(45,71,57,0.04);
 }}
-.care-header-title{{font-weight:700;font-size:15px;color:var(--text);}}
-.care-header-sub{{font-size:12px;color:var(--text-3);font-family:var(--font-mono);}}
-.care-header-actions{{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}}
+.care-header h2{{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);}}
+.care-header-sub{{font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}}
+.care-header-actions{{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}}
 .care-mass-btn{{
-  padding:7px 14px;font-size:12px;font-weight:600;border-radius:6px;
-  border:1px solid var(--border-2);background:var(--surface-2);color:var(--text-2);
-  transition:all var(--transition);
+  padding:10px 20px;font-size:13px;font-weight:600;border-radius:99px;
+  border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
+  transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);cursor:pointer;
 }}
-.care-mass-btn:hover{{border-color:var(--text-3);color:var(--text);background:var(--surface-3);}}
-.care-mass-btn.primary{{border-color:var(--accent-glow);color:var(--accent);background:var(--accent-dim);}}
-.care-mass-btn.primary:hover{{background:rgba(63,185,80,.2);}}
-.care-mass-btn.danger{{border-color:rgba(88,166,255,0.3);color:var(--blue);background:var(--blue-dim);}}
+.care-mass-btn:hover{{background:var(--bg);border-color:var(--accent-glow);color:var(--accent);transform:translateY(-1px);}}
+.care-mass-btn.primary{{background:var(--accent);border-color:var(--accent);color:#fff;}}
+.care-mass-btn.primary:hover{{background:#6aa335;box-shadow:0 4px 16px var(--accent-glow);transform:translateY(-1px);}}
 
+/* Care Sub-tabs */
 .care-subtabs{{
-  display:flex;background:var(--surface);border-bottom:1px solid var(--border-2);
-  padding:0 20px;gap:2px;flex-shrink:0;
+  display:flex;gap:8px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:var(--rx);padding:6px;box-shadow:0 4px 16px rgba(45,71,57,0.03);flex-shrink:0;
 }}
 .care-subtab{{
-  padding:8px 16px;font-size:12px;font-weight:500;color:var(--text-2);
-  border-radius:6px;cursor:pointer;transition:all var(--transition);position:relative;
-  display:flex;align-items:center;gap:6px;
+  flex:1;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);
+  border-radius:var(--r);transition:all var(--transition);
 }}
 .care-subtab:hover{{color:var(--text);background:var(--surface-2);}}
-.care-subtab.active{{color:var(--text);}}
-.care-subtab.active::after{{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent);border-radius:1px;}}
+.care-subtab.active{{background:var(--accent);color:#fff;box-shadow:0 4px 12px var(--accent-glow);}}
 
-/* Sync indicator */
-.sync-badge{{
-  font-size:10px;padding:2px 8px;border-radius:4px;font-family:var(--font-mono);font-weight:600;
-  background:var(--accent-dim);border:1px solid var(--accent-glow);color:var(--accent);
-  display:flex;align-items:center;gap:5px;
-}}
-.sync-badge.syncing{{background:var(--blue-dim);border-color:rgba(88,166,255,0.3);color:var(--blue);animation:sdot-blink 1s infinite;}}
-.sync-badge.error{{background:var(--danger-dim);border-color:rgba(248,81,73,0.25);color:var(--danger-bright);}}
+/* Calendar Grid */
+#care-calendar-pane{{display:flex;flex-direction:column;gap:20px;}}
+#care-status-pane{{display:none;flex-direction:column;gap:16px;}}
 
-/* Care panes */
-#care-calendar-pane, #care-status-pane, #care-history-pane{{
-  flex:1;overflow-y:auto;padding:16px 20px;display:none;flex-direction:column;gap:16px;
-}}
-#care-calendar-pane.active, #care-status-pane.active, #care-history-pane.active{{display:flex;}}
-
-/* Calendar */
 .calendar-wrap{{
-  background:var(--surface);border:1px solid var(--border-2);border-radius:var(--rx);overflow:hidden;
-  max-width:900px;
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  overflow:hidden;box-shadow:0 8px 32px rgba(45,71,57,0.04);
 }}
 .calendar-nav{{
-  display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);
-}}
-.calendar-nav-btn{{
-  padding:6px 12px;border-radius:6px;border:1px solid var(--border-2);background:var(--surface-2);
-  color:var(--text-2);font-size:16px;cursor:pointer;transition:all var(--transition);
-}}
-.calendar-nav-btn:hover{{background:var(--surface-3);color:var(--text);}}
-.calendar-nav-title{{flex:1;text-align:center;font-weight:700;font-size:14px;color:var(--text);font-family:var(--font-mono);}}
-.cal-grid{{display:grid;grid-template-columns:repeat(7,1fr);border-top:1px solid var(--border);}}
-.cal-header-row{{
-  display:grid;grid-template-columns:repeat(7,1fr);
+  display:flex;align-items:center;justify-content:space-between;padding:20px 24px;
   border-bottom:1px solid var(--border);
 }}
-.cal-header-cell{{
-  padding:8px 10px;text-align:center;font-size:11px;font-weight:600;
-  color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;background:var(--surface-2);
+.calendar-nav-title{{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);}}
+.calendar-nav-btn{{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--border);
+  background:var(--surface-solid);color:var(--text);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);cursor:pointer;
+}}
+.calendar-nav-btn:hover{{background:var(--surface-2);border-color:var(--accent-glow);transform:scale(1.08);}}
+.cal-grid{{display:grid;grid-template-columns:repeat(7,1fr);}}
+.cal-day-header{{
+  padding:12px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.06em;background:var(--bg);border-bottom:1px solid var(--border);
 }}
 .cal-cell{{
-  padding:8px 10px;min-height:80px;border-right:1px solid var(--border);
-  border-bottom:1px solid var(--border);background:var(--bg);transition:background var(--transition);
+  min-height:90px;padding:10px 8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);
+  position:relative;transition:background .2s;
 }}
 .cal-cell:nth-child(7n){{border-right:none;}}
-.cal-cell.other-month{{opacity:.35;background:var(--surface);}}
-.cal-cell.today{{background:rgba(63,185,80,0.04);}}
+.cal-cell:nth-last-child(-n+7){{border-bottom:none;}}
+.cal-cell.other-month .cal-day-num{{color:var(--muted2);opacity:.5;}}
+.cal-cell.today{{background:linear-gradient(135deg,rgba(124,179,66,0.06),rgba(124,179,66,0.02));}}
 .cal-cell.today .cal-day-num{{
-  background:var(--accent);color:#0D1117;width:24px;height:24px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-mono);
+  background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-weight:700;
+  box-shadow:0 2px 8px var(--accent-glow);
 }}
-.cal-day-num{{font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:4px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);}}
-.cal-events{{display:flex;flex-direction:column;gap:2px;}}
+.cal-day-num{{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;}}
+.cal-events{{display:flex;flex-direction:column;gap:3px;}}
 .cal-event{{
-  font-size:10px;font-weight:600;padding:2px 5px;border-radius:3px;
+  font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }}
-.cal-event.water{{background:var(--blue-dim);color:var(--blue);}}
-.cal-event.fertilize{{background:var(--accent-dim);color:var(--accent);}}
-.cal-event.due-water{{background:rgba(88,166,255,0.2);color:var(--blue);border:1px solid rgba(88,166,255,0.25);}}
-.cal-event.due-fertilize{{background:rgba(63,185,80,0.18);color:var(--accent);border:1px solid var(--accent-glow);}}
+.cal-event.water{{background:rgba(100,181,246,0.15);color:#1565C0;}}
+.cal-event.fertilize{{background:var(--accent-dim);color:var(--accent-dark);}}
+.cal-event.due-water{{background:rgba(100,181,246,0.3);color:#1565C0;border:1px solid rgba(100,181,246,0.4);}}
+.cal-event.due-fertilize{{background:rgba(124,179,66,0.25);color:var(--accent-dark);border:1px solid var(--accent-glow);}}
 
-/* Care Dashboard — Section Titles */
+/* Care Status Pane */
 .care-section-title{{
-  font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;
-  letter-spacing:.06em;display:flex;align-items:center;gap:10px;margin-bottom:2px;
+  font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:10px;margin-bottom:4px;
 }}
 .care-section-title .care-badge{{
-  font-family:var(--font-mono);font-size:10px;font-weight:700;padding:2px 8px;
-  border-radius:4px;background:var(--danger-dim);color:var(--danger-bright);border:1px solid rgba(248,81,73,0.25);
-  text-transform:none;letter-spacing:0;
+  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:3px 10px;
+  border-radius:99px;background:var(--danger-dim);color:var(--danger);border:1px solid rgba(229,115,115,0.3);
 }}
-.care-section-title .care-badge.warn{{background:var(--warn-dim);color:var(--warn-bright);border-color:rgba(210,153,34,0.25);}}
-.care-section-title .care-badge.ok{{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-glow);}}
+.care-section-title .care-badge.warn{{background:var(--warn-dim);color:#c27a3e;border-color:rgba(226,167,111,0.3);}}
+.care-section-title .care-badge.ok{{background:var(--surface-2);color:var(--accent);border-color:var(--accent-glow);}}
 
-/* Pflege-Karten */
+/* Pflege-Karten Database-Style */
 .care-card{{
-  background:var(--surface);border:1px solid var(--border-2);border-radius:var(--rx);
-  display:flex;align-items:center;gap:14px;
-  transition:all var(--transition);position:relative;overflow:hidden;
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  padding:16px 20px;display:flex;align-items:center;gap:16px;
+  transition:all var(--transition);box-shadow:0 4px 16px rgba(45,71,57,0.03);
+  position:relative;overflow:hidden;margin-bottom:8px;
 }}
-.care-card-stripe{{
-  width:3px;height:100%;background:var(--accent);flex-shrink:0;align-self:stretch;min-height:80px;
-  border-radius:0;
+.care-card::before{{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:5px;
+  background:var(--accent);border-radius:0;transition:background .3s;
 }}
-.care-card.overdue .care-card-stripe{{background:var(--danger-bright);}}
-.care-card.soon .care-card-stripe{{background:var(--warn-bright);}}
-.care-card.done .care-card-stripe{{background:var(--surface-3);}}
-.care-card:hover{{background:var(--surface-2);}}
-.care-card-inner{{display:flex;align-items:center;gap:14px;flex:1;padding:14px 16px 14px 0;}}
+.care-card.overdue::before{{background:var(--danger);}}
+.care-card.soon::before{{background:var(--warn);}}
+.care-card.done::before{{background:var(--muted2);}}
+.care-card:hover{{box-shadow:0 8px 32px rgba(45,71,57,0.07);transform:translateY(-1px);}}
 
-/* Care card plant thumbnail */
 .care-card-thumb{{
-  width:46px;height:46px;border-radius:8px;overflow:hidden;flex-shrink:0;
+  width:52px;height:52px;border-radius:var(--r);overflow:hidden;flex-shrink:0;
   background:var(--surface-2);border:1px solid var(--border);
   display:flex;align-items:center;justify-content:center;
 }}
 .care-card-thumb img{{width:100%;height:100%;object-fit:cover;}}
-.care-card-thumb-emoji{{font-size:24px;}}
-.care-card-info{{flex:1;min-width:0}}
-.care-card-name{{font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px;}}
-.care-card-meta{{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}}
+.care-card-thumb-emoji{{font-size:26px;}}
+.care-card-info{{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}}
+.care-card-name{{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}}
+.care-card-meta{{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}}
+
+/* Fortschrittsbalken & Chips */
 .care-chip{{
-  font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;
-  background:var(--surface-2);color:var(--text-2);border:1px solid var(--border);font-family:var(--font-mono);
+  font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px;
+  background:var(--surface-2);color:var(--muted);border:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;
 }}
-.care-chip.overdue{{background:var(--danger-dim);color:var(--danger-bright);border-color:rgba(248,81,73,0.3);}}
-.care-chip.soon{{background:var(--warn-dim);color:var(--warn-bright);border-color:rgba(210,153,34,0.25);}}
-.care-chip.ok{{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-glow);}}
+.care-chip.overdue{{background:var(--danger-dim);color:var(--danger);border-color:rgba(229,115,115,0.4);}}
+.care-chip.soon{{background:var(--warn-dim);color:#c27a3e;border-color:rgba(226,167,111,0.4);}}
+.care-chip.ok{{background:var(--surface-2);color:var(--accent);border-color:var(--accent-glow);}}
 
-/* Progress bars — rings style */
-.care-progress-wrap{{display:flex;flex-direction:column;gap:5px;margin-bottom:6px;}}
-.care-progress-row{{display:flex;align-items:center;gap:7px;}}
-.care-progress-icon{{font-size:11px;flex-shrink:0;width:14px;}}
-.care-progress-track{{flex:1;height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden;}}
-.care-progress-fill{{height:100%;border-radius:2px;transition:width 1s ease;}}
-.care-progress-fill.water{{background:linear-gradient(90deg,rgba(88,166,255,.4),var(--blue));}}
-.care-progress-fill.fertilize{{background:linear-gradient(90deg,var(--accent-dim),var(--accent));}}
-.care-progress-pct{{font-size:10px;font-weight:700;color:var(--text-3);min-width:28px;text-align:right;font-family:var(--font-mono);}}
+.care-bar-wrapper{{width:120px;height:8px;border-radius:4px;background:var(--bg);overflow:hidden;border:1px solid var(--border);}}
+.care-bar-fill{{height:100%;border-radius:4px;transition:width 0.8s ease;}}
+.care-bar-fill.water{{background:linear-gradient(90deg, #64B5F6, #1976D2);}}
+.care-bar-fill.fertilize{{background:linear-gradient(90deg, var(--accent-glow), var(--accent));}}
 
-/* Circle progress for overdue section */
-.care-circles{{display:flex;gap:12px;margin-bottom:8px;}}
-.care-circle-wrap{{display:flex;flex-direction:column;align-items:center;gap:4px;}}
-.care-circle{{position:relative;width:44px;height:44px;}}
-.care-circle svg{{transform:rotate(-90deg);}}
-.care-circle-bg{{fill:none;stroke:var(--surface-3);stroke-width:4;}}
-.care-circle-fill{{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset 1s ease;}}
-.care-circle-fill.water{{stroke:var(--blue);}}
-.care-circle-fill.water.urgent{{stroke:var(--danger-bright);}}
-.care-circle-fill.fertilize{{stroke:var(--accent);}}
-.care-circle-fill.fertilize.urgent{{stroke:var(--warn-bright);}}
-.care-circle-label{{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--text-2);}}
-.care-circle-sub{{font-size:9px;color:var(--text-3);font-weight:500;text-align:center;max-width:52px;}}
-
-.care-card-actions{{display:flex;flex-direction:column;gap:6px;flex-shrink:0;padding-right:14px;}}
+.care-card-actions{{display:flex;gap:10px;flex-shrink:0;}}
 .care-btn{{
-  padding:7px 12px;font-size:11px;font-weight:700;border-radius:6px;
-  border:1px solid var(--border-2);background:var(--surface-2);color:var(--text-2);
+  padding:10px 16px;font-size:13px;font-weight:600;border-radius:var(--r);
+  border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
   transition:all var(--transition);cursor:pointer;white-space:nowrap;
-  font-family:var(--font-mono);
+  box-shadow:0 2px 8px rgba(45,71,57,0.02);display:flex;align-items:center;gap:6px;
 }}
-.care-btn:hover{{background:var(--surface-3);}}
-.care-btn:active{{transform:scale(0.97);}}
-.care-btn.water{{border-color:rgba(88,166,255,0.35);color:var(--blue);background:var(--blue-dim);}}
-.care-btn.water:hover{{background:rgba(88,166,255,0.2);box-shadow:0 2px 8px rgba(88,166,255,0.15);}}
-.care-btn.fertilize{{border-color:var(--accent-glow);color:var(--accent);background:var(--accent-dim);}}
-.care-btn.fertilize:hover{{background:rgba(63,185,80,.2);}}
-.care-btn.syncing{{opacity:.7;pointer-events:none;}}
+.care-btn:hover{{background:var(--bg);transform:translateY(-1px);}}
+.care-btn:active{{transform:scale(0.96);}}
+.care-btn.water{{border-color:rgba(100,181,246,0.5);color:#1976d2;background:rgba(100,181,246,0.08);}}
+.care-btn.water:hover{{background:rgba(100,181,246,0.15);box-shadow:0 4px 12px rgba(100,181,246,0.15);}}
+.care-btn.fertilize{{border-color:var(--accent-glow);color:var(--accent);background:var(--surface-2);}}
+.care-btn.fertilize:hover{{background:var(--surface-3);box-shadow:0 4px 12px var(--accent-dim);}}
 
 /* Historie */
 .care-history{{
-  background:var(--surface);border:1px solid var(--border-2);border-radius:var(--rx);
-  overflow:hidden;
+  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
+  overflow:hidden;box-shadow:0 4px 16px rgba(45,71,57,0.03);
 }}
 .care-history-header{{
-  padding:12px 16px;border-bottom:1px solid var(--border);
-  font-size:12px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;
-  display:flex;align-items:center;gap:10px;background:var(--surface-2);
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:10px;
 }}
 .history-entry{{
-  display:flex;align-items:center;gap:12px;padding:10px 16px;
-  border-bottom:1px solid var(--border);font-size:12px;
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  border-bottom:1px solid var(--border);font-size:13px;
   transition:background .2s;
 }}
 .history-entry:last-child{{border-bottom:none}}
-.history-entry:hover{{background:var(--surface-2);}}
-.history-icon{{font-size:14px;flex-shrink:0;}}
+.history-entry:hover{{background:var(--bg);}}
+.history-icon{{font-size:16px;flex-shrink:0;}}
 .history-text{{flex:1;color:var(--text);font-weight:500;}}
-.history-sub{{font-size:11px;color:var(--text-3);margin-top:2px;font-family:var(--font-mono);}}
-.history-badge{{
-  font-size:10px;padding:2px 7px;border-radius:4px;font-family:var(--font-mono);font-weight:600;
-  flex-shrink:0;
-}}
-.history-badge.synced{{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-glow);}}
-.history-badge.local{{background:var(--surface-2);color:var(--text-3);border:1px solid var(--border);}}
-.history-time{{font-size:11px;color:var(--text-3);font-family:var(--font-mono);white-space:nowrap;}}
+.history-time{{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}}
 
 .care-empty{{
-  text-align:center;padding:40px;color:var(--text-3);
-  background:var(--surface);border:1px dashed var(--border-2);border-radius:var(--rx);
+  text-align:center;padding:48px 24px;color:var(--muted);
+  background:var(--surface-solid);border:1px dashed var(--border-2);border-radius:var(--rx);
 }}
-.care-empty .ce-icon{{font-size:40px;margin-bottom:10px;opacity:.3;display:block}}
-.care-empty p{{font-size:13px;font-weight:500;line-height:1.6;}}
+.care-empty .ce-icon{{font-size:48px;margin-bottom:12px;opacity:.5}}
+.care-empty p{{font-size:14px;font-weight:500;line-height:1.6;}}
 
 /* ── TOAST & TOOLTIP ── */
 #tooltip{{
   position:fixed;z-index:500;pointer-events:none;
-  background:var(--surface-2);border:1px solid var(--border-2);
-  border-radius:6px;padding:8px 12px;font-size:12px;font-weight:500;color:var(--text);
-  box-shadow:0 8px 20px rgba(0,0,0,0.5);opacity:0;transition:opacity .15s;
-  max-width:220px;font-family:var(--font-mono);
+  background:rgba(255,255,255,0.95);backdrop-filter:blur(8px);border:1px solid var(--border-2);
+  border-radius:var(--rs);padding:10px 14px;font-size:12px;font-weight:600;color:var(--text);
+  box-shadow:0 8px 24px rgba(45,71,57,0.08);opacity:0;transition:opacity .15s;
+  max-width:240px;
 }}
 #tooltip.visible{{opacity:1}}
 
 #save-toast{{
-  position:fixed;bottom:20px;right:20px;z-index:999;
-  background:var(--surface-2);border:1px solid var(--border-2);
-  border-radius:8px;padding:12px 18px;font-size:13px;font-weight:600;color:var(--text);
-  box-shadow:0 8px 24px rgba(0,0,0,0.5);
-  transform:translateY(20px);opacity:0;
-  transition:all .3s ease;
-  display:flex;align-items:center;gap:10px;font-family:var(--font-mono);
+  position:fixed;bottom:24px;right:24px;z-index:999;
+  background:var(--surface-solid);border:1px solid var(--accent-glow);
+  border-radius:var(--r);padding:14px 20px;font-size:14px;font-weight:600;color:var(--text);
+  box-shadow:0 8px 32px rgba(124,179,66,0.15);
+  transform:translateY(30px);opacity:0;
+  transition:all .4s cubic-bezier(.34, 1.56, .64, 1);
+  display:flex;align-items:center;gap:10px;
 }}
 #save-toast.show{{transform:translateY(0);opacity:1}}
-#save-toast.success{{border-color:var(--accent-glow);}}
-#save-toast.error{{border-color:rgba(248,81,73,.3);}}
-#save-toast.info{{border-color:rgba(88,166,255,.3);}}
 
 /* ── LOADING ── */
 #loading{{
   position:fixed;inset:0;z-index:9999;background:var(--bg);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
-  transition:opacity .5s,visibility .5s;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  transition:opacity .6s,visibility .6s;
 }}
 #loading.hidden{{opacity:0;visibility:hidden}}
-#loading .ld-icon{{font-size:44px;animation:pulse 2s ease-in-out infinite}}
-#loading p{{font-size:14px;font-weight:500;color:var(--text-2);font-family:var(--font-mono);}}
-.ld-bar{{width:200px;height:2px;background:var(--surface-3);border-radius:1px;overflow:hidden;}}
-.ld-bar-fill{{height:100%;background:var(--accent);border-radius:1px;animation:ldFill 2s ease infinite;}}
-@keyframes ldFill{{0%{{width:0%}}100%{{width:100%}}}}
-@keyframes pulse{{0%,100%{{transform:scale(1);opacity:.5}}50%{{transform:scale(1.08);opacity:1}}}}
+#loading .ld-icon{{font-size:54px;animation:pulse 2s ease-in-out infinite}}
+#loading p{{font-size:16px;font-weight:500;color:var(--text)}}
+@keyframes pulse{{0%,100%{{transform:scale(1);opacity:.6}}50%{{transform:scale(1.1);opacity:1}}}}
 </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="ld-icon">🌿</div>
-  <p>Plant Management System wird geladen…</p>
-  <div class="ld-bar"><div class="ld-bar-fill"></div></div>
-</div>
+<div id="loading"><div class="ld-icon">🌿</div><p>Natürliches Umfeld wird geladen…</p></div>
 <div id="tooltip"></div>
 <div id="save-toast">💾 <span id="toast-msg">Gespeichert</span></div>
 
-<!-- HEADER -->
 <div id="header">
-  <span class="logo">🌿 PlantOS <span class="logo-tag">v7</span></span>
-  <div class="header-sep"></div>
-  <span style="font-size:12px;font-weight:500;color:var(--text-2);font-family:var(--font-mono)" id="month-label"></span>
+  <span class="logo">🌿 Pflanzen-Planer Pro</span>
+  <span class="logo-sep">|</span>
+  <span style="font-size:14px;font-weight:500;color:var(--text)" id="month-label"></span>
   <div class="header-meta">
     <div class="sun-info">
       <div class="sun-dot"></div>
-      <span id="sun-label">☀ Berechne…</span>
+      <span id="sun-label">Sonnenstand wird berechnet…</span>
     </div>
-    <div id="sync-badge" class="sync-badge" style="display:none">⟳ Sync</div>
     <div class="status-wrap">
       <div class="sdot" id="sdot"></div>
       <span id="stext">Verbinden…</span>
@@ -865,30 +817,26 @@ input,select{{font-family:inherit}}
   </div>
 </div>
 
-<!-- TABS -->
 <div id="tabs">
   <button class="tab active" data-tab="planer" onclick="switchTab('planer')">
-    🗺 Grundriss-Planer
+    <span class="tab-icon">🗺️</span> Grundriss-Planer
   </button>
   <button class="tab" data-tab="library" onclick="switchTab('library')">
-    📚 Pflanzen-Bibliothek
+    <span class="tab-icon">📚</span> Pflanzen-Bibliothek
   </button>
   <button class="tab" data-tab="care" onclick="switchTab('care')">
-    🌱 Care Dashboard
-    <span class="tab-badge" id="care-tab-badge" style="display:none">0</span>
+    <span class="tab-icon">🌱</span> Pflege-Kalender
   </button>
 </div>
 
-<!-- MAIN -->
 <div id="main">
 
-  <!-- LEFT SIDEBAR -->
   <div id="left-sidebar">
     <div class="sidebar-header">
-      <span>Inventar</span>
-      <span class="sb-count" id="inv-count">0</span>
+      <span>🪴 Inventar</span>
+      <span id="inv-count" style="font-size:12px;background:var(--surface-2);color:var(--text);padding:4px 10px;border-radius:99px;font-weight:600"></span>
     </div>
-    <input class="inv-search" id="inv-search" type="text" placeholder="Pflanze suchen…" oninput="filterInventory(this.value)">
+    <input class="inv-search" id="inv-search" type="text" placeholder="Suchen…" oninput="filterInventory(this.value)">
     <div id="inv-list" style="flex:1;overflow-y:auto"></div>
     <div class="inv-floor-switcher">
       <button class="floor-btn active" onclick="setFloor('EG')" id="fbtn-EG">EG</button>
@@ -897,95 +845,68 @@ input,select{{font-family:inherit}}
     </div>
   </div>
 
-  <!-- MAP AREA -->
   <div id="map-area">
     <div class="dli-toggle-wrap">
-      <span class="dli-toggle-label">DLI-Modus</span>
+      <span class="dli-toggle-label">📊 DLI-Modus</span>
       <button class="dli-toggle" id="dli-toggle-btn" onclick="toggleDLIMode()"></button>
     </div>
     <div id="map-canvas">
       <img id="floor-img" src="" alt="Grundriss" draggable="false"
-           onerror="this.src='https://placehold.co/1100x600/161B22/3FB950?text=Grundriss+nicht+gefunden'">
+           onerror="this.src='https://placehold.co/1100x600/FCFAF7/7CB342?text=Grundriss+nicht+gefunden'">
       <canvas id="light-canvas"></canvas>
     </div>
   </div>
 
-  <!-- LIBRARY VIEW -->
   <div id="library-view">
-    <div class="lib-toolbar">
+    <div class="lib-header">
       <div>
-        <div class="lib-toolbar-title">📚 Pflanzen-Bibliothek</div>
-        <div class="lib-toolbar-sub" id="lib-sub-label">–</div>
+        <h2>🌱 Pflanzen-Bibliothek</h2>
+        <div class="lib-header-sub" id="lib-sub-label"></div>
       </div>
       <div class="lib-filters">
-        <input class="lib-search" id="lib-search" type="text" placeholder="🔍 Name suchen…" oninput="onLibraryFilterChange()">
-        <select class="lib-select" id="lib-filter-light" onchange="onLibraryFilterChange()">
-          <option value="">☀ Lichtbedarf</option>
-          <option value="low">Schattig (1–4)</option>
-          <option value="mid">Halbschattig (5–7)</option>
-          <option value="high">Sonnig (8–10)</option>
+        <input class="lib-search" id="lib-search" type="text" placeholder="🔍 Name suchen…" oninput="updateLibFilters()">
+        <select class="lib-filter-sel" id="lib-filter-light" onchange="updateLibFilters()">
+          <option value="all">Alle Lichtbedarfe</option>
+          <option value="high">Viel Licht (>7)</option>
+          <option value="medium">Mittel (4-7)</option>
+          <option value="low">Wenig (<4)</option>
         </select>
-        <select class="lib-select" id="lib-filter-water" onchange="onLibraryFilterChange()">
-          <option value="">💧 Gießhäufigkeit</option>
-          <option value="rare">Selten (14+ Tage)</option>
-          <option value="mid">Mittel (7–13 Tage)</option>
-          <option value="frequent">Häufig (1–6 Tage)</option>
+        <select class="lib-filter-sel" id="lib-filter-water" onchange="updateLibFilters()">
+          <option value="all">Alle Gießintervalle</option>
+          <option value="high">Oft (<7 Tage)</option>
+          <option value="medium">Moderat (7-14 Tage)</option>
+          <option value="low">Selten (>14 Tage)</option>
         </select>
-        <select class="lib-select" id="lib-sort" onchange="onLibraryFilterChange()">
-          <option value="name">Sortieren: Name A→Z</option>
-          <option value="name-desc">Sortieren: Name Z→A</option>
-          <option value="licht">Sortieren: Lichtbedarf ↑</option>
-          <option value="licht-desc">Sortieren: Lichtbedarf ↓</option>
-          <option value="giessen">Sortieren: Gießintervall ↑</option>
-          <option value="giessen-desc">Sortieren: Gießintervall ↓</option>
+        <select class="lib-filter-sel" id="lib-sort" onchange="updateLibFilters()">
+          <option value="name">Sortierung: Name</option>
+          <option value="light">Sortierung: Lichtbedarf</option>
+          <option value="water">Sortierung: Gießintervall</option>
         </select>
-        <button class="lib-sort-btn" id="lib-reset-btn" onclick="resetLibraryFilters()" style="display:none">✕ Filter zurücksetzen</button>
       </div>
-    </div>
-    <div class="lib-results-bar" id="lib-results-bar">
-      <span id="lib-results-count">–</span>
-      <span id="lib-active-filters"></span>
     </div>
     <div class="lib-grid" id="lib-grid"></div>
   </div>
 
-  <!-- CARE VIEW -->
   <div id="care-view">
     <div class="care-header">
       <div>
-        <div class="care-header-title">🌱 Care Dashboard</div>
+        <h2>🌱 Pflege-Kalender</h2>
         <div class="care-header-sub" id="care-sub-label">Lade Pflegedaten…</div>
       </div>
       <div class="care-header-actions">
         <button class="care-mass-btn" onclick="waterAllDue()">💧 Alle fälligen gießen</button>
-        <button class="care-mass-btn danger" onclick="syncAllFromSheets()">⟳ Sheets laden</button>
-        <button class="care-mass-btn primary" onclick="refreshCare()">↻ Aktualisieren</button>
+        <button class="care-mass-btn primary" onclick="refreshCare()">🔄 Aktualisieren</button>
       </div>
     </div>
 
-    <!-- Sub-tabs -->
     <div class="care-subtabs">
-      <button class="care-subtab active" id="subtab-due" onclick="switchCareSubtab('due')">🔴 Fällige Aufgaben</button>
-      <button class="care-subtab" id="subtab-all" onclick="switchCareSubtab('all')">📋 Alle Pflanzen</button>
       <button class="care-subtab" id="subtab-calendar" onclick="switchCareSubtab('calendar')">📅 Kalender</button>
-      <button class="care-subtab" id="subtab-history" onclick="switchCareSubtab('history')">🕐 Pflege-Historie</button>
+      <button class="care-subtab active" id="subtab-status" onclick="switchCareSubtab('status')">📋 Pflege-Status (Smart)</button>
+      <button class="care-subtab" id="subtab-history" onclick="switchCareSubtab('history')">🕐 Historie</button>
     </div>
 
-    <!-- Due pane -->
-    <div id="care-due-pane" class="active">
-      <div id="care-overdue-section"></div>
-      <div id="care-soon-section"></div>
-    </div>
-
-    <!-- All pane -->
-    <div id="care-all-pane">
-      <div id="care-all-section"></div>
-    </div>
-
-    <!-- Calendar pane -->
-    <div id="care-calendar-pane">
+    <div id="care-calendar-pane" style="display:none">
       <div class="calendar-wrap">
-        <div class="cal-header-row" id="cal-header-row"></div>
         <div class="calendar-nav">
           <button class="calendar-nav-btn" onclick="changeCalMonth(-1)">‹</button>
           <span class="calendar-nav-title" id="cal-month-title"></span>
@@ -995,24 +916,26 @@ input,select{{font-family:inherit}}
       </div>
     </div>
 
-    <!-- History pane -->
-    <div id="care-history-pane">
+    <div id="care-status-pane">
+      <div id="care-overdue-section"></div>
+      <div id="care-soon-section"></div>
+      <div id="care-all-section"></div>
+    </div>
+
+    <div id="care-history-pane" style="display:none">
       <div id="care-history-section"></div>
     </div>
   </div>
 
-  <!-- RIGHT SIDEBAR -->
   <div id="right-sidebar">
     <div id="rsb-empty">
       <div class="empty-icon">🪴</div>
-      <p style="font-size:13px;line-height:1.6;color:var(--text-3);font-weight:500;">Pflanze auswählen<br>für Details &amp; Analyse</p>
+      <p style="font-size:14px;line-height:1.6;color:var(--muted);font-weight:500;">Klicke auf eine Pflanze<br>für Details &amp; Pflegehinweise.</p>
     </div>
     <div id="rsb-detail"></div>
   </div>
 
-</div><!-- /main -->
-
-<script>
+</div><script>
 // ============================================================
 // KONSTANTEN & FLOOR DATA
 // ============================================================
@@ -1034,25 +957,26 @@ const NOW_MONTH    = NOW.getMonth();
 // ============================================================
 let plants          = [];
 let positions       = {{}};
-let careData        = {{}};    // keyed by plant idx: {{lastWatered, lastFertilized, syncedAt}}
+let careData        = {{}};
 let careHistory     = [];
 let activePIdx      = null;
 let currentFloor    = "EG";
 let currentTab      = "planer";
-let currentCareSubtab = "due";
+let currentCareSubtab = "status";
 let dragSrcIdx      = null;
 let inventoryFilter = "";
-let libraryFilter   = "";
-let libFilterLight  = "";
-let libFilterWater  = "";
-let libSort         = "name";
+
+let libFilterSearch = "";
+let libFilterLight  = "all";
+let libFilterWater  = "all";
+let libSortType     = "name";
+
 let saveTimeout     = null;
 let sunState        = {{ azimuth:180, elevation:0, factor:0 }};
-let dliMode         = false;
-let dliCache        = {{}};
+let dliMode         = false;      
+let dliCache        = {{}};        
 let calMonth        = NOW_MONTH;
 let calYear         = NOW.getFullYear();
-let syncInProgress  = false;
 
 // ============================================================
 // UTILITY
@@ -1064,14 +988,6 @@ function setStatus(ok, msg) {{
   $("stext").textContent = msg;
 }}
 
-function showSyncBadge(state) {{
-  const badge = $("sync-badge");
-  badge.style.display = "flex";
-  badge.className = "sync-badge" + (state==="syncing" ? " syncing" : state==="error" ? " error" : "");
-  badge.textContent = state==="syncing" ? "⟳ Syncing…" : state==="error" ? "✕ Sync-Fehler" : "✓ Synced";
-  if(state !== "syncing") setTimeout(()=>{{ badge.style.display="none"; }}, 3000);
-}}
-
 function showTooltip(msg, x, y) {{
   const t = $("tooltip");
   t.textContent = msg;
@@ -1081,378 +997,427 @@ function showTooltip(msg, x, y) {{
 }}
 function hideTooltip() {{ $("tooltip").classList.remove("visible"); }}
 
-function showToast(msg, type='success', dur=2500) {{
+function showToast(msg, dur=2200) {{
   $("toast-msg").textContent = msg;
-  const el = $("save-toast");
-  el.className = "show " + type;
-  clearTimeout(el._t);
-  el._t = setTimeout(()=>el.classList.remove("show"), dur);
+  $("save-toast").classList.add("show");
+  setTimeout(()=>$("save-toast").classList.remove("show"), dur);
 }}
 
 $("month-label").textContent = MONTHS_DE[NOW_MONTH]+" "+NOW.getFullYear();
 
 // ============================================================
-// ASTRONOMISCHE LICHTSIMULATION
+// ★ ASTRONOMISCHE LICHTSIMULATION
 // ============================================================
 function calcSunPosition(date) {{
   const JD = date / 86400000 + 2440587.5;
   const n  = JD - 2451545.0;
+
   const L  = (280.460 + 0.9856474*n) % 360;
   const g  = ((357.528 + 0.9856003*n) % 360) * Math.PI/180;
   const lam= (L + 1.915*Math.sin(g) + 0.020*Math.sin(2*g)) * Math.PI/180;
   const eps = (23.439 - 0.0000004*n) * Math.PI/180;
+
   const sinDec = Math.sin(eps)*Math.sin(lam);
   const dec    = Math.asin(sinDec);
   const RA     = Math.atan2(Math.cos(eps)*Math.sin(lam), Math.cos(lam));
-  const ut = (date % 86400000) / 3600000;
-  const GMST = (6.697375 + 0.0657098242*n + ut) % 24;
-  const LST  = (GMST + LON_DEG_VAL/15) % 24;
-  const HA   = (LST*15 - RA*180/Math.PI) * Math.PI/180;
-  const sinAlt= Math.sin(LAT_RAD)*sinDec + Math.cos(LAT_RAD)*Math.cos(dec)*Math.cos(HA);
-  const alt  = Math.asin(Math.max(-1,Math.min(1,sinAlt)));
-  const cosAz= (sinDec - Math.sin(LAT_RAD)*sinAlt)/(Math.cos(LAT_RAD)*Math.cos(alt));
-  let az     = Math.acos(Math.max(-1,Math.min(1,cosAz))) * 180/Math.PI;
-  if(Math.sin(HA)>0) az = 360-az;
-  return {{ elevation: alt*180/Math.PI, azimuth: az }};
+
+  const GMST = (6.697375 + 0.0657098242*n + (date.getUTCHours()+(date.getUTCMinutes()+date.getUTCSeconds()/60)/60)) % 24;
+  const LMST = (GMST*15 + LON_DEG_VAL) % 360;
+  const HA   = (LMST - RA*180/Math.PI) * Math.PI/180;
+
+  const sinElev = Math.sin(LAT_RAD)*Math.sin(dec) + Math.cos(LAT_RAD)*Math.cos(dec)*Math.cos(HA);
+  const elev    = Math.asin(sinElev);
+  const cosAz   = (Math.sin(dec) - Math.sin(elev)*Math.sin(LAT_RAD)) / (Math.cos(elev)*Math.cos(LAT_RAD));
+  const azBase  = Math.acos(Math.max(-1,Math.min(1,cosAz))) * 180/Math.PI;
+  const az      = Math.sin(HA)>0 ? 360-azBase : azBase;
+
+  const elevDeg = elev * 180/Math.PI;
+
+  let airmass = 1;
+  if(elevDeg > 0) airmass = 1 / (Math.sin(elev) + 0.50572*Math.pow(elevDeg+6.07995,-1.6364));
+
+  const transmit = elevDeg > 0 ? Math.pow(0.7, Math.pow(airmass, 0.678)) : 0;
+
+  return {{ azimuth:az, elevation:elevDeg, transmittance:transmit, factor:transmit }};
 }}
 
-function skyDiffuse(elevDeg) {{
-  const e = Math.max(0, elevDeg);
-  return 0.05 + 0.10 * Math.min(e/90, 1);
-}}
+function computeDLI(px, py, floor) {{
+  const today = new Date();
+  const year  = today.getFullYear();
+  const month = today.getMonth();
+  const day   = today.getDate();
 
-function updateSunInfo() {{
-  const s = calcSunPosition(Date.now());
-  const factor = Math.max(0, Math.sin(s.elevation*Math.PI/180));
-  sunState = {{ azimuth: s.azimuth, elevation: s.elevation, factor }};
-  const risen = s.elevation > 0;
-  $("sun-label").textContent = risen
-    ? `☀ Az:${{s.azimuth.toFixed(0)}}° El:${{s.elevation.toFixed(1)}}°`
-    : `🌙 El:${{s.elevation.toFixed(1)}}°`;
-}}
+  let sumScore   = 0;
+  let weightSum  = 0;
 
-const WIN_SAMPLES = 5;
-
-function windowAzimuth(side, buildingNorthAzimuth) {{
-  const map = {{ N:0, NE:45, E:90, SE:135, S:180, SW:225, W:270, NW:315 }};
-  const base = map[side] ?? 0;
-  return (buildingNorthAzimuth + base) % 360;
-}}
-
-function directSunFactor(winAzDeg, sunAzDeg, sunElevDeg) {{
-  if(sunElevDeg<=0) return 0;
-  let diff = Math.abs(winAzDeg - sunAzDeg) % 360;
-  if(diff>180) diff = 360-diff;
-  if(diff>90)  return 0;
-  return Math.cos(diff*Math.PI/180) * Math.sin(sunElevDeg*Math.PI/180);
-}}
-
-function roomPenetrationFactor(sunElevDeg, side, buildingNorthAzimuth) {{
-  const winAz = windowAzimuth(side, buildingNorthAzimuth);
-  let solarAngle = (buildingNorthAzimuth - winAz + 180) % 360;
-  if(solarAngle>180) solarAngle=360-solarAngle;
-  if(sunElevDeg<=0) return 0;
-  return Math.max(0, Math.cos(solarAngle*Math.PI/180)) * Math.cos(sunElevDeg*Math.PI/180);
-}}
-
-function isBlockedByInnerWall(px,py,wx,wy,fd) {{
-  for(const wall of fd.walls) {{
-    if(segmentsIntersect(px,py,wx,wy,wall.x1,wall.y1,wall.x2,wall.y2)) return true;
+  for(let h = 0; h < 24; h++) {{
+    const dt = new Date(Date.UTC(year, month, day, h - 1, 0, 0)); 
+    const sun = calcSunPosition(dt);
+    if(sun.elevation <= 0) continue; 
+    const savedState = {{...sunState}};
+    sunState = sun;
+    const score = computeLichtFull(px, py, floor).score;
+    sunState = savedState;
+    const weight = Math.sin(sun.elevation * Math.PI / 180);
+    sumScore  += score * weight;
+    weightSum += weight;
   }}
-  return false;
+  if(weightSum === 0) return 1; 
+  return Math.min(10, Math.max(1, Math.round(sumScore / weightSum * 10) / 10));
 }}
 
-function isBlockedByOuterWall(px,py,wx,wy,fd) {{
-  for(const wall of fd.outerWalls) {{
-    if(segmentsIntersect(px,py,wx,wy,wall.x1,wall.y1,wall.x2,wall.y2)) return true;
-  }}
-  return false;
-}}
-
-function cross2D(ax,ay,bx,by) {{ return ax*by-ay*bx; }}
-
-function segmentsIntersect(ax,ay,bx,by,cx,cy,dx,dy) {{
-  const d1x=bx-ax, d1y=by-ay, d2x=dx-cx, d2y=dy-cy;
-  const denom=cross2D(d1x,d1y,d2x,d2y);
-  if(Math.abs(denom)<1e-9) return false;
-  const t=cross2D(cx-ax,cy-ay,d2x,d2y)/denom;
-  const u=cross2D(cx-ax,cy-ay,d1x,d1y)/denom;
-  return t>1e-6&&t<1-1e-6&&u>1e-6&&u<1-1e-6;
-}}
-
-// DLI Cache
-function getDLIScore(rx,ry,floor) {{
-  if(!dliCache[floor]) return null;
-  const key=`${{Math.round(rx*20)}},${{Math.round(ry*20)}}`;
-  return dliCache[floor].get(key) ?? null;
-}}
-
-let dliComputeTimer=null;
+let dliComputeScheduled = false;
 function scheduleDLICompute(floor) {{
-  if(dliComputeTimer) clearTimeout(dliComputeTimer);
-  dliComputeTimer=setTimeout(()=>computeDLIForFloor(floor),100);
+  if(dliComputeScheduled) return;
+  dliComputeScheduled = true;
+  requestAnimationFrame(()=>{{
+    dliComputeScheduled = false;
+    if(!dliMode) return;
+    const fd   = FLOOR_DATA[floor];
+    const step = 0.05; 
+    const cache = {{}};
+    for(let ry=0; ry<=1.01; ry+=step) {{
+      for(let rx=0; rx<=1.01; rx+=step) {{
+        const key = `${{rx.toFixed(2)}},${{ry.toFixed(2)}}`;
+        cache[key] = computeDLI(rx, ry, floor);
+      }}
+    }}
+    dliCache[floor] = cache;
+    drawLightMap();
+  }});
 }}
 
-function computeDLIForFloor(floor) {{
-  const fd=FLOOR_DATA[floor];
-  const fw=fd.floorX2-fd.floorX1, fh=fd.floorY2-fd.floorY1;
-  if(!dliCache[floor]) dliCache[floor]=new Map();
-  const cache=dliCache[floor];
-  const totalDLI=12*3600;
-  const steps=12;
-  const now=Date.now();
-  const startOfDay=now - (now%(86400000)) - 4*3600000;
-  for(let iy=0;iy<=20;iy++) {{
-    for(let ix=0;ix<=20;ix++) {{
-      const rx=ix/20, ry=iy/20;
-      const pAX=fd.floorX1+rx*fw, pAY=fd.floorY1+ry*fh;
-      if(pAX<fd.floorX1||pAX>fd.floorX2||pAY<fd.floorY1||pAY>fd.floorY2) continue;
-      let sum=0;
-      for(let s=0;s<steps;s++) {{
-        const t=(s+0.5)/steps;
-        const ts=startOfDay+t*86400000;
-        const sp=calcSunPosition(ts);
-        const fac=Math.max(0,Math.sin(sp.elevation*Math.PI/180));
-        const tmpState={{azimuth:sp.azimuth,elevation:sp.elevation,factor:fac}};
-        const origState=sunState;
-        sunState=tmpState;
-        const score=computeLicht(rx,ry,floor);
-        sunState=origState;
-        sum+=score*(1/steps);
-      }}
-      const dliScore=Math.min(10,Math.max(1,Math.round(sum*10)/10));
-      cache.set(`${{ix}},${{iy}}`,dliScore);
-    }}
-  }}
-  drawLightMap();
+function getDLIScore(px, py, floor) {{
+  if(!dliCache[floor]) return null;
+  const step = 0.05;
+  const rx = Math.round(px / step) * step;
+  const ry = Math.round(py / step) * step;
+  const key = `${{rx.toFixed(2)}},${{ry.toFixed(2)}}`;
+  return dliCache[floor]?.[key] ?? null;
 }}
 
 function toggleDLIMode() {{
-  dliMode=!dliMode;
-  $("dli-toggle-btn").classList.toggle("on",dliMode);
-  if(dliMode) scheduleDLICompute(currentFloor);
-  drawLightMap(); render();
+  dliMode = !dliMode;
+  const btn = $("dli-toggle-btn");
+  btn.classList.toggle("on", dliMode);
+  if(dliMode) {{
+    showToast("📊 DLI-Modus: Tages-Durchschnitt wird berechnet…", 3000);
+    scheduleDLICompute(currentFloor);
+  }} else {{
+    drawLightMap();
+  }}
+  render();
 }}
 
-function px2rel(px,p1,p2) {{ return (px-p1)/(p2-p1); }}
+const WIN_SAMPLES = 7;
 
-function computeLichtFull(px,py,floor) {{
-  const fd=FLOOR_DATA[floor];
-  const fw=fd.floorX2-fd.floorX1, fh=fd.floorY2-fd.floorY1;
-  const realW=fd.realW, realH=fd.realH;
-  const bldAz=fd.buildingNorthAzimuth||0;
-  const pAX=fd.floorX1+px*fw, pAY=fd.floorY1+py*fh;
-  const margin=4;
-  if(pAX<fd.floorX1-margin||pAX>fd.floorX2+margin||pAY<fd.floorY1-margin||pAY>fd.floorY2+margin) {{
-    return {{score:1,components:{{}},windowHits:[]}};
+function skyDiffuse(sunElevDeg) {{
+  if(sunElevDeg <= -6) return 0;
+  if(sunElevDeg <= 0)  return 0.05;
+  return 0.10 + 0.05 * Math.min(1, sunElevDeg / 30);
+}}
+
+function windowAzimuth(side, buildingNorthAzimuth) {{
+  const sideOffset = {{"N":0,"E":90,"S":180,"W":270}};
+  const offset = sideOffset[side] ?? 180;
+  return (buildingNorthAzimuth + offset) % 360;
+}}
+
+function directSunFactor(winAz, sunAz, sunElevDeg) {{
+  if(sunElevDeg <= 0) return 0;
+  const diff    = Math.abs(((winAz - sunAz + 540) % 360) - 180);
+  const cosHoriz = Math.cos(diff * Math.PI / 180);
+  if(cosHoriz <= 0) return 0;
+  const sinElev = Math.sin(sunElevDeg * Math.PI / 180);
+  return cosHoriz * sinElev;
+}}
+
+function roomPenetrationFactor(sunElevDeg, winSide, buildingNorthAzimuth) {{
+  if(sunElevDeg <= 0) return 0;
+  const elev = Math.max(5, Math.min(80, sunElevDeg));
+  return 1 - (elev - 5) / 80;
+}}
+
+function updateSunInfo() {{
+  const now = new Date();
+  sunState  = calcSunPosition(now);
+  const elev = sunState.elevation.toFixed(1);
+  const az   = sunState.azimuth.toFixed(0);
+  if(sunState.elevation > 0) {{
+    $("sun-label").textContent = `☀️ Elevation ${{elev}}° · Azimut ${{az}}° · Stärke ${{(sunState.factor*100).toFixed(0)}}%`;
+  }} else {{
+    $("sun-label").textContent = `🌙 Sonne unter Horizont (${{elev}}°)`;
   }}
-  const sunElevDeg=sunState.elevation, sunAzDeg=sunState.azimuth, sunDirect=sunState.factor;
-  const skyDiff=skyDiffuse(sunElevDeg);
-  const wallReflectance=0.15;
-  let totalIlluminance=0;
-  const windowHits=[];
+}}
+
+function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
+  const denom = (bx-ax)*(dy-cy)-(by-ay)*(dx-cx);
+  if(Math.abs(denom)<1e-9) return false;
+  const t = ((cx-ax)*(dy-cy)-(cy-ay)*(dx-cx))/denom;
+  const u = ((cx-ax)*(by-ay)-(cy-ay)*(bx-ax))/denom;
+  const eps = 1e-6;
+  return t>eps && t<1-eps && u>eps && u<1-eps;
+}}
+
+function isBlockedByInnerWall(pAX, pAY, sAX, sAY, fd) {{
+  for(const w of fd.walls) {{
+    if(segmentsIntersect(pAX,pAY,sAX,sAY, w.x1,w.y1,w.x2,w.y2)) return true;
+  }}
+  return false;
+}}
+
+function isBlockedByOuterWall(pAX, pAY, sAX, sAY, fd) {{
+  for(const seg of fd.outerWalls) {{
+    if(segmentsIntersect(pAX,pAY,sAX,sAY, seg.x1,seg.y1,seg.x2,seg.y2)) return true;
+  }}
+  return false;
+}}
+
+function px2rel(px, p1, p2) {{ return (px-p1)/(p2-p1); }}
+
+function computeLichtFull(px, py, floor) {{
+  const fd    = FLOOR_DATA[floor];
+  const fw    = fd.floorX2 - fd.floorX1;
+  const fh    = fd.floorY2 - fd.floorY1;
+  const realW = fd.realW;
+  const realH = fd.realH;
+  const bldAz = fd.buildingNorthAzimuth || 0;
+
+  const pAX = fd.floorX1 + px * fw;
+  const pAY = fd.floorY1 + py * fh;
+
+  const margin = 4;
+  if(pAX < fd.floorX1-margin || pAX > fd.floorX2+margin ||
+     pAY < fd.floorY1-margin || pAY > fd.floorY2+margin) {{
+    return {{ score:1, components:{{}}, windowHits:[] }};
+  }}
+
+  const sunElevDeg = sunState.elevation;
+  const sunAzDeg   = sunState.azimuth;
+  const sunDirect  = sunState.factor;
+  const skyDiff    = skyDiffuse(sunElevDeg);
+  const wallReflectance = 0.15;
+
+  let totalIlluminance = 0;
+  const windowHits = [];
+
   for(const w of fd.windows) {{
-    const winAz=windowAzimuth(w.side,bldAz);
-    let winContrib=0,samplesVisible=0,totalSamples=0,bestIncFactor=0;
-    for(let s=0;s<WIN_SAMPLES;s++) {{
-      const t=WIN_SAMPLES===1?0.5:s/(WIN_SAMPLES-1);
-      const sAX=w.x1+t*(w.x2-w.x1), sAY=w.y1+t*(w.y2-w.y1);
+    const winAz = windowAzimuth(w.side, bldAz);
+    let winContrib      = 0;
+    let samplesVisible  = 0;
+    let totalSamples    = 0;
+    let bestIncFactor   = 0;
+
+    for(let s=0; s<WIN_SAMPLES; s++) {{
+      const t = WIN_SAMPLES===1 ? 0.5 : s/(WIN_SAMPLES-1);
+      const sAX = w.x1 + t*(w.x2-w.x1);
+      const sAY = w.y1 + t*(w.y2-w.y1);
+
       totalSamples++;
+
       if(isBlockedByInnerWall(pAX,pAY,sAX,sAY,fd)) continue;
       if(isBlockedByOuterWall(pAX,pAY,sAX,sAY,fd)) continue;
+
       samplesVisible++;
-      const dxM=(px-px2rel(sAX,fd.floorX1,fd.floorX2))*realW;
-      const dyM=(py-px2rel(sAY,fd.floorY1,fd.floorY2))*realH;
-      const distM=Math.sqrt(dxM*dxM+dyM*dyM);
-      const incFactor=directSunFactor(winAz,sunAzDeg,sunElevDeg);
-      bestIncFactor=Math.max(bestIncFactor,incFactor);
-      const penetration=roomPenetrationFactor(sunElevDeg,w.side,bldAz);
-      const kDirect=0.2+0.6*(1-penetration);
-      const directContrib=incFactor*sunDirect/(1+kDirect*distM*distM);
-      const kDiffuse=0.3;
-      const diffuseContrib=skyDiff/(1+kDiffuse*distM);
-      winContrib+=directContrib+diffuseContrib;
+
+      const dxM   = (px - px2rel(sAX,fd.floorX1,fd.floorX2)) * realW;
+      const dyM   = (py - px2rel(sAY,fd.floorY1,fd.floorY2)) * realH;
+      const distM = Math.sqrt(dxM*dxM + dyM*dyM);
+
+      const incFactor = directSunFactor(winAz, sunAzDeg, sunElevDeg);
+      bestIncFactor = Math.max(bestIncFactor, incFactor);
+
+      const penetration = roomPenetrationFactor(sunElevDeg, w.side, bldAz);
+      const kDirect = 0.2 + 0.6*(1-penetration);
+      const directContrib = incFactor * sunDirect / (1 + kDirect * distM * distM);
+
+      const kDiffuse = 0.3;
+      const diffuseContrib = skyDiff / (1 + kDiffuse * distM);
+
+      winContrib += directContrib + diffuseContrib;
     }}
-    if(totalSamples>0) {{
-      const avgContrib=winContrib/totalSamples;
-      const winPxLen=Math.sqrt((w.x2-w.x1)**2+(w.y2-w.y1)**2);
-      const isVertical=Math.abs(w.x2-w.x1)<Math.abs(w.y2-w.y1);
-      const winMeter=isVertical?(winPxLen/fh)*realH:(winPxLen/fw)*realW;
-      const winSizeFactor=Math.min(3,winMeter)/1.0;
-      totalIlluminance+=avgContrib*winSizeFactor;
+
+    if(totalSamples > 0) {{
+      const avgContrib = winContrib / totalSamples;
+      const winPxLen = Math.sqrt((w.x2-w.x1)**2 + (w.y2-w.y1)**2);
+      const isVertical = Math.abs(w.x2-w.x1) < Math.abs(w.y2-w.y1);
+      const winMeter = isVertical
+        ? (winPxLen / fh) * realH
+        : (winPxLen / fw) * realW;
+      const winSizeFactor = Math.min(3, winMeter) / 1.0;
+      totalIlluminance += avgContrib * winSizeFactor;
     }}
-    windowHits.push({{side:w.side,winAz:winAz.toFixed(0),incFactor:bestIncFactor.toFixed(2),visRatio:(samplesVisible/totalSamples).toFixed(2),occluded:samplesVisible===0}});
+
+    windowHits.push({{
+      side:       w.side,
+      winAz:      winAz.toFixed(0),
+      incFactor:  bestIncFactor.toFixed(2),
+      visRatio:   (samplesVisible/totalSamples).toFixed(2),
+      occluded:   samplesVisible === 0,
+    }});
   }}
-  totalIlluminance*=(1+wallReflectance);
-  const scaleFactor=22;
-  const score=Math.min(10,Math.max(1,Math.round(totalIlluminance*scaleFactor*10)/10));
-  return {{score,components:{{totalIlluminance,skyDiff,sunDirect}},windowHits}};
+
+  totalIlluminance *= (1 + wallReflectance);
+
+  const scaleFactor = 22;
+  const score = Math.min(10, Math.max(1, Math.round(totalIlluminance * scaleFactor * 10) / 10));
+
+  return {{
+    score,
+    components: {{ totalIlluminance, skyDiff, sunDirect }},
+    windowHits,
+  }};
 }}
 
-function computeLicht(px,py,floor) {{ return computeLichtFull(px,py,floor).score; }}
+function computeLicht(px, py, floor) {{
+  return computeLichtFull(px, py, floor).score;
+}}
 
-function getLichtStatus(ist,soll) {{
-  if(ist>=soll) return "ideal";
+function getLichtStatus(ist, soll) {{
+  if(ist>=soll)   return "ideal";
   if(ist>=soll-2) return "ok";
   return "bad";
 }}
 
 const STATUS_CFG = {{
-  ideal:{{icon:"🟢",label:"Idealer Standort",desc:"Ausreichend Licht für diese Pflanze.",cls:"ideal"}},
-  ok:   {{icon:"🟡",label:"Akzeptabler Standort",desc:"Etwas weniger als optimal.",cls:"ok"}},
-  bad:  {{icon:"🔴",label:"Zu dunkel",desc:"Bitte näher ans Fenster stellen.",cls:"bad"}},
+  ideal:{{icon:"🌟",label:"Idealer Standort",desc:"Ausreichend Licht für diese Pflanze.",cls:"ideal"}},
+  ok:   {{icon:"⛅",label:"Akzeptabler Standort",desc:"Etwas weniger als optimal, aber tolerierbar.",cls:"ok"}},
+  bad:  {{icon:"🌑",label:"Zu dunkel",desc:"Bitte näher ans Fenster stellen.",cls:"bad"}},
 }};
 
-// ============================================================
-// LIGHT MAP
-// ============================================================
 function drawLightMap() {{
-  const img=document.getElementById("floor-img");
-  const canvas=$("light-canvas");
+  const img    = $("floor-img");
+  const canvas = $("light-canvas");
   if(!img.naturalWidth) return;
-  canvas.width=img.naturalWidth; canvas.height=img.naturalHeight;
-  canvas.style.width=img.naturalWidth+"px"; canvas.style.height=img.naturalHeight+"px";
-  const ctx=canvas.getContext("2d");
+  canvas.width  = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  canvas.style.width  = img.naturalWidth+"px";
+  canvas.style.height = img.naturalHeight+"px";
+  const ctx = canvas.getContext("2d");
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  const fd=FLOOR_DATA[currentFloor];
-  const fw=fd.floorX2-fd.floorX1, fh=fd.floorY2-fd.floorY1;
-  const step=20;
-  for(let iy=fd.floorY1;iy<=fd.floorY2;iy+=step) {{
-    for(let ix=fd.floorX1;ix<=fd.floorX2;ix+=step) {{
+  const fd  = FLOOR_DATA[currentFloor];
+  const fw  = fd.floorX2-fd.floorX1, fh = fd.floorY2-fd.floorY1;
+  const step= 20;
+
+  for(let iy=fd.floorY1; iy<=fd.floorY2; iy+=step) {{
+    for(let ix=fd.floorX1; ix<=fd.floorX2; ix+=step) {{
       const rx=(ix-fd.floorX1)/fw, ry=(iy-fd.floorY1)/fh;
       let lv;
       if(dliMode) {{
-        const cached=getDLIScore(rx,ry,currentFloor);
-        lv=cached!==null?cached:computeLicht(rx,ry,currentFloor);
-        const alpha=(lv/10)*0.22;
-        const r=Math.round(50+(lv/10)*40);
-        const g=Math.round(120+(lv/10)*46);
-        const b=Math.round(220-(lv/10)*40);
+        const cached = getDLIScore(rx, ry, currentFloor);
+        lv = cached !== null ? cached : computeLicht(rx, ry, currentFloor);
+        const alpha = (lv/10)*0.28;
+        const r = Math.round(92 + (lv/10)*50);
+        const g = Math.round(155 + (lv/10)*30);
+        const b = Math.round(214 - (lv/10)*50);
         ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
       }} else {{
-        lv=computeLicht(rx,ry,currentFloor);
-        const alpha=(lv/10)*0.2;
-        const g=Math.round(140+(lv/10)*75);
-        ctx.fillStyle=`rgba(63,${{g}},80,${{alpha.toFixed(3)}})`;
+        lv = computeLicht(rx, ry, currentFloor);
+        const alpha=(lv/10)*0.25;
+        const r = Math.round(lv/10*251), g=222, b=Math.round((1-lv/10)*128+74);
+        ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
       }}
       ctx.fillRect(ix,iy,step,step);
     }}
   }}
 }}
 
-// ============================================================
-// IMAGE READY
-// ============================================================
 function onImageReady() {{
-  const img=$("floor-img");
-  const cvs=$("map-canvas");
-  const W=img.naturalWidth||1100, H=img.naturalHeight||600;
+  const img  = $("floor-img");
+  const cvs  = $("map-canvas");
+  const W    = img.naturalWidth||1100, H = img.naturalHeight||600;
   cvs.style.width=W+"px"; cvs.style.height=H+"px";
-  const area=$("map-area");
-  const scale=Math.min(1,(area.clientWidth-40)/W,(area.clientHeight-40)/H);
+  const area = $("map-area");
+  const scale= Math.min(1,(area.clientWidth-40)/W,(area.clientHeight-40)/H);
   cvs.style.transform=`translate(-50%,-50%) scale(${{scale}})`;
 }}
 $("floor-img").addEventListener("load",()=>{{onImageReady();drawLightMap();render();}});
 window.addEventListener("resize",onImageReady);
 
-// ============================================================
-// PLANT IMAGE URL
-// ============================================================
 function getPlantImageUrl(plantName) {{
-  const safeName=plantName.replace(/\s+/g,'%20');
+  const safeName = plantName.replace(/\s+/g, '%20');
   return `${{GITHUB_BASE}}/${{safeName}}.png`;
 }}
 
-// ============================================================
-// CSV LOAD
-// ============================================================
 async function loadPlants() {{
   setStatus(false,"Lade Daten…");
   try {{
-    const res=await fetch(CSV_URL);
+    const res = await fetch(CSV_URL);
     if(!res.ok) throw new Error("HTTP "+res.status);
-    const text=await res.text();
-    plants=parseCSV(text);
-    setStatus(true,plants.length+" Pflanzen geladen");
+    const text = await res.text();
+    plants = parseCSV(text);
+    setStatus(true, plants.length+" Pflanzen geladen");
   }} catch(e) {{
     console.warn("CSV-Fehler:",e);
-    plants=[
-      {{name:"Monstera Deliciosa",botanisch:"Monstera deliciosa",licht:7,giessen:3,dungen:4,umtopfen:"Alle 2 Jahre",info:"Robuste Zimmerpflanze",emoji:"🌿",luftfeuchtigkeit:"60-80%",besprühen:"Ja",besonderheit:"Bekannt für spektakuläre Blattlöcher.",giessAll:{{}},duengAll:{{}}}},
-      {{name:"Sukkulente",botanisch:"Echeveria spp.",licht:9,giessen:14,dungen:8,umtopfen:"Alle 3 Jahre",info:"Viel Sonne",emoji:"🌵",luftfeuchtigkeit:"30-50%",besprühen:"Nein",besonderheit:"Speichert Wasser in Blättern.",giessAll:{{}},duengAll:{{}}}},
+    plants = [
+      {{name:"Monstera Deliciosa",botanisch:"Monstera deliciosa",licht:7,giessen:3,dungen:4,umtopfen:"Alle 2 Jahre",info:"Robuste Zimmerpflanze",emoji:"🌿",luftfeuchtigkeit:"60-80%",besprühen:"Ja",besonderheit:"Bekannt für ihre spektakulären Blattlöcher.",giessAll:{{}},duengAll:{{}}}},
     ];
     setStatus(false,"Offline-Modus");
   }}
   plants.forEach((p,i)=>{{ if(!p.emoji) p.emoji=PLANT_EMOJIS[i%PLANT_EMOJIS.length]; }});
-  $("inv-count").textContent=plants.length;
+  $("inv-count").textContent = plants.length;
+
   loadPositionsLocal();
-  loadCareData();
-  // Try to load care data from sheets
-  await syncCareFromSheets();
+  loadCareData(); // Initial load from LocalStorage
+
   renderInventory();
   renderLibrary();
   setFloor(currentFloor);
   $("loading").classList.add("hidden");
   updateSunInfo();
   renderCare();
-  setInterval(()=>{{updateSunInfo();drawLightMap();render();}},60000);
-  updateCareBadge();
+  setInterval(()=>{{ updateSunInfo(); drawLightMap(); render(); }}, 60000);
 }}
 
-// ============================================================
-// CSV PARSE
-// ============================================================
 function parseCSV(text) {{
-  const lines=text.trim().split("\\n");
-  const headers=lines[0].split(",").map(h=>h.trim().replace(/"/g,""));
-  const col=(cands)=>{{
+  const lines   = text.trim().split("\\n");
+  const headers = lines[0].split(",").map(h=>h.trim().replace(/"/g,""));
+  const col = (cands) => {{
     for(const c of cands) {{
       const idx=headers.findIndex(h=>h.toLowerCase().includes(c.toLowerCase()));
       if(idx>=0) return idx;
     }}
     return -1;
   }};
-  const colName=col(["Pflanze","Name","name"]);
-  const colBotanisch=col(["Botanischer","botanisch","Botanisch"]);
-  const colLicht=col(["Lichtbedarf"]);
-  const colUmtopf=col(["Umtopfen"]);
-  const colLuft=col(["Luftfeuchtigkeit","Optimale Luftfeu","luftfeucht"]);
-  const colBespr=col(["Besprühen","Bespruhen","besprühen"]);
-  const colBesond=col(["Besonderheit","besonderheit"]);
-  const monthName=MONTHS_DE[NOW_MONTH];
-  const colGiess=col(["Gießen_"+monthName,"Giessen_"+monthName]);
-  const colDueng=col(["Düngen_"+monthName,"Dunegen_"+monthName,"Düngen_"+monthName]);
+
+  const colName      = col(["Pflanze","Name","name"]);
+  const colBotanisch = col(["Botanischer","botanisch","Botanisch"]);
+  const colLicht     = col(["Lichtbedarf"]);
+  const colUmtopf    = col(["Umtopfen"]);
+  const colLuft      = col(["Luftfeuchtigkeit","Optimale Luftfeu","luftfeucht"]);
+  const colBespr     = col(["Besprühen","Bespruhen","besprühen"]);
+  const colBesond    = col(["Besonderheit","besonderheit"]);
+
+  const monthName = MONTHS_DE[NOW_MONTH];
+  const colGiess  = col(["Gießen_"+monthName,"Giessen_"+monthName]);
+  const colDueng  = col(["Düngen_"+monthName,"Dunegen_"+monthName,"Düngen_"+monthName]);
   const giessAll={{}}, duengAll={{}};
   MONTHS_DE.forEach(m=>{{
     giessAll[m]=col(["Gießen_"+m,"Giessen_"+m]);
     duengAll[m]=col(["Düngen_"+m,"Dunegen_"+m,"Düngen_"+m]);
   }});
-  // Care timestamp columns
-  const colLastWatered=col(["lastWatered","last_watered","LastWatered"]);
-  const colLastFertilized=col(["lastFertilized","last_fertilized","LastFertilized"]);
 
   return lines.slice(1).filter(l=>l.trim()).map((line,i)=>{{
     const cols=splitCSVLine(line);
-    const safeCol=(idx)=>idx>=0?(cols[idx]||"").trim().replace(/"/g,""):"";
+    const safeCol = (idx) => idx>=0 ? (cols[idx]||"").trim().replace(/"/g,"") : "";
+
     const obj={{
       id:i,
-      name:safeCol(colName)||"Pflanze "+(i+1),
-      botanisch:safeCol(colBotanisch),
-      licht:parseFloat(safeCol(colLicht))||5,
-      giessen:colGiess>=0?(safeCol(colGiess)||"—"):"—",
-      dungen:colDueng>=0?(safeCol(colDueng)||"—"):"—",
-      umtopfen:safeCol(colUmtopf)||"—",
-      luftfeuchtigkeit:safeCol(colLuft)||"",
-      besprühen:safeCol(colBespr)||"",
-      besonderheit:safeCol(colBesond)||"",
-      emoji:PLANT_EMOJIS[i%PLANT_EMOJIS.length],
-      giessAll:{{}},duengAll:{{}},
-      // Care timestamps from CSV (may be overridden by local/sheets)
-      csvLastWatered:colLastWatered>=0?safeCol(colLastWatered):"",
-      csvLastFertilized:colLastFertilized>=0?safeCol(colLastFertilized):"",
+      name:          safeCol(colName) || "Pflanze "+(i+1),
+      botanisch:     safeCol(colBotanisch),
+      licht:         parseFloat(safeCol(colLicht))||5,
+      giessen:       colGiess>=0 ? (safeCol(colGiess)||"—") : "—",
+      dungen:        colDueng>=0 ? (safeCol(colDueng)||"—") : "—",
+      umtopfen:      safeCol(colUmtopf)||"—",
+      luftfeuchtigkeit: safeCol(colLuft)||"",
+      besprühen:     safeCol(colBespr)||"",
+      besonderheit:  safeCol(colBesond)||"",
+      emoji:         PLANT_EMOJIS[i%PLANT_EMOJIS.length],
+      giessAll:{{}}, duengAll:{{}},
     }};
     MONTHS_DE.forEach(m=>{{
-      obj.giessAll[m]=giessAll[m]>=0?(safeCol(giessAll[m])||"—"):"—";
-      obj.duengAll[m]=duengAll[m]>=0?(safeCol(duengAll[m])||"—"):"—";
+      obj.giessAll[m] = giessAll[m]>=0 ? (safeCol(giessAll[m])||"—") : "—";
+      obj.duengAll[m] = duengAll[m]>=0 ? (safeCol(duengAll[m])||"—") : "—";
     }});
     return obj;
   }});
@@ -1468,164 +1433,75 @@ function splitCSVLine(line) {{
   res.push(cur.trim()); return res;
 }}
 
-// ============================================================
-// PERSISTENZ — LOCAL STORAGE
-// ============================================================
 function savePositionsLocal() {{
-  try {{ localStorage.setItem("pflanzen_positions_v2",JSON.stringify(positions)); }} catch(e) {{}}
+  try {{ localStorage.setItem("pflanzen_positions_v2", JSON.stringify(positions)); }}
+  catch(e) {{ console.warn("localStorage write failed:", e); }}
 }}
+
 function loadPositionsLocal() {{
   try {{
-    const raw=localStorage.getItem("pflanzen_positions_v2");
-    if(raw) positions=JSON.parse(raw);
-  }} catch(e) {{ positions={{}}; }}
+    const raw = localStorage.getItem("pflanzen_positions_v2");
+    if(raw) positions = JSON.parse(raw);
+  }} catch(e) {{ positions = {{}}; }}
 }}
+
 function saveCareData() {{
   try {{
-    localStorage.setItem("pflanzen_care_v2",JSON.stringify(careData));
-    localStorage.setItem("pflanzen_history_v2",JSON.stringify(careHistory.slice(0,200)));
-  }} catch(e) {{}}
+    localStorage.setItem("pflanzen_care_v1", JSON.stringify(careData));
+    localStorage.setItem("pflanzen_history_v1", JSON.stringify(careHistory.slice(0,100)));
+  }} catch(e) {{ console.warn("care save failed:", e); }}
 }}
+
 function loadCareData() {{
   try {{
-    const rc=localStorage.getItem("pflanzen_care_v2");
-    if(rc) careData=JSON.parse(rc);
-    const rh=localStorage.getItem("pflanzen_history_v2");
-    if(rh) careHistory=JSON.parse(rh);
-    // Merge CSV timestamps if no local data exists
-    plants.forEach((p,i)=>{{
-      if(!careData[i]) careData[i]={{}};
-      const cd=careData[i];
-      if(!cd.lastWatered && p.csvLastWatered) {{
-        const d=new Date(p.csvLastWatered);
-        if(!isNaN(d.getTime())) cd.lastWatered=d.toISOString();
-      }}
-      if(!cd.lastFertilized && p.csvLastFertilized) {{
-        const d=new Date(p.csvLastFertilized);
-        if(!isNaN(d.getTime())) cd.lastFertilized=d.toISOString();
-      }}
-    }});
+    const rc = localStorage.getItem("pflanzen_care_v1");
+    if(rc) careData = JSON.parse(rc);
+    const rh = localStorage.getItem("pflanzen_history_v1");
+    if(rh) careHistory = JSON.parse(rh);
   }} catch(e) {{ careData={{}}; careHistory=[]; }}
 }}
 
-// ============================================================
-// GOOGLE APPS SCRIPT URL
-// ============================================================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9Vf0xJ4gJPFt6j3SaQQjW2PKT29upU-UxmyoioOEs_upOXVA0MgKGmu17yZQm0uuM/exec";
 
-// ============================================================
-// SHEETS SYNC — Positionen speichern
-// ============================================================
-async function savePositionsToSheets() {{
+// ★ NEU: Kombinierter Google Sheets API-Call für Koordinaten & Care-Daten
+async function syncPlantDataToSheets() {{
   savePositionsLocal();
+  saveCareData();
   if(!APPS_SCRIPT_URL) return;
-  const payload=Object.entries(positions).map(([idx,pos])=>{{
-    return {{action:"savePosition",idx:parseInt(idx),floor:pos.floor,x:pos.x,y:pos.y}};
+  const payload = Object.entries(positions).map(([idxStr, pos]) => {{
+    const idx = parseInt(idxStr);
+    const cd = careData[idx] || {{}};
+    return {{
+      idx: idx,
+      floor: pos.floor, x: pos.x, y: pos.y,
+      lastWatered: cd.lastWatered || null,
+      lastFertilized: cd.lastFertilized || null
+    }};
   }});
+  
   try {{
-    await fetch(APPS_SCRIPT_URL,{{method:"POST",mode:"no-cors",headers:{{"Content-Type":"application/json"}},body:JSON.stringify(payload)}});
-    showToast("☁ Standorte synchronisiert","success");
+    await fetch(APPS_SCRIPT_URL, {{
+      method:"POST", mode:"no-cors",
+      headers:{{"Content-Type":"application/json"}},
+      body: JSON.stringify({{action: "updateAll", data: payload}}),
+    }});
+    showToast("☁️ Sync mit Google Sheets erfolgreich");
   }} catch(e) {{
-    showToast("💾 Lokal gespeichert","info");
+    showToast("💾 Nur lokal gespeichert (Offline)");
   }}
 }}
 
 function debouncedSave() {{
   if(saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout=setTimeout(savePositionsToSheets,800);
+  saveTimeout = setTimeout(syncPlantDataToSheets, 800);
 }}
 
-// ============================================================
-// SHEETS SYNC — Care-Daten schreiben
-// ============================================================
-async function saveCareToSheets(plantIdx, type, timestamp) {{
-  saveCareData();
-  if(!APPS_SCRIPT_URL) return false;
-  const p=plants[plantIdx];
-  if(!p) return false;
-  const payload={{
-    action:"saveCare",
-    idx:plantIdx,
-    plantName:p.name,
-    type:type,           // "water" | "fertilize"
-    timestamp:timestamp,
-    lastWatered:careData[plantIdx]?.lastWatered || "",
-    lastFertilized:careData[plantIdx]?.lastFertilized || "",
-  }};
-  try {{
-    showSyncBadge("syncing");
-    $("sdot").className="sdot syncing";
-    await fetch(APPS_SCRIPT_URL,{{method:"POST",mode:"no-cors",headers:{{"Content-Type":"application/json"}},body:JSON.stringify([payload])}});
-    careData[plantIdx].syncedAt=new Date().toISOString();
-    saveCareData();
-    showSyncBadge("ok");
-    $("sdot").className="sdot ok";
-    return true;
-  }} catch(e) {{
-    console.warn("Sheets-Sync fehlgeschlagen:",e);
-    showSyncBadge("error");
-    $("sdot").className="sdot ok";
-    return false;
-  }}
-}}
-
-// ============================================================
-// SHEETS SYNC — Care-Daten lesen
-// ============================================================
-async function syncCareFromSheets() {{
-  if(!APPS_SCRIPT_URL || syncInProgress) return;
-  syncInProgress=true;
-  try {{
-    showSyncBadge("syncing");
-    const url=APPS_SCRIPT_URL+"?action=getCare&t="+Date.now();
-    const res=await fetch(url,{{method:"GET",mode:"cors"}});
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    const data=await res.json();
-    // data expected: array of {{idx, lastWatered, lastFertilized}}
-    if(Array.isArray(data)) {{
-      data.forEach(entry=>{{
-        const i=entry.idx;
-        if(i===undefined||i===null) return;
-        if(!careData[i]) careData[i]={{}};
-        // Only update if sheets data is newer
-        const sheetW=entry.lastWatered?new Date(entry.lastWatered):null;
-        const sheetF=entry.lastFertilized?new Date(entry.lastFertilized):null;
-        const localW=careData[i].lastWatered?new Date(careData[i].lastWatered):null;
-        const localF=careData[i].lastFertilized?new Date(careData[i].lastFertilized):null;
-        if(sheetW && (!localW || sheetW>localW)) {{
-          careData[i].lastWatered=entry.lastWatered;
-        }}
-        if(sheetF && (!localF || sheetF>localF)) {{
-          careData[i].lastFertilized=entry.lastFertilized;
-        }}
-      }});
-      saveCareData();
-      showSyncBadge("ok");
-    }}
-  }} catch(e) {{
-    // Silently fail — sheets might not support GET yet
-    showSyncBadge("ok");
-  }} finally {{
-    syncInProgress=false;
-  }}
-}}
-
-async function syncAllFromSheets() {{
-  showToast("⟳ Lade von Google Sheets…","info",4000);
-  await syncCareFromSheets();
-  renderCare();
-  showToast("✓ Daten aktualisiert","success");
-}}
-
-// ============================================================
-// TAB SWITCHING
-// ============================================================
 function switchTab(tab) {{
   currentTab=tab;
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===tab));
-  const isPlaner=tab==="planer";
-  const isLibrary=tab==="library";
-  const isCare=tab==="care";
+  const isPlaner = tab==="planer";
+  const isLibrary= tab==="library";
+  const isCare   = tab==="care";
   $("left-sidebar").classList.toggle("hidden",!isPlaner);
   $("right-sidebar").classList.toggle("hidden",!isPlaner);
   $("map-area").style.display=isPlaner?"block":"none";
@@ -1635,26 +1511,19 @@ function switchTab(tab) {{
   if(isCare) renderCare();
 }}
 
-// ============================================================
-// CARE SUB-TABS
-// ============================================================
 function switchCareSubtab(tab) {{
-  currentCareSubtab=tab;
-  ["due","all","calendar","history"].forEach(t=>{{
-    const btn=$("subtab-"+t);
-    if(btn) btn.classList.toggle("active",t===tab);
-    const pane=$("care-"+t+"-pane");
-    if(pane) pane.classList.toggle("active",t===tab);
+  currentCareSubtab = tab;
+  ["calendar","status","history"].forEach(t=>{{
+    $("subtab-"+t).classList.toggle("active", t===tab);
   }});
+  $("care-calendar-pane").style.display = tab==="calendar" ? "flex" : "none";
+  $("care-status-pane").style.display   = tab==="status"   ? "flex" : "none";
+  $("care-history-pane").style.display  = tab==="history"  ? "block" : "none";
   if(tab==="calendar") renderCalendar();
+  if(tab==="status")   renderCareStatus();
   if(tab==="history")  renderCareHistory();
-  if(tab==="due")      renderCareDue();
-  if(tab==="all")      renderCareAll();
 }}
 
-// ============================================================
-// FLOOR SWITCHING
-// ============================================================
 function setFloor(floor) {{
   currentFloor=floor;
   ["EG","1. OG","2. OG"].forEach(f=>{{
@@ -1665,147 +1534,199 @@ function setFloor(floor) {{
   fd.src=FLOOR_DATA[floor].url;
   fd.onload=()=>{{onImageReady();drawLightMap();render();}};
   if(fd.complete&&fd.naturalWidth){{onImageReady();drawLightMap();render();}}
-  render(); renderInventory();
+  render();
+  renderInventory();
   if(activePIdx!==null) renderDetail(activePIdx);
   if(dliMode) scheduleDLICompute(floor);
 }}
 
-// ============================================================
-// RENDER PINS
-// ============================================================
 function render() {{
   const canvas=$("map-canvas");
   const img=$("floor-img");
   const W=img.naturalWidth||1100, H=img.naturalHeight||600;
   canvas.style.width=W+"px"; canvas.style.height=H+"px";
   canvas.querySelectorAll(".plant-pin").forEach(el=>el.remove());
+
   plants.forEach((p,i)=>{{
     const pos=positions[i];
     if(!pos||pos.floor!==currentFloor) return;
-    const ist=dliMode?(getDLIScore(pos.x,pos.y,currentFloor)??computeLicht(pos.x,pos.y,currentFloor)):computeLicht(pos.x,pos.y,currentFloor);
+    const ist = dliMode
+      ? (getDLIScore(pos.x, pos.y, currentFloor) ?? computeLicht(pos.x,pos.y,currentFloor))
+      : computeLicht(pos.x,pos.y,currentFloor);
     const stat=getLichtStatus(ist,p.licht);
     const pin=document.createElement("div");
     pin.className="plant-pin"+(activePIdx===i?" active":"");
     pin.dataset.idx=i;
-    const tx=Math.round(pos.x*W-21), ty=Math.round(pos.y*H-21);
+    const tx=Math.round(pos.x*W-23), ty=Math.round(pos.y*H-23);
     pin.style.transform=`translate(${{tx}}px,${{ty}}px)`;
+    const modeLabel = dliMode ? "DLI" : "Live";
     pin.innerHTML=`
       <div class="pin-bubble">${{p.emoji}}</div>
       <div class="pin-indicator ${{stat}}"></div>
-      <div class="pin-label">${{p.name}}</div>
+      <div class="pin-label">${{p.name.split(" ")[0]}}</div>
       <div class="pin-light-badge">${{ist}}/10</div>
     `;
-    pin.addEventListener("click",e=>{{e.stopPropagation();activePIdx=i;render();renderInventory();renderDetail(i);}});
-    pin.addEventListener("mouseenter",e=>showTooltip(`${{p.name}} — ${{ist}}/10 Licht`,e.clientX,e.clientY));
-    pin.addEventListener("mouseleave",hideTooltip);
     setupPinDrag(pin,i);
+    pin.addEventListener("click",e=>{{e.stopPropagation();selectPlant(i);}});
+    pin.addEventListener("mousemove",e=>showTooltip(`${{p.name}} · ${{modeLabel}}: ${{ist}}/10 · Bedarf: ${{p.licht}}/10`,e.clientX,e.clientY));
+    pin.addEventListener("mouseleave",hideTooltip);
     canvas.appendChild(pin);
   }});
 }}
 
-// ============================================================
-// DETAIL PANEL
-// ============================================================
+function selectPlant(idx) {{
+  activePIdx=(activePIdx===idx)?null:idx;
+  render();
+  if(activePIdx!==null) renderDetail(activePIdx);
+  else showEmptyDetail();
+  renderInventory();
+}}
 function showEmptyDetail() {{
-  $("rsb-empty").style.display="flex";
+  $("rsb-empty").style.display="";
   $("rsb-detail").classList.remove("visible");
-  $("rsb-detail").innerHTML="";
 }}
 
 function renderDetail(idx) {{
-  const p=plants[idx];
-  if(!p) return;
-  const det=$("rsb-detail");
-  det.innerHTML="";
-  det.classList.add("visible");
-  $("rsb-empty").style.display="none";
-
+  const p  =plants[idx];
   const pos=positions[idx];
-  const lf=pos?computeLichtFull(pos.x,pos.y,pos.floor):null;
-  const liveScore=lf?lf.score:null;
-  const dliScore=pos?(getDLIScore(pos.x,pos.y,pos.floor||currentFloor)??null):null;
-  const primaryScore=dliMode?dliScore:liveScore;
-  const stat=primaryScore?getLichtStatus(primaryScore,p.licht):null;
-  const sc=stat?STATUS_CFG[stat]:null;
+  const floor=pos?pos.floor:currentFloor;
+  const lf = pos ? computeLichtFull(pos.x,pos.y,floor) : null;
+  const liveScore = lf ? lf.score : null;
 
-  const imgUrl=getPlantImageUrl(p.name);
-  const imgHTML=`
+  const dliScore = pos ? getDLIScore(pos.x, pos.y, floor) : null;
+  const primaryScore = dliMode && dliScore ? dliScore : liveScore;
+
+  const stat=primaryScore?getLichtStatus(primaryScore,p.licht):null;
+  const sc  =stat?STATUS_CFG[stat]:null;
+
+  $("rsb-empty").style.display="none";
+  const det=$("rsb-detail");
+  det.classList.add("visible");
+
+  const imgUrl = getPlantImageUrl(p.name);
+  const imgHTML = `
     <div class="detail-img-wrap">
       <img src="${{imgUrl}}" style="width:100%;height:100%;object-fit:cover;"
-        onerror="this.style.display='none'">
-      <div class="detail-img-overlay"></div>
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="detail-img-fallback" style="display:none">${{p.emoji}}</div>
     </div>
   `;
 
-  const coordsHTML=pos?`<div class="coords">📍 ${{pos.floor}} · x:${{(pos.x*100).toFixed(1)}}% y:${{(pos.y*100).toFixed(1)}}%</div>`:'';
+  const coordsHTML=pos
+    ?`<div class="coords-row">Rel. ${{(pos.x*100).toFixed(1)}}% · ${{(pos.y*100).toFixed(1)}}%</div>
+      <span class="floor-tag">📍 ${{pos.floor}}</span>`
+    :`<span class="floor-tag">📦 Im Inventar</span>`;
 
-  // DLI panel
-  let dliHTML="";
-  if(dliScore&&dliMode) {{
-    const dliPct=(dliScore/10*100).toFixed(1);
-    dliHTML=`
-      <div class="dli-detail">
-        <div class="dli-detail-lbl">Tages-DLI (berechnet)</div>
-        <div class="dli-bar-wrap">
-          <div class="dli-bar-track"><div class="dli-bar-fill" style="width:${{dliPct}}%"></div></div>
-          <div class="dli-score-val">${{dliScore}}</div>
+  let dliHTML = "";
+  if(pos) {{
+    const hasCache = dliScore !== null;
+    const dliVal   = hasCache ? dliScore : "—";
+    const dliPct   = hasCache ? ((dliScore/10)*100).toFixed(0) : 0;
+    const liveVal  = liveScore !== null ? liveScore : "—";
+    const nightMode = sunState.elevation <= -6;
+    const liveLabel = nightMode ? "🌙 Nacht (kein Tageslicht)" : `${{"☀️"}} Live-Score ${{liveVal}}/10`;
+
+    dliHTML = `
+      <div class="dli-panel">
+        <div class="dli-panel-title">📊 Daily Light Integral</div>
+        <div class="dli-score-row">
+          <span class="dli-score-val">${{dliVal}}</span>
+          <span class="dli-score-unit">/ 10 Tages-Ø</span>
         </div>
+        <div class="dli-bar-wrap">
+          <div class="dli-bar-track">
+            <div class="dli-bar-fill" style="width:${{dliPct}}%"></div>
+          </div>
+          <div class="dli-bar-labels">
+            <span>Tagesmittel</span>
+            <span>Bedarf: ${{p.licht}}/10</span>
+          </div>
+        </div>
+        <div class="dli-live-row">
+          <div class="dli-live-dot"></div>
+          <span class="dli-live-text">${{liveLabel}}</span>
+        </div>
+        ${{!hasCache ? '<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:4px;">DLI-Modus aktivieren für Tagesberechnung</div>' : ''}}
       </div>
     `;
   }}
 
-  // Astro panel
   let astroHTML="";
   if(lf) {{
     const winChips=lf.windowHits.map(w=>{{
-      const visRatio=parseFloat(w.visRatio||0);
-      const bright=!w.occluded&&parseFloat(w.incFactor)>0.2;
-      return `<span class="win-chip ${{bright?"hit":""}}">${{w.side}}${{w.occluded?" ✕":bright?" ☀":""}} (${{Math.round(visRatio*100)}}%)</span>`;
+      const visRatio = parseFloat(w.visRatio||0);
+      const bright = !w.occluded && parseFloat(w.incFactor)>0.2;
+      const partialLabel = visRatio>0&&visRatio<1 ? ` (${{Math.round(visRatio*100)}}%)` : "";
+      return `<span class="win-chip ${{bright?"hit":""}}">
+        ${{w.side}}${{w.occluded?" (verdeckt)": bright?" ☀️":""}}${{partialLabel}}
+      </span>`;
     }}).join("");
-    const nightMode=sunState.elevation<=-6;
-    const dawnMode=sunState.elevation<=0&&!nightMode;
-    const timeLabel=nightMode?"🌙 Nacht":dawnMode?"🌅 Dämmerung":"☀ Tageslicht";
+
+    const nightMode = sunState.elevation <= -6;
+    const dawnMode  = sunState.elevation <= 0 && !nightMode;
+    const timeLabel = nightMode ? "🌙 Nacht" : dawnMode ? "🌅 Dämmerung" : "☀️ Tageslicht";
+    const skyPct    = (lf.components.skyDiff * 100 / 0.15).toFixed(0);
+    const dirPct    = (lf.components.sunDirect * 100).toFixed(0);
+
     astroHTML=`
       <div class="astro-panel">
-        <div class="astro-title">Lichtanalyse · ${{timeLabel}}</div>
+        <div class="astro-title">☀️ Lichtanalyse (Live)</div>
         <div class="astro-grid">
-          <div class="astro-cell"><div class="astro-cell-lbl">Elevation</div><div class="astro-cell-val">${{sunState.elevation.toFixed(1)}}<span class="astro-cell-unit">°</span></div></div>
-          <div class="astro-cell"><div class="astro-cell-lbl">Azimut</div><div class="astro-cell-val">${{sunState.azimuth.toFixed(0)}}<span class="astro-cell-unit">°</span></div></div>
-          <div class="astro-cell"><div class="astro-cell-lbl">Direktsonne</div><div class="astro-cell-val">${{(lf.components.sunDirect*100).toFixed(0)}}<span class="astro-cell-unit">%</span></div></div>
-          <div class="astro-cell"><div class="astro-cell-lbl">Himmelslicht</div><div class="astro-cell-val">${{(lf.components.skyDiff*100/0.15).toFixed(0)}}<span class="astro-cell-unit">%</span></div></div>
+          <div class="astro-cell">
+            <div class="astro-cell-lbl">Elevation</div>
+            <div class="astro-cell-val">${{sunState.elevation.toFixed(1)}}<span class="astro-cell-unit">°</span></div>
+          </div>
+          <div class="astro-cell">
+            <div class="astro-cell-lbl">Azimut</div>
+            <div class="astro-cell-val">${{sunState.azimuth.toFixed(0)}}<span class="astro-cell-unit">°</span></div>
+          </div>
+          <div class="astro-cell">
+            <div class="astro-cell-lbl">Direkt. Sonne</div>
+            <div class="astro-cell-val">${{dirPct}}<span class="astro-cell-unit">%</span></div>
+          </div>
+          <div class="astro-cell">
+            <div class="astro-cell-lbl">Himmelslicht</div>
+            <div class="astro-cell-val">${{skyPct}}<span class="astro-cell-unit">%</span></div>
+          </div>
         </div>
+        <div style="font-size:11px;font-weight:600;color:var(--muted);margin-top:4px">${{timeLabel}} · Fenster-Sichtbarkeit:</div>
         <div class="window-chips">${{winChips}}</div>
       </div>
     `;
   }}
 
-  const barColor=stat==='ideal'?'var(--accent)':stat==='ok'?'var(--warn-bright)':'var(--danger-bright)';
-  const scoreToShow=primaryScore||liveScore;
+  const barColor = stat==='ideal' ? 'var(--accent)' : stat==='ok' ? 'var(--warn)' : 'var(--danger)';
+  const scoreToShow = primaryScore || liveScore;
   const lightHTML=scoreToShow?`
     <div class="score-badge ${{sc.cls}}">
       <div class="sc-icon">${{sc.icon}}</div>
       <div class="sc-text"><h3>${{sc.label}}</h3><p>${{sc.desc}}</p></div>
     </div>
     <div class="light-bar-wrap">
-      <div class="lbw-label"><span>Lichtwert</span><span>${{scoreToShow}} / 10</span></div>
+      <div class="lbw-label"><span>💡 Lichtwert</span><span>${{scoreToShow}} / 10</span></div>
       <div class="lbw-track">
-        <div class="lbw-fill" style="width:${{(scoreToShow/10*100).toFixed(1)}}%;background:linear-gradient(90deg,var(--accent-dim),${{barColor}})"></div>
+        <div class="lbw-fill" style="width:${{(scoreToShow/10*100).toFixed(1)}}%;background:linear-gradient(90deg, var(--accent-glow), ${{barColor}})"></div>
         <div class="lbw-needle" style="left:${{(p.licht/10*100).toFixed(1)}}%"></div>
       </div>
-      <div class="lbw-label"><span style="color:var(--text-3)">Bedarf: ${{p.licht}}/10</span><span style="color:var(--text-3)">Verfügbar: ${{scoreToShow}}/10</span></div>
+      <div class="lbw-label"><span style="color:var(--muted);font-weight:500;">Bedarf: ${{p.licht}}/10</span><span style="color:var(--muted);font-weight:500;">Verfügbar: ${{scoreToShow}}/10</span></div>
     </div>
     ${{dliHTML}}
     ${{astroHTML}}
   `:`
-    ${{dliHTML||'<div style="font-size:12px;color:var(--text-3);background:var(--surface-2);border-radius:8px;padding:16px;margin:0 16px 12px;text-align:center;">Pflanze auf Karte platzieren für Lichtanalyse</div>'}}
+    ${{dliHTML || '<div style="font-size:14px;font-weight:500;color:var(--muted);background:var(--surface-solid);border-radius:var(--rx);padding:20px;text-align:center;box-shadow:0 4px 16px rgba(45,71,57,0.02);border:1px solid var(--border);">Pflanze auf Karte platzieren, um Lichtwert zu berechnen.</div>'}}
   `;
 
-  const removeHTML=pos?`<button class="act-btn danger-btn" onclick="removePlant(${{idx}})">🗑 Entfernen</button>`:"";
-  const extraHTML=`
-    <div style="padding:0 0 8px;">
-      ${{p.luftfeuchtigkeit?`<div class="detail-extra-row"><div class="detail-extra-lbl">💧 Luftfeuchtigkeit</div><div class="detail-extra-val">${{p.luftfeuchtigkeit}}</div></div>`:''}}
-      ${{p.besprühen?`<div class="detail-extra-row"><div class="detail-extra-lbl">🌫 Besprühen</div><div class="detail-extra-val">${{p.besprühen}}</div></div>`:''}}
-      ${{p.besonderheit?`<div class="detail-extra-row"><div class="detail-extra-lbl">💡 Besonderheit</div><div class="detail-extra-val">${{p.besonderheit}}</div></div>`:''}}
+  const removeHTML=pos?`<button class="act-btn danger-btn" onclick="removePlant(${{idx}})">🗑️ Entfernen</button>`:"";
+  
+  const mNow = MONTHS_DE[NOW_MONTH];
+  const gCurrent = p.giessAll[mNow] || p.giessen;
+  const dCurrent = p.duengAll[mNow] || p.dungen;
+
+  const extraHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${{p.luftfeuchtigkeit ? `<div class="detail-extra-row"><div class="detail-extra-lbl">💧 Opt. Luftfeuchtigkeit</div><div class="detail-extra-val">${{p.luftfeuchtigkeit}}</div></div>` : ''}}
+      ${{p.besprühen ? `<div class="detail-extra-row"><div class="detail-extra-lbl">🌫️ Besprühen</div><div class="detail-extra-val">${{p.besprühen}}</div></div>` : ''}}
+      ${{p.besonderheit ? `<div class="detail-extra-row"><div class="detail-extra-lbl">💡 Besonderheit</div><div class="detail-extra-val">${{p.besonderheit}}</div></div>` : ''}}
     </div>
   `;
 
@@ -1815,28 +1736,35 @@ function renderDetail(idx) {{
       <div class="big-emoji">${{p.emoji}}</div>
       <div class="plant-hdr-text">
         <h2>${{p.name}}</h2>
-        ${{p.botanisch?`<div class="botanical">${{p.botanisch}}</div>`:''}}
+        ${{p.botanisch ? `<div class="botanical">${{p.botanisch}}</div>` : ''}}
         ${{coordsHTML}}
       </div>
     </div>
     ${{lightHTML}}
     <div class="data-grid">
-      <div class="dc"><div class="dc-lbl">💧 Gießen (${{MONTHS_DE[NOW_MONTH]}})</div><div class="dc-val">${{p.giessen||"—"}}<span class="dc-unit">Tage</span></div></div>
-      <div class="dc"><div class="dc-lbl">🌿 Düngen (${{MONTHS_DE[NOW_MONTH]}})</div><div class="dc-val">${{p.dungen||"—"}}</div></div>
-      <div class="dc"><div class="dc-lbl">☀ Lichtbedarf</div><div class="dc-val">${{p.licht}}<span class="dc-unit">/ 10</span></div></div>
-      <div class="dc"><div class="dc-lbl">🪴 Umtopfen</div><div class="dc-val" style="font-size:13px">${{p.umtopfen||"—"}}</div></div>
+      <div class="dc">
+        <div class="dc-lbl">💧 Gießen (${{mNow}})</div>
+        <div class="dc-val">${{gCurrent||"—"}}<span class="dc-unit">Tage</span></div>
+      </div>
+      <div class="dc">
+        <div class="dc-lbl">🌿 Düngen (${{mNow}})</div>
+        <div class="dc-val">${{dCurrent||"—"}}<span class="dc-unit"></span></div>
+      </div>
+      <div class="dc">
+        <div class="dc-lbl">☀️ Lichtbedarf</div>
+        <div class="dc-val">${{p.licht}}<span class="dc-unit">/ 10</span></div>
+      </div>
+      <div class="dc">
+        <div class="dc-lbl">🪴 Umtopfen</div>
+        <div class="dc-val" style="font-size:14px;padding-top:4px">${{p.umtopfen||"—"}}</div>
+      </div>
     </div>
     ${{extraHTML}}
     <div class="action-row">
-      <button class="act-btn primary" onclick="selectPlant(${{idx}})">✓ OK</button>
+      <button class="act-btn primary" onclick="selectPlant(${{idx}})">✓ Schließen</button>
       ${{removeHTML}}
     </div>
   `;
-}}
-
-function selectPlant(idx) {{
-  activePIdx=null;
-  render(); renderInventory(); showEmptyDetail();
 }}
 
 function removePlant(idx) {{
@@ -1846,13 +1774,11 @@ function removePlant(idx) {{
   render(); renderInventory(); showEmptyDetail();
 }}
 
-// ============================================================
-// RENDER INVENTORY
-// ============================================================
 function renderInventory() {{
-  const list=$("inv-list");
+  const list  =$("inv-list");
   const filter=inventoryFilter.toLowerCase();
-  const available=[],placedHere=[],otherFloor=[];
+  const available=[], placedHere=[], otherFloor=[];
+
   plants.forEach((p,i)=>{{
     if(filter&&!p.name.toLowerCase().includes(filter)) return;
     const pos=positions[i];
@@ -1860,7 +1786,9 @@ function renderInventory() {{
     else if(pos.floor===currentFloor) placedHere.push(i);
     else otherFloor.push(i);
   }});
+
   list.innerHTML="";
+
   const makeGroup=(label,indices,isPlaced,isOther)=>{{
     if(!indices.length) return;
     const grp=document.createElement("div");
@@ -1871,37 +1799,55 @@ function renderInventory() {{
       const item=document.createElement("div");
       let cls="inv-item";
       if(activePIdx===i) cls+=" selected";
-      if(isOther) cls+=" placed-elsewhere";
+      if(isOther)        cls+=" placed-elsewhere";
       item.className=cls;
       item.dataset.pidx=i;
-      const badgeHtml=isPlaced?`<span class="inv-badge placed-badge">📍 ${{positions[i]?.floor||""}}</span>`:`<span class="inv-badge">Frei</span>`;
-      item.innerHTML=`<span class="inv-emoji">${{p.emoji}}</span><span class="inv-name">${{p.name}}</span>${{badgeHtml}}`;
+
+      const badgeHtml=isPlaced
+        ?`<span class="inv-badge placed-badge">📍 ${{positions[i]?.floor||""}}</span>`
+        :`<span class="inv-badge">Verfügbar</span>`;
+
+      item.innerHTML=`
+        <span class="inv-emoji">${{p.emoji}}</span>
+        <span class="inv-name">${{p.name}}</span>
+        ${{badgeHtml}}
+      `;
+
       item.addEventListener("click",()=>{{
         activePIdx=i;
-        if(positions[i]&&positions[i].floor!==currentFloor) setFloor(positions[i].floor);
+        if(positions[i] && positions[i].floor!==currentFloor) {{
+          setFloor(positions[i].floor);
+        }}
         render(); renderInventory(); renderDetail(i);
       }});
+
       if(!isPlaced) {{
         item.draggable=true;
-        item.addEventListener("dragstart",e=>{{dragSrcIdx=i;e.dataTransfer.effectAllowed="move";setTimeout(()=>item.classList.add("dragging-source"),0);}});
-        item.addEventListener("dragend",()=>{{item.classList.remove("dragging-source");dragSrcIdx=null;}});
+        item.addEventListener("dragstart",e=>{{
+          dragSrcIdx=i; e.dataTransfer.effectAllowed="move";
+          setTimeout(()=>item.classList.add("dragging-source"),0);
+        }});
+        item.addEventListener("dragend",()=>{{
+          item.classList.remove("dragging-source"); dragSrcIdx=null;
+        }});
       }}
       grp.appendChild(item);
     }});
     list.appendChild(grp);
   }};
-  makeGroup("Verfügbar",available,false,false);
-  makeGroup("Hier platziert",placedHere,true,false);
-  makeGroup("Anderes OG",otherFloor,true,true);
+
+  makeGroup("🟢 Verfügbar",       available,  false, false);
+  makeGroup("📍 Hier platziert",  placedHere, true,  false);
+  makeGroup("🔵 Anderes OG",      otherFloor, true,  true);
 }}
 
 function filterInventory(val) {{ inventoryFilter=val; renderInventory(); }}
 
-// ============================================================
-// DROP ONTO MAP
-// ============================================================
 const mapArea=$("map-area");
-mapArea.addEventListener("dragover",e=>{{e.preventDefault();e.dataTransfer.dropEffect="move";$("map-canvas").classList.add("drag-over");}});
+mapArea.addEventListener("dragover",e=>{{
+  e.preventDefault(); e.dataTransfer.dropEffect="move";
+  $("map-canvas").classList.add("drag-over");
+}});
 mapArea.addEventListener("dragleave",()=>$("map-canvas").classList.remove("drag-over"));
 mapArea.addEventListener("drop",e=>{{
   e.preventDefault(); $("map-canvas").classList.remove("drag-over");
@@ -1919,9 +1865,6 @@ mapArea.addEventListener("drop",e=>{{
   render(); renderInventory(); renderDetail(activePIdx);
 }});
 
-// ============================================================
-// PIN DRAG
-// ============================================================
 function setupPinDrag(pin,idx) {{
   let startX,startY,startPX,startPY,dragging=false;
   function getWH() {{
@@ -1942,7 +1885,7 @@ function setupPinDrag(pin,idx) {{
     const {{W,H,scaleX,scaleY}}=getWH();
     positions[idx].x=Math.max(0,Math.min(1,startPX+(e.clientX-startX)*scaleX/W));
     positions[idx].y=Math.max(0,Math.min(1,startPY+(e.clientY-startY)*scaleY/H));
-    const tx=Math.round(positions[idx].x*W-21), ty=Math.round(positions[idx].y*H-21);
+    const tx=Math.round(positions[idx].x*W-23), ty=Math.round(positions[idx].y*H-23);
     pin.style.transform=`translate(${{tx}}px,${{ty}}px)`;
     const ist=computeLicht(positions[idx].x,positions[idx].y,currentFloor);
     const stat=getLichtStatus(ist,plants[idx].licht);
@@ -1957,130 +1900,114 @@ function setupPinDrag(pin,idx) {{
     render();
     if(activePIdx===idx) renderDetail(idx);
   }});
-  pin.addEventListener("pointercancel",()=>{{dragging=false;pin.classList.remove("dragging");}});
+  pin.addEventListener("pointercancel",e=>{{dragging=false;pin.classList.remove("dragging");}});
 }}
 
 // ============================================================
-// LIBRARY — SMART FILTER & SORT
+// ★ LIBRARY VIEW — SMART FILTER & SORT
 // ============================================================
-function onLibraryFilterChange() {{
-  libraryFilter=$("lib-search").value;
-  libFilterLight=$("lib-filter-light").value;
-  libFilterWater=$("lib-filter-water").value;
-  libSort=$("lib-sort").value;
+function updateLibFilters() {{
+  libFilterSearch = $("lib-search").value.toLowerCase();
+  libFilterLight  = $("lib-filter-light").value;
+  libFilterWater  = $("lib-filter-water").value;
+  libSortType     = $("lib-sort").value;
   renderLibrary();
-}}
-
-function resetLibraryFilters() {{
-  $("lib-search").value="";
-  $("lib-filter-light").value="";
-  $("lib-filter-water").value="";
-  $("lib-sort").value="name";
-  libraryFilter=""; libFilterLight=""; libFilterWater=""; libSort="name";
-  renderLibrary();
-}}
-
-function applyLibraryFiltersAndSort(list) {{
-  const txt=libraryFilter.toLowerCase();
-  // Filter
-  let filtered=list.filter(p=>{{
-    if(txt && !p.name.toLowerCase().includes(txt) && !(p.botanisch||"").toLowerCase().includes(txt)) return false;
-    if(libFilterLight) {{
-      const l=p.licht||5;
-      if(libFilterLight==="low"&&l>4) return false;
-      if(libFilterLight==="mid"&&(l<5||l>7)) return false;
-      if(libFilterLight==="high"&&l<8) return false;
-    }}
-    if(libFilterWater) {{
-      const days=parseIntervalDays(p.giessen);
-      if(libFilterWater==="rare"&&(days===null||days<14)) return false;
-      if(libFilterWater==="mid"&&(days===null||days<7||days>=14)) return false;
-      if(libFilterWater==="frequent"&&(days===null||days>=7)) return false;
-    }}
-    return true;
-  }});
-  // Sort
-  filtered.sort((a,b)=>{{
-    switch(libSort) {{
-      case "name": return a.name.localeCompare(b.name,"de");
-      case "name-desc": return b.name.localeCompare(a.name,"de");
-      case "licht": return (a.licht||0)-(b.licht||0);
-      case "licht-desc": return (b.licht||0)-(a.licht||0);
-      case "giessen": return (parseIntervalDays(a.giessen)||999)-(parseIntervalDays(b.giessen)||999);
-      case "giessen-desc": return (parseIntervalDays(b.giessen)||999)-(parseIntervalDays(a.giessen)||999);
-      default: return 0;
-    }}
-  }});
-  return filtered;
 }}
 
 function renderLibrary() {{
   const grid=$("lib-grid");
-  const filtered=applyLibraryFiltersAndSort(plants);
-  const placed=Object.keys(positions).length;
-  const hasFilters=libraryFilter||libFilterLight||libFilterWater;
-
-  // Results bar
-  $("lib-sub-label").textContent=`${{plants.length}} Pflanzen · ${{placed}} platziert · ${{MONTHS_DE[NOW_MONTH]}}`;
-  $("lib-results-count").textContent=`${{filtered.length}} von ${{plants.length}} Einträgen`;
-
-  // Active filter tags
-  const filterTags=[];
-  if(libraryFilter) filterTags.push(`"${{libraryFilter}}"`);
-  if(libFilterLight) filterTags.push(libFilterLight==="low"?"☀ Schattig":libFilterLight==="mid"?"☀ Halbschattig":"☀ Sonnig");
-  if(libFilterWater) filterTags.push(libFilterWater==="rare"?"💧 Selten":libFilterWater==="mid"?"💧 Mittel":"💧 Häufig");
-  $("lib-active-filters").innerHTML=filterTags.map(t=>`<span class="lib-filter-tag" onclick="resetLibraryFilters()">${{t}} ✕</span>`).join("");
-
-  const resetBtn=$("lib-reset-btn");
-  if(resetBtn) resetBtn.style.display=hasFilters?"":"none";
-
   grid.innerHTML="";
 
-  if(!filtered.length) {{
-    grid.innerHTML=`<div class="lib-no-results"><div class="lib-no-results-icon">🔍</div><div style="font-size:14px;font-weight:600;color:var(--text-2)">Keine Pflanzen gefunden</div><div style="font-size:12px;color:var(--text-3);margin-top:6px">Filter anpassen oder zurücksetzen</div></div>`;
-    return;
+  // 1. FILTERING
+  let filtered = plants.filter(p => {{
+    if(libFilterSearch && !p.name.toLowerCase().includes(libFilterSearch)) return false;
+    
+    if(libFilterLight !== "all") {{
+      if(libFilterLight === "high" && p.licht <= 7) return false;
+      if(libFilterLight === "medium" && (p.licht < 4 || p.licht > 7)) return false;
+      if(libFilterLight === "low" && p.licht >= 4) return false;
+    }}
+
+    if(libFilterWater !== "all") {{
+      const mNow = MONTHS_DE[NOW_MONTH];
+      const gCurrent = parseIntervalDays(p.giessAll[mNow] || p.giessen);
+      if(!gCurrent) return libFilterWater === "all"; // ignore missing data if specific filter is set
+      
+      if(libFilterWater === "high" && gCurrent >= 7) return false;
+      if(libFilterWater === "medium" && (gCurrent < 7 || gCurrent > 14)) return false;
+      if(libFilterWater === "low" && gCurrent <= 14) return false;
+    }}
+
+    return true;
+  }});
+
+  // 2. SORTING
+  filtered.sort((a, b) => {{
+    if(libSortType === "name") return a.name.localeCompare(b.name);
+    if(libSortType === "light") return b.licht - a.licht;
+    if(libSortType === "water") {{
+      const mA = parseIntervalDays(a.giessAll[MONTHS_DE[NOW_MONTH]] || a.giessen) || 999;
+      const mB = parseIntervalDays(b.giessAll[MONTHS_DE[NOW_MONTH]] || b.giessen) || 999;
+      return mA - mB; // Shortest interval first
+    }}
+    return 0;
+  }});
+
+  const libSub=$("lib-sub-label");
+  if(libSub) {{
+    const placed=Object.keys(positions).length;
+    libSub.textContent=`${{filtered.length}} Pflanzen gefunden · ${{MONTHS_DE[NOW_MONTH]}}`;
   }}
 
-  filtered.forEach(p=>{{
+  filtered.forEach((p) => {{
     const i=plants.indexOf(p);
     const pos=positions[i];
     const lf=pos?computeLichtFull(pos.x,pos.y,pos.floor):null;
     const ist=lf?lf.score:null;
     const stat=ist?getLichtStatus(ist,p.licht):null;
-    const floorLabel=pos?`📍 ${{pos.floor}}`:"📦 Inventar";
-    const barColor=stat==='ideal'?'var(--accent)':stat==='ok'?'var(--warn-bright)':'var(--danger-bright)';
+    const floorLabel=pos?`📍 ${{pos.floor}}`:"📦 Im Inventar";
+
+    const barColor=stat==='ideal'?'var(--accent)':stat==='ok'?'var(--warn)':'var(--danger)';
     const lightPct=ist?(ist/10*100).toFixed(1):0;
 
     let statusChip="";
     if(stat) {{
-      const cfg={{ideal:{{cls:"ideal",lbl:"✓ Optimal"}},ok:{{cls:"ok",lbl:"~ Akzeptabel"}},bad:{{cls:"bad",lbl:"✕ Zu dunkel"}}}};
+      const cfg={{ideal:{{cls:"ideal",ico:"✅",lbl:"Optimaler Standort"}},ok:{{cls:"ok",ico:"⚠️",lbl:"Akzeptabler Standort"}},bad:{{cls:"bad",ico:"❌",lbl:"Zu dunkel"}}}};
       const c=cfg[stat];
-      statusChip=`<span class="lib-status-chip ${{c.cls}}">${{c.lbl}}</span>`;
+      statusChip=`<span class="lib-status-chip ${{c.cls}}">${{c.ico}} ${{c.lbl}}</span>`;
     }} else {{
       statusChip=`<span class="lib-status-chip none">📦 Nicht platziert</span>`;
     }}
 
-    const imgUrl=getPlantImageUrl(p.name);
-    const besondHTML=p.besonderheit?`<div class="lib-besonderheit"><div class="lib-besonderheit-lbl">💡 Besonderheit</div>${{p.besonderheit}}</div>`:'';
-    const humiHTML=(p.luftfeuchtigkeit||p.besprühen)?`
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        ${{p.luftfeuchtigkeit?`<div class="lib-humidity-row">💧 <span class="lib-humidity-badge">${{p.luftfeuchtigkeit}}</span></div>`:''}}
-        ${{p.besprühen?`<div class="lib-humidity-row">🌫 Besprühen: <strong style="color:var(--text);margin-left:3px">${{p.besprühen}}</strong></div>`:''}}
-      </div>
-    `:'';
+    const imgUrl = getPlantImageUrl(p.name);
+    const mNow = MONTHS_DE[NOW_MONTH];
+    const gCurrent = p.giessAll[mNow] || p.giessen;
+    const dCurrent = p.duengAll[mNow] || p.dungen;
 
-    const waterDays=parseIntervalDays(p.giessen);
-    const fertDays=parseIntervalDays(p.dungen);
+    const besondHTML = p.besonderheit ? `
+      <div class="lib-besonderheit">
+        <div class="lib-besonderheit-lbl">💡 Besonderheit</div>
+        ${{p.besonderheit}}
+      </div>
+    ` : '';
+
+    const humiHTML = (p.luftfeuchtigkeit || p.besprühen) ? `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        ${{p.luftfeuchtigkeit ? `<div class="lib-humidity-row">💧 <span class="lib-humidity-badge">${{p.luftfeuchtigkeit}}</span></div>` : ''}}
+        ${{p.besprühen ? `<div class="lib-humidity-row">🌫️ Besprühen: <strong style="margin-left:4px;color:var(--text);">${{p.besprühen}}</strong></div>` : ''}}
+      </div>
+    ` : '';
 
     const card=document.createElement("div");
     card.className="lib-card";
     card.innerHTML=`
       <div class="lib-card-img">
-        <img src="${{imgUrl}}" alt="${{p.name}}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <img src="${{imgUrl}}" alt="${{p.name}}"
+          onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div class="lib-card-img-fallback" style="display:none">${{p.emoji}}</div>
         <div class="lib-card-img-overlay">
           <div class="lib-card-name">${{p.name}}</div>
-          ${{p.botanisch?`<div class="lib-card-botanical">${{p.botanisch}}</div>`:''}}
+          ${{p.botanisch ? `<div class="lib-card-botanical">${{p.botanisch}}</div>` : ''}}
         </div>
       </div>
       <div class="lib-card-body">
@@ -2091,39 +2018,48 @@ function renderLibrary() {{
             ${{floorLabel}}
           </div>
         </div>
-        <div class="lib-metrics-row">
-          <div class="lib-metric">
-            <div class="lib-metric-lbl">☀ Lichtbedarf</div>
-            <div class="lib-metric-val">${{p.licht}}<span class="lib-metric-unit">/ 10</span></div>
-          </div>
-          <div class="lib-metric">
-            <div class="lib-metric-lbl">💧 Gießen</div>
-            <div class="lib-metric-val">${{waterDays||"—"}}<span class="lib-metric-unit">${{waterDays?"d":""}}</span></div>
-          </div>
-          <div class="lib-metric">
-            <div class="lib-metric-lbl">🌿 Düngen</div>
-            <div class="lib-metric-val">${{fertDays||"—"}}<span class="lib-metric-unit">${{fertDays?"d":""}}</span></div>
-          </div>
-        </div>
-        ${{ist?`
         <div class="lib-light-row">
-          <div style="font-size:11px;color:var(--text-3);width:60px;font-family:var(--font-mono)">Licht</div>
+          <div class="lib-light-icon">☀️</div>
           <div class="lib-light-bar-wrap">
             <div class="lib-light-bar-track">
-              <div class="lib-light-bar-fill" style="width:${{lightPct}}%;background:linear-gradient(90deg,rgba(63,185,80,.3),${{barColor}})"></div>
+              <div class="lib-light-bar-fill" style="width:${{lightPct}}%;background:${{ist?'linear-gradient(90deg, var(--accent-glow), '+barColor+')':'rgba(45,71,57,0.1)'}}"></div>
+            </div>
+            <div class="lib-light-labels">
+              <span>Licht verfügbar</span>
+              <span>Bedarf: ${{p.licht}}/10</span>
             </div>
           </div>
-          <div class="lib-light-score" style="color:${{barColor}}">${{ist}}/10</div>
+          <div class="lib-light-score" style="color:${{ist?barColor:'var(--muted)'}}">
+            ${{ist?ist+"/10":"—"}}
+          </div>
         </div>
-        `:''}
+        <div class="lib-divider"></div>
+        <div class="lib-care-grid">
+          <div class="lib-care-cell">
+            <div class="lib-care-cell-lbl">💧 Gießen (${{mNow}})</div>
+            <div class="lib-care-cell-val">${{gCurrent||"—"}}<span class="lib-care-cell-unit">Tage</span></div>
+          </div>
+          <div class="lib-care-cell">
+            <div class="lib-care-cell-lbl">🌿 Düngen (${{mNow}})</div>
+            <div class="lib-care-cell-val">${{dCurrent||"—"}}</div>
+          </div>
+          <div class="lib-care-cell">
+            <div class="lib-care-cell-lbl">☀️ Lichtbedarf</div>
+            <div class="lib-care-cell-val">${{p.licht}}<span class="lib-care-cell-unit">/ 10</span></div>
+          </div>
+          <div class="lib-care-cell">
+            <div class="lib-care-cell-lbl">🪴 Umtopfen</div>
+            <div class="lib-care-cell-val" style="font-size:13px">${{p.umtopfen||"—"}}</div>
+          </div>
+        </div>
         ${{humiHTML}}
         ${{besondHTML}}
       </div>
       <div class="lib-card-footer">
-        <button class="show-on-map-btn" data-pidx="${{i}}">🗺 Auf Karte</button>
-        <button class="show-on-map-btn care-btn-lib" onclick="switchTab('care')">🌱 Pflege</button>
+        <button class="show-on-map-btn" data-pidx="${{i}}">🗺️ Auf Karte zeigen</button>
       </div>
     `;
+
     card.querySelector(".show-on-map-btn").addEventListener("click",()=>{{
       const ppos=positions[i];
       if(ppos) setFloor(ppos.floor);
@@ -2134,531 +2070,427 @@ function renderLibrary() {{
         if(pin){{pin.classList.add("highlight-pulse");setTimeout(()=>pin.classList.remove("highlight-pulse"),4500);}}
       }},120);
     }});
+
     grid.appendChild(card);
   }});
 }}
 
-// ============================================================
-// CLICK OUTSIDE → DESELECT
-// ============================================================
 $("map-area").addEventListener("click",()=>{{activePIdx=null;render();renderInventory();showEmptyDetail();}});
 
 // ============================================================
-// CARE BADGE UPDATE
+// ★ PFLEGE-KALENDER — Kalender-Grid
 // ============================================================
-function updateCareBadge() {{
-  const now=new Date();
-  let dueCount=0;
-  plants.forEach((p,i)=>{{
-    const ws=getCareStatus(i,'water');
-    const fs=getCareStatus(i,'fertilize');
-    if((ws&&ws.overdueDays>0)||(fs&&fs.overdueDays>0)) dueCount++;
-  }});
-  const badge=$("care-tab-badge");
-  if(badge) {{
-    badge.textContent=dueCount;
-    badge.style.display=dueCount>0?"":"none";
-    badge.className="tab-badge"+(dueCount>0?" ":"");
-  }}
-}}
-
-// ============================================================
-// KALENDER
-// ============================================================
-function changeCalMonth(d) {{
-  calMonth+=d;
-  if(calMonth<0){{calMonth=11;calYear--;}}
-  if(calMonth>11){{calMonth=0;calYear++;}}
+function changeCalMonth(delta) {{
+  calMonth += delta;
+  if(calMonth > 11){{ calMonth=0; calYear++; }}
+  if(calMonth < 0) {{ calMonth=11; calYear--; }}
   renderCalendar();
 }}
 
 function renderCalendar() {{
-  const title=$("cal-month-title");
-  if(title) title.textContent=`${{MONTHS_DE[calMonth]}} ${{calYear}}`;
-  const headerRow=$("cal-header-row");
-  if(headerRow) headerRow.innerHTML=DAYS_DE.map(d=>`<div class="cal-header-cell">${{d}}</div>`).join("");
-  const grid=$("cal-grid");
+  const titleEl = $("cal-month-title");
+  if(titleEl) titleEl.textContent = MONTHS_DE[calMonth]+" "+calYear;
+  const grid = $("cal-grid");
   if(!grid) return;
-  const firstDay=new Date(calYear,calMonth,1);
-  const totalDays=new Date(calYear,calMonth+1,0).getDate();
-  const prevMonthDays=new Date(calYear,calMonth,0).getDate();
-  let startDow=firstDay.getDay();
-  let html="";
-  for(let d=0;d<startDow;d++) html+=`<div class="cal-cell other-month"><div class="cal-day-num">${{prevMonthDays-startDow+d+1}}</div></div>`;
-  const todayD=NOW.getDate(),todayM=NOW.getMonth(),todayY=NOW.getFullYear();
-  const eventsByDay={{}};
+
+  let html = DAYS_DE.map(d=>`<div class="cal-day-header">${{d}}</div>`).join("");
+
+  const firstDay = new Date(calYear, calMonth, 1);
+  const lastDay  = new Date(calYear, calMonth+1, 0);
+  const startDow = firstDay.getDay(); 
+  const totalDays= lastDay.getDate();
+
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+  for(let d=startDow-1; d>=0; d--) {{
+    html += `<div class="cal-cell other-month"><div class="cal-day-num">${{prevLast-d}}</div></div>`;
+  }}
+
+  const todayD = NOW.getDate(), todayM = NOW.getMonth(), todayY = NOW.getFullYear();
+  const eventsByDay = {{}};
+
   careHistory.forEach(h=>{{
-    const d=new Date(h.time);
-    if(d.getMonth()===calMonth&&d.getFullYear()===calYear) {{
-      const day=d.getDate();
+    const d = new Date(h.time);
+    if(d.getMonth()===calMonth && d.getFullYear()===calYear) {{
+      const day = d.getDate();
       if(!eventsByDay[day]) eventsByDay[day]=[];
-      eventsByDay[day].push({{type:h.type,name:h.name,emoji:h.emoji}});
+      eventsByDay[day].push({{ type:h.type, name:h.name, emoji:h.emoji }});
     }}
   }});
+
   plants.forEach((p,i)=>{{
-    const ws=getCareStatus(i,'water');
-    const fs=getCareStatus(i,'fertilize');
+    const ws = getCareStatus(i,'water');
+    const fs = getCareStatus(i,'fertilize');
     [['water',ws],['fertilize',fs]].forEach(([type,status])=>{{
       if(!status) return;
-      const nd=status.nextDate;
-      if(nd.getMonth()===calMonth&&nd.getFullYear()===calYear) {{
-        const day=nd.getDate();
+      const nd = status.nextDate;
+      if(nd.getMonth()===calMonth && nd.getFullYear()===calYear) {{
+        const day = nd.getDate();
         if(!eventsByDay[day]) eventsByDay[day]=[];
-        eventsByDay[day].push({{type:'due-'+type,name:p.name,emoji:p.emoji}});
+        eventsByDay[day].push({{ type:'due-'+type, name:p.name, emoji:p.emoji }});
       }}
     }});
   }});
-  for(let d=1;d<=totalDays;d++) {{
-    const isToday=d===todayD&&calMonth===todayM&&calYear===todayY;
-    const events=eventsByDay[d]||[];
-    const evHTML=events.slice(0,3).map(e=>{{
-      const cls=e.type==='water'?'water':e.type==='fertilize'?'fertilize':e.type==='due-water'?'due-water':'due-fertilize';
-      const icon=e.type.includes('water')?'💧':'🌿';
+
+  for(let d=1; d<=totalDays; d++) {{
+    const isToday = d===todayD && calMonth===todayM && calYear===todayY;
+    let cellClass = "cal-cell" + (isToday?" today":"");
+    const events  = eventsByDay[d] || [];
+    const evHTML  = events.slice(0,3).map(e=>{{
+      const cls = e.type==='water' ? 'water' : e.type==='fertilize' ? 'fertilize' : e.type==='due-water' ? 'due-water' : 'due-fertilize';
+      const icon = e.type.includes('water') ? '💧' : '🌿';
       return `<div class="cal-event ${{cls}}">${{icon}} ${{e.name}}</div>`;
     }}).join("");
-    const moreHTML=events.length>3?`<div class="cal-event" style="color:var(--text-3);background:transparent;">+${{events.length-3}}</div>`:"";
-    html+=`<div class="cal-cell${{isToday?' today':''}}"><div class="cal-day-num">${{d}}</div><div class="cal-events">${{evHTML}}${{moreHTML}}</div></div>`;
+    const moreHTML = events.length>3 ? `<div class="cal-event" style="color:var(--muted);background:transparent;">+${{events.length-3}} weitere</div>` : "";
+    html += `
+      <div class="${{cellClass}}">
+        <div class="cal-day-num">${{d}}</div>
+        <div class="cal-events">${{evHTML}}${{moreHTML}}</div>
+      </div>
+    `;
   }}
-  const cellsUsed=startDow+totalDays;
-  const remaining=(7-(cellsUsed%7))%7;
-  for(let d=1;d<=remaining;d++) html+=`<div class="cal-cell other-month"><div class="cal-day-num">${{d}}</div></div>`;
-  grid.innerHTML=html;
+
+  const cellsUsed = startDow + totalDays;
+  const remaining = (7 - (cellsUsed % 7)) % 7;
+  for(let d=1; d<=remaining; d++) {{
+    html += `<div class="cal-cell other-month"><div class="cal-day-num">${{d}}</div></div>`;
+  }}
+
+  grid.innerHTML = html;
 }}
 
 // ============================================================
-// CARE STATUS LOGIC — Saisonale 12-Monate-Logik
+// ★ PFLEGE-STATUS — Saisonale Berechnungslogik & Visualisierung
 // ============================================================
+
 function parseIntervalDays(val) {{
-  if(!val||val==="—"||String(val).trim()==="") return null;
-  const n=parseFloat(String(val).replace(",","."));
-  return isNaN(n)||n<=0?null:Math.round(n);
-}}
-
-function getMonthlyInterval(plantIdx, type) {{
-  // Uses current month's value from the 12-month schema in Sheets
-  const p=plants[plantIdx];
-  if(!p) return null;
-  const currentMonthName=MONTHS_DE[NOW_MONTH];
-  let val;
-  if(type==='water') {{
-    val = p.giessAll&&p.giessAll[currentMonthName] !== undefined
-      ? p.giessAll[currentMonthName]
-      : p.giessen;
-  }} else {{
-    val = p.duengAll&&p.duengAll[currentMonthName] !== undefined
-      ? p.duengAll[currentMonthName]
-      : p.dungen;
-  }}
-  return parseIntervalDays(val);
+  if(!val || val==="—" || val.trim()==="") return null;
+  const n = parseFloat(val);
+  return isNaN(n) ? null : n;
 }}
 
 function getCareStatus(plantIdx, type) {{
-  const intervalDays=getMonthlyInterval(plantIdx, type);
+  const p = plants[plantIdx];
+  const mNow = MONTHS_DE[NOW_MONTH]; // Aktueller Monat für saisonale Logik
+
+  // Wichtig: Spezifische Monatsdaten verwenden
+  const intervalVal = type==='water' ? (p.giessAll[mNow] || p.giessen) : (p.duengAll[mNow] || p.dungen);
+  const intervalDays = parseIntervalDays(intervalVal);
+
   if(!intervalDays) return null;
 
-  const cd=careData[plantIdx]||{{}};
-  const lastStr=type==='water'?cd.lastWatered:cd.lastFertilized;
+  const cd = careData[plantIdx] || {{}};
+  const lastStr = type==='water' ? cd.lastWatered : cd.lastFertilized;
+  const lastDate = lastStr ? new Date(lastStr) : null;
+  const now = new Date();
 
-  // Robust date parsing
-  let lastDate=null;
-  if(lastStr) {{
-    const d=new Date(lastStr);
-    if(!isNaN(d.getTime())) lastDate=d;
-  }}
-
-  const now=new Date();
-  let nextDate,overdueDays=0,moisturePct=50;
+  let nextDate;
+  let overdueDays = 0;
+  let moisturePct = 50;
 
   if(lastDate) {{
-    nextDate=new Date(lastDate.getTime()+intervalDays*24*3600*1000);
-    const diffMs=now-nextDate;
-    overdueDays=Math.max(0,Math.floor(diffMs/(24*3600*1000)));
-    const elapsed=(now-lastDate)/(1000*3600*24);
-    moisturePct=Math.max(0,Math.min(100,Math.round((1-elapsed/intervalDays)*100)));
+    nextDate = new Date(lastDate.getTime() + intervalDays*24*3600*1000);
+    const diffMs = now - nextDate;
+    overdueDays = Math.max(0, Math.floor(diffMs / (24*3600*1000)));
+    const elapsed = (now - lastDate) / (1000*3600*24);
+    moisturePct = Math.max(0, Math.min(100, Math.round((1 - elapsed/intervalDays)*100)));
   }} else {{
-    // Never cared for — treat as overdue since yesterday
-    nextDate=new Date(now.getTime()-24*3600*1000);
-    overdueDays=1;
-    moisturePct=0;
+    nextDate = new Date(now.getTime() - 24*3600*1000);
+    overdueDays = 1;
+    moisturePct = 0;
   }}
 
-  return {{nextDate,overdueDays,intervalDays,moisturePct,lastDate}};
+  return {{ nextDate, overdueDays, intervalDays, moisturePct }};
 }}
 
 function formatRelDate(date) {{
-  const now=new Date();
-  const diffDays=Math.round((date-now)/(24*3600*1000));
-  if(diffDays<-1) return `${{Math.abs(diffDays)}} Tage überfällig`;
-  if(diffDays===-1) return "Gestern fällig";
-  if(diffDays===0) return "Heute fällig";
-  if(diffDays===1) return "Morgen";
-  if(diffDays<=3) return `In ${{diffDays}} Tagen`;
-  return date.toLocaleDateString("de-DE",{{day:"2-digit",month:"2-digit"}});
+  const now = new Date();
+  const diffDays = Math.round((date.setHours(0,0,0,0) - now.setHours(0,0,0,0)) / (24*3600*1000));
+  if(diffDays < -1) return `${{Math.abs(diffDays)}} Tage drüber`;
+  if(diffDays === -1) return "Gestern";
+  if(diffDays === 0) return "Heute";
+  if(diffDays === 1) return "Morgen";
+  if(diffDays <= 5) return `In ${{diffDays}} Tagen`;
+  return date.toLocaleDateString("de-DE", {{day:"2-digit",month:"2-digit"}});
 }}
 
 function formatAbsDate(isoStr) {{
   if(!isoStr) return "—";
-  const d=new Date(isoStr);
-  if(isNaN(d.getTime())) return "Ungültiges Datum";
-  return d.toLocaleDateString("de-DE",{{day:"2-digit",month:"2-digit",year:"numeric"}})
-    +" "+d.toLocaleTimeString("de-DE",{{hour:"2-digit",minute:"2-digit"}});
+  const d = new Date(isoStr);
+  return d.toLocaleDateString("de-DE", {{day:"2-digit",month:"2-digit",year:"numeric"}})
+    + " " + d.toLocaleTimeString("de-DE",{{hour:"2-digit",minute:"2-digit"}});
 }}
 
-// ============================================================
-// CARE ACTIONS — Sofort-Sync
-// ============================================================
 async function doWater(plantIdx) {{
   if(!careData[plantIdx]) careData[plantIdx]={{}};
-  const now=new Date().toISOString();
-  careData[plantIdx].lastWatered=now;
-  careHistory.unshift({{type:'water',plantIdx,name:plants[plantIdx].name,emoji:plants[plantIdx].emoji,time:now,synced:false}});
-  saveCareData();
+  const now = new Date().toISOString();
+  careData[plantIdx].lastWatered = now;
+  careHistory.unshift({{
+    type:'water', plantIdx,
+    name: plants[plantIdx].name,
+    emoji: plants[plantIdx].emoji,
+    time: now
+  }});
+  
+  // Sofortiges UI Update
   renderCare();
-  updateCareBadge();
-  showToast(`💧 ${{plants[plantIdx].name}} gegossen`,"success");
-  // Async sync to Sheets
-  const ok=await saveCareToSheets(plantIdx,'water',now);
-  if(ok) {{
-    careHistory[0].synced=true;
-    saveCareData();
-    if(currentCareSubtab==='history') renderCareHistory();
-  }}
+  showToast(`💧 ${{plants[plantIdx].name}} gegossen`);
+  
+  // Im Hintergrund speichern und synchronisieren
+  await syncPlantDataToSheets();
 }}
 
 async function doFertilize(plantIdx) {{
   if(!careData[plantIdx]) careData[plantIdx]={{}};
-  const now=new Date().toISOString();
-  careData[plantIdx].lastFertilized=now;
-  careHistory.unshift({{type:'fertilize',plantIdx,name:plants[plantIdx].name,emoji:plants[plantIdx].emoji,time:now,synced:false}});
-  saveCareData();
+  const now = new Date().toISOString();
+  careData[plantIdx].lastFertilized = now;
+  careHistory.unshift({{
+    type:'fertilize', plantIdx,
+    name: plants[plantIdx].name,
+    emoji: plants[plantIdx].emoji,
+    time: now
+  }});
+  
+  // Sofortiges UI Update
   renderCare();
-  updateCareBadge();
-  showToast(`🌿 ${{plants[plantIdx].name}} gedüngt`,"success");
-  const ok=await saveCareToSheets(plantIdx,'fertilize',now);
-  if(ok) {{
-    careHistory[0].synced=true;
-    saveCareData();
-    if(currentCareSubtab==='history') renderCareHistory();
-  }}
+  showToast(`🌿 ${{plants[plantIdx].name}} gedüngt`);
+  
+  // Im Hintergrund speichern und synchronisieren
+  await syncPlantDataToSheets();
 }}
 
 async function waterAllDue() {{
-  let count=0;
-  const toSync=[];
-  plants.forEach((p,i)=>{{
-    const ws=getCareStatus(i,'water');
-    if(ws&&ws.overdueDays>0) {{
+  let count = 0;
+  plants.forEach((p,i) => {{
+    const ws = getCareStatus(i, 'water');
+    if(ws && ws.overdueDays > 0) {{
       if(!careData[i]) careData[i]={{}};
-      const now=new Date().toISOString();
-      careData[i].lastWatered=now;
-      careHistory.unshift({{type:'water',plantIdx:i,name:p.name,emoji:p.emoji,time:now,synced:false}});
-      toSync.push({{idx:i,time:now}});
+      careData[i].lastWatered = new Date().toISOString();
+      careHistory.unshift({{type:'water',plantIdx:i,name:p.name,emoji:p.emoji,time:careData[i].lastWatered}});
       count++;
     }}
   }});
-  saveCareData();
-  renderCare();
-  updateCareBadge();
-  showToast(`💧 ${{count}} Pflanzen gegossen`,"success");
-  // Batch sync
-  for(const s of toSync) await saveCareToSheets(s.idx,'water',s.time);
+  if(count > 0) {{
+    renderCare();
+    showToast(`💧 ${{count}} Pflanzen gegossen`);
+    await syncPlantDataToSheets();
+  }} else {{
+    showToast("Keine fälligen Pflanzen gefunden.", 1500);
+  }}
 }}
 
-function refreshCare() {{ renderCare(); updateCareBadge(); }}
+function renderCareStatus() {{
+  const overdueItems  = [];
+  const soonItems     = [];
+  const allItems      = [];
+  const now = new Date();
+  const in3days = new Date(now.getTime() + 3*24*3600*1000);
 
-function renderCare() {{
-  if(currentCareSubtab==='calendar') renderCalendar();
-  else if(currentCareSubtab==='due') renderCareDue();
-  else if(currentCareSubtab==='all') renderCareAll();
-  else if(currentCareSubtab==='history') renderCareHistory();
-  renderCareStatusCounts();
-}}
+  plants.forEach((p, i) => {{
+    const ws = getCareStatus(i, 'water');
+    const fs = getCareStatus(i, 'fertilize');
+    const wOverdue = ws && ws.overdueDays > 0;
+    const fOverdue = fs && fs.overdueDays > 0;
+    const wSoon = ws && !wOverdue && ws.nextDate <= in3days;
+    const fSoon = fs && !fOverdue && fs.nextDate <= in3days;
 
-function renderCareStatusCounts() {{
-  const now=new Date();
-  const in3days=new Date(now.getTime()+3*24*3600*1000);
-  let dueCount=0,soonCount=0;
-  plants.forEach((p,i)=>{{
-    const ws=getCareStatus(i,'water');
-    const fs=getCareStatus(i,'fertilize');
-    const wOver=ws&&ws.overdueDays>0;
-    const fOver=fs&&fs.overdueDays>0;
-    const wSoon=ws&&!wOver&&ws.nextDate<=in3days;
-    const fSoon=fs&&!fOver&&fs.nextDate<=in3days;
-    if(wOver||fOver) dueCount++;
-    else if(wSoon||fSoon) soonCount++;
-  }});
-  $("care-sub-label").textContent=`${{plants.length}} Pflanzen · ${{dueCount}} fällig · ${{soonCount}} demnächst`;
-}}
-
-// ============================================================
-// CARE DUE — Fällige Aufgaben
-// ============================================================
-function renderCareDue() {{
-  const now=new Date();
-  const in3days=new Date(now.getTime()+3*24*3600*1000);
-  const overdueItems=[],soonItems=[];
-  plants.forEach((p,i)=>{{
-    const ws=getCareStatus(i,'water');
-    const fs=getCareStatus(i,'fertilize');
-    const wOver=ws&&ws.overdueDays>0;
-    const fOver=fs&&fs.overdueDays>0;
-    const wSoon=ws&&!wOver&&ws.nextDate<=in3days;
-    const fSoon=fs&&!fOver&&fs.nextDate<=in3days;
-    if(wOver||fOver) overdueItems.push({{idx:i,ws,fs}});
-    else if(wSoon||fSoon) soonItems.push({{idx:i,ws,fs}});
+    const entry = {{idx:i, ws, fs}};
+    if(wOverdue || fOverdue) overdueItems.push(entry);
+    else if(wSoon || fSoon) soonItems.push(entry);
+    else allItems.push(entry);
   }});
 
-  const overdueSection=$("care-overdue-section");
-  if(overdueSection) {{
-    if(overdueItems.length>0) {{
-      overdueSection.innerHTML=`
-        <div class="care-section-title">🔴 Überfällig / Heute fällig <span class="care-badge">${{overdueItems.length}} Pflanze${{overdueItems.length!==1?'n':''}}</span></div>
-        ${{overdueItems.map(e=>makeCareCard(e.idx,e.ws,e.fs,'overdue')).join("")}}
-      `;
-    }} else {{
-      overdueSection.innerHTML=`
-        <div class="care-section-title">🔴 Überfällig <span class="care-badge ok">✓ Alles erledigt</span></div>
-        <div class="care-empty"><span class="ce-icon">🎉</span><p>Alle Pflanzen sind versorgt!</p></div>
-      `;
-    }}
-  }}
+  const dueCount  = overdueItems.length;
+  const soonCount = soonItems.length;
+  $("care-sub-label").textContent =
+    `${{plants.length}} Pflanzen · ${{dueCount}} fällig · ${{soonCount}} in den nächsten 3 Tagen`;
 
-  const soonSection=$("care-soon-section");
-  if(soonSection) {{
-    if(soonItems.length>0) {{
-      soonSection.innerHTML=`
-        <div class="care-section-title" style="margin-top:12px">🟡 In den nächsten 3 Tagen <span class="care-badge warn">${{soonItems.length}} Pflanze${{soonItems.length!==1?'n':''}}</span></div>
-        ${{soonItems.map(e=>makeCareCard(e.idx,e.ws,e.fs,'soon')).join("")}}
-      `;
-    }} else {{
-      soonSection.innerHTML='';
-    }}
-  }}
-}}
-
-// ============================================================
-// CARE ALL
-// ============================================================
-function renderCareAll() {{
-  const now=new Date();
-  const in3days=new Date(now.getTime()+3*24*3600*1000);
-  const allSection=$("care-all-section");
-  if(!allSection) return;
-
-  // Grouped: overdue, soon, ok
-  const groups={{overdue:[],soon:[],ok:[]}};
-  plants.forEach((p,i)=>{{
-    const ws=getCareStatus(i,'water');
-    const fs=getCareStatus(i,'fertilize');
-    const wOver=ws&&ws.overdueDays>0;
-    const fOver=fs&&fs.overdueDays>0;
-    const wSoon=ws&&!wOver&&ws.nextDate<=in3days;
-    const fSoon=fs&&!fOver&&fs.nextDate<=in3days;
-    if(wOver||fOver) groups.overdue.push({{idx:i,ws,fs}});
-    else if(wSoon||fSoon) groups.soon.push({{idx:i,ws,fs}});
-    else groups.ok.push({{idx:i,ws,fs}});
-  }});
-
-  let html='';
-  if(groups.overdue.length) {{
-    html+=`<div class="care-section-title">🔴 Überfällig <span class="care-badge">${{groups.overdue.length}}</span></div>`;
-    html+=groups.overdue.map(e=>makeCareCard(e.idx,e.ws,e.fs,'overdue')).join('');
-  }}
-  if(groups.soon.length) {{
-    html+=`<div class="care-section-title" style="margin-top:14px">🟡 Demnächst fällig <span class="care-badge warn">${{groups.soon.length}}</span></div>`;
-    html+=groups.soon.map(e=>makeCareCard(e.idx,e.ws,e.fs,'soon')).join('');
-  }}
-  if(groups.ok.length) {{
-    html+=`<div class="care-section-title" style="margin-top:14px">🟢 Versorgt <span class="care-badge ok">${{groups.ok.length}}</span></div>`;
-    html+=groups.ok.map(e=>makeCareCard(e.idx,e.ws,e.fs,'ok')).join('');
-  }}
-  allSection.innerHTML=html;
-}}
-
-// ============================================================
-// CARE CARD — mit Kreisdiagrammen und Fortschrittsbalken
-// ============================================================
-function makeCareCard(plantIdx, waterStatus, fertilizeStatus, variant) {{
-  const p=plants[plantIdx];
-  const cd=careData[plantIdx]||{{}};
-  const wOver=waterStatus&&waterStatus.overdueDays>0;
-  const fOver=fertilizeStatus&&fertilizeStatus.overdueDays>0;
-  let cardCls="care-card"+(wOver||fOver?" overdue":variant==="soon"?" soon":variant==="ok"?" done":"");
-
-  // Water chip
-  let waterChip="";
-  if(waterStatus) {{
-    const cls=waterStatus.overdueDays>0?"overdue":waterStatus.nextDate<=new Date(Date.now()+3*86400000)?"soon":"ok";
-    waterChip=`<span class="care-chip ${{cls}}">💧 ${{formatRelDate(waterStatus.nextDate)}}</span>`;
-  }}
-
-  // Fertilize chip
-  let fertChip="";
-  if(fertilizeStatus) {{
-    const cls=fertilizeStatus.overdueDays>0?"overdue":fertilizeStatus.nextDate<=new Date(Date.now()+3*86400000)?"soon":"ok";
-    fertChip=`<span class="care-chip ${{cls}}">🌿 ${{formatRelDate(fertilizeStatus.nextDate)}}</span>`;
-  }}
-
-  // Circle progress diagrams
-  const R=18, C=2*Math.PI*R;
-  let circlesHTML='';
-  if(waterStatus) {{
-    const pct=waterStatus.moisturePct;
-    const urgent=wOver;
-    const offset=C-(pct/100)*C;
-    circlesHTML+=`
-      <div class="care-circle-wrap">
-        <div class="care-circle">
-          <svg width="44" height="44" viewBox="0 0 44 44">
-            <circle class="care-circle-bg" cx="22" cy="22" r="${{R}}"/>
-            <circle class="care-circle-fill water${{urgent?' urgent':''}}" cx="22" cy="22" r="${{R}}"
-              stroke-dasharray="${{C.toFixed(1)}}" stroke-dashoffset="${{offset.toFixed(1)}}"/>
-          </svg>
-          <div class="care-circle-label">${{pct}}%</div>
-        </div>
-        <div class="care-circle-sub">💧 Wasser</div>
+  const overdueSection = $("care-overdue-section");
+  if(overdueItems.length > 0) {{
+    overdueSection.innerHTML = `
+      <div class="care-section-title">
+        ⚠️ Fällige Aufgaben
+        <span class="care-badge">${{overdueItems.length}} Pflanze${{overdueItems.length!==1?'n':''}}</span>
       </div>
+      ${{overdueItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
+    `;
+  }} else {{
+    overdueSection.innerHTML = `
+      <div class="care-section-title">⚠️ Fällige Aufgaben <span class="care-badge ok">Alles erledigt ✓</span></div>
+      <div class="care-empty"><div class="ce-icon">🎉</div><p>Alle Pflanzen sind bestens versorgt!<br>Lehn dich zurück.</p></div>
     `;
   }}
-  if(fertilizeStatus) {{
-    const pct=fertilizeStatus.moisturePct;
-    const urgentF=fOver;
-    const offset=C-(pct/100)*C;
-    circlesHTML+=`
-      <div class="care-circle-wrap">
-        <div class="care-circle">
-          <svg width="44" height="44" viewBox="0 0 44 44">
-            <circle class="care-circle-bg" cx="22" cy="22" r="${{R}}"/>
-            <circle class="care-circle-fill fertilize${{urgentF?' urgent':''}}" cx="22" cy="22" r="${{R}}"
-              stroke-dasharray="${{C.toFixed(1)}}" stroke-dashoffset="${{offset.toFixed(1)}}"/>
-          </svg>
-          <div class="care-circle-label">${{pct}}%</div>
-        </div>
-        <div class="care-circle-sub">🌿 Dünger</div>
+
+  const soonSection = $("care-soon-section");
+  if(soonItems.length > 0) {{
+    soonSection.innerHTML = `
+      <div class="care-section-title" style="margin-top:24px;">
+        📅 Demnächst fällig
+        <span class="care-badge warn">${{soonItems.length}} Pflanze${{soonItems.length!==1?'n':''}}</span>
+      </div>
+      ${{soonItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
+    `;
+  }} else {{
+    soonSection.innerHTML = '';
+  }}
+
+  const allSection = $("care-all-section");
+  if(allItems.length > 0) {{
+    allSection.innerHTML = `
+      <div class="care-section-title" style="margin-top:24px;">
+        🌿 Versorgt & Gesund
+        <span class="care-badge ok">${{allItems.length}} versorgt</span>
+      </div>
+      ${{allItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
+    `;
+  }} else {{
+    allSection.innerHTML = '';
+  }}
+}}
+
+function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
+  const p = plants[plantIdx];
+  const cd = careData[plantIdx] || {{}};
+
+  const wOver = waterStatus && waterStatus.overdueDays > 0;
+  const fOver = fertilizeStatus && fertilizeStatus.overdueDays > 0;
+  let cardClass = "care-card";
+  if(wOver || fOver) cardClass += " overdue";
+  else if (waterStatus && waterStatus.nextDate <= new Date(Date.now()+3*86400000)) cardClass += " soon";
+
+  // Chips & Bars for Water
+  let waterHTML = "";
+  if(waterStatus) {{
+    const cls = waterStatus.overdueDays > 0 ? "overdue" : waterStatus.nextDate <= new Date(Date.now()+3*86400000) ? "soon" : "ok";
+    const label = formatRelDate(waterStatus.nextDate);
+    const wPct = waterStatus.moisturePct;
+    waterHTML = `
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <span class="care-chip ${{cls}}">💧 ${{label}}</span>
+        <div class="care-bar-wrapper"><div class="care-bar-fill water" style="width:${{wPct}}%"></div></div>
       </div>
     `;
   }}
 
-  // Plant thumbnail
-  const imgUrl=getPlantImageUrl(p.name);
-  const thumbHTML=`
+  // Chips & Bars for Fertilizer
+  let fertHTML = "";
+  if(fertilizeStatus) {{
+    const cls = fertilizeStatus.overdueDays > 0 ? "overdue" : fertilizeStatus.nextDate <= new Date(Date.now()+3*86400000) ? "soon" : "ok";
+    const label = formatRelDate(fertilizeStatus.nextDate);
+    const fPct = fertilizeStatus.moisturePct;
+    fertHTML = `
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <span class="care-chip ${{cls}}">🌿 ${{label}}</span>
+        <div class="care-bar-wrapper"><div class="care-bar-fill fertilize" style="width:${{fPct}}%"></div></div>
+      </div>
+    `;
+  }}
+
+  const imgUrl = getPlantImageUrl(p.name);
+  const thumbHTML = `
     <div class="care-card-thumb">
-      <img src="${{imgUrl}}" style="width:100%;height:100%;object-fit:cover;"
-        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <img src="${{imgUrl}}" alt="${{p.name}}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="care-card-thumb-emoji" style="display:none">${{p.emoji}}</div>
     </div>
   `;
 
-  const lastW=cd.lastWatered?`Gegossen: ${{formatAbsDate(cd.lastWatered)}}`:"Noch nie gegossen";
-  const lastF=cd.lastFertilized?`Gedüngt: ${{formatAbsDate(cd.lastFertilized)}}`:"Noch nie gedüngt";
-
-  // Month label for seasonal logic
-  const monthInterval=waterStatus?`Interval ${{MONTHS_DE[NOW_MONTH]}}: alle ${{waterStatus.intervalDays}} Tage`:'' ;
+  const waterBtn = waterStatus
+    ? `<button class="care-btn water" onclick="doWater(${{plantIdx}})">💧 Gegossen</button>`
+    : "";
+  const fertBtn = fertilizeStatus
+    ? `<button class="care-btn fertilize" onclick="doFertilize(${{plantIdx}})">🌿 Gedüngt</button>`
+    : "";
 
   return `
-    <div class="${{cardCls}}">
-      <div class="care-card-stripe"></div>
-      <div class="care-card-inner">
-        ${{thumbHTML}}
-        <div class="care-card-info">
-          <div class="care-card-name">${{p.name}}</div>
-          <div class="care-card-meta">${{waterChip}}${{fertChip}}</div>
-          <div class="care-circles">${{circlesHTML}}</div>
-          <div style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);display:flex;flex-direction:column;gap:2px;">
-            <span>${{lastW}}</span>
-            ${{fertilizeStatus?`<span>${{lastF}}</span>`:''}}
-            ${{monthInterval?`<span style="color:var(--text-3);opacity:.7">${{monthInterval}}</span>`:''}}
-          </div>
+    <div class="${{cardClass}}">
+      ${{thumbHTML}}
+      <div class="care-card-info">
+        <div class="care-card-name">${{p.name}} <span style="font-size:12px; font-weight:500; color:var(--muted); margin-left:8px;">${{p.botanisch||""}}</span></div>
+        <div class="care-card-meta">
+          ${{waterHTML}}
+          ${{fertHTML}}
         </div>
-        <div class="care-card-actions">
-          ${{waterStatus?`<button class="care-btn water" id="wbtn-${{plantIdx}}" onclick="doWater(${{plantIdx}})">💧 Gegossen</button>`:''}}
-          ${{fertilizeStatus?`<button class="care-btn fertilize" id="fbtn-c-${{plantIdx}}" onclick="doFertilize(${{plantIdx}})">🌿 Gedüngt</button>`:''}}
-        </div>
+      </div>
+      <div class="care-card-actions">
+        ${{waterBtn}}
+        ${{fertBtn}}
       </div>
     </div>
   `;
 }}
 
-// ============================================================
-// CARE HISTORY — aus lokalen + Sheets Daten
-// ============================================================
 function renderCareHistory() {{
-  const histSection=$("care-history-section");
+  const histSection = $("care-history-section");
   if(!histSection) return;
-
-  // Build combined history: from local actions + from sheets timestamps
-  const allEntries=[...careHistory];
-
-  // Add initial-load timestamps from care data (if not already in history)
-  const existingKeys=new Set(careHistory.map(h=>`${{h.plantIdx}}-${{h.type}}-${{h.time}}`));
-  plants.forEach((p,i)=>{{
-    const cd=careData[i]||{{}};
-    if(cd.lastWatered) {{
-      const key=`${{i}}-water-${{cd.lastWatered}}`;
-      if(!existingKeys.has(key)) {{
-        allEntries.push({{type:'water',plantIdx:i,name:p.name,emoji:p.emoji,time:cd.lastWatered,synced:true,fromSheets:true}});
-        existingKeys.add(key);
-      }}
-    }}
-    if(cd.lastFertilized) {{
-      const key=`${{i}}-fertilize-${{cd.lastFertilized}}`;
-      if(!existingKeys.has(key)) {{
-        allEntries.push({{type:'fertilize',plantIdx:i,name:p.name,emoji:p.emoji,time:cd.lastFertilized,synced:true,fromSheets:true}});
-        existingKeys.add(key);
-      }}
-    }}
-  }});
-
-  // Sort by time descending
-  allEntries.sort((a,b)=>new Date(b.time)-new Date(a.time));
-
-  if(allEntries.length>0) {{
-    const entries=allEntries.slice(0,80).map(h=>{{
-      const icon=h.type==='water'?'💧':'🌿';
-      const label=h.type==='water'?'gegossen':'gedüngt';
-      const source=h.fromSheets?'sheets':h.synced?'synced':'local';
-      const badge=source==='local'
-        ?`<span class="history-badge local">lokal</span>`
-        :`<span class="history-badge synced">☁ Sheets</span>`;
+  if(careHistory.length > 0) {{
+    const entries = careHistory.slice(0,50).map(h => {{
+      const icon = h.type==='water' ? '💧' : '🌿';
+      const label = h.type==='water' ? 'gegossen' : 'gedüngt';
       return `
         <div class="history-entry">
           <span class="history-icon">${{icon}}</span>
-          <div style="flex:1">
-            <div class="history-text">${{h.emoji||'🌿'}} ${{h.name}} ${{label}}</div>
-            <div class="history-sub">${{MONTHS_DE[new Date(h.time).getMonth()]}} ${{new Date(h.time).getFullYear()}} · ${{h.type==='water'?'💧 Wasser':'🌿 Dünger'}}</div>
-          </div>
-          ${{badge}}
+          <span class="history-text"><strong>${{h.emoji}} ${{h.name}}</strong> wurde ${{label}}</span>
           <span class="history-time">${{formatAbsDate(h.time)}}</span>
         </div>
       `;
     }}).join("");
-    histSection.innerHTML=`
+    histSection.innerHTML = `
       <div class="care-history">
         <div class="care-history-header">
-          📋 Pflege-Historie
-          <span style="font-size:11px;font-weight:500;color:var(--text-3);margin-left:auto;font-family:var(--font-mono)">${{allEntries.length}} Einträge</span>
+          📋 Aktuelle Pflege-Historie
+          <span style="font-family:'DM Sans';font-size:12px;font-weight:500;color:var(--muted);margin-left:auto;">Letzte ${{Math.min(careHistory.length, 50)}} Einträge</span>
         </div>
         ${{entries}}
       </div>
     `;
   }} else {{
-    histSection.innerHTML=`
+    histSection.innerHTML = `
       <div class="care-history">
         <div class="care-history-header">📋 Pflege-Historie</div>
-        <div style="padding:32px;text-align:center;color:var(--text-3);font-size:13px;">Noch keine Aktionen aufgezeichnet.</div>
+        <div style="padding:24px;text-align:center;color:var(--muted);font-size:14px;font-weight:500;">
+          Noch keine Aktionen aufgezeichnet.
+        </div>
       </div>
     `;
   }}
 }}
 
+function refreshCare() {{ 
+  syncPlantDataToSheets();
+  renderCare(); 
+}}
+
+function renderCare() {{
+  if(currentCareSubtab === 'calendar') renderCalendar();
+  else if(currentCareSubtab === 'status') renderCareStatus();
+  else if(currentCareSubtab === 'history') renderCareHistory();
+  renderCareStatusCounts();
+}}
+
+function renderCareStatusCounts() {{
+  const now = new Date();
+  const in3days = new Date(now.getTime() + 3*24*3600*1000);
+  let dueCount = 0, soonCount = 0;
+  plants.forEach((p, i) => {{
+    const ws = getCareStatus(i, 'water');
+    const fs = getCareStatus(i, 'fertilize');
+    const wOverdue = ws && ws.overdueDays > 0;
+    const fOverdue = fs && fs.overdueDays > 0;
+    const wSoon = ws && !wOverdue && ws.nextDate <= in3days;
+    const fSoon = fs && !fOverdue && fs.nextDate <= in3days;
+    if(wOverdue||fOverdue) dueCount++;
+    else if(wSoon||fSoon) soonCount++;
+  }});
+  $("care-sub-label").textContent =
+    `${{plants.length}} Pflanzen · ${{dueCount}} fällig · ${{soonCount}} in den nächsten 3 Tagen`;
+}}
+
 // ============================================================
 // BOOT
 // ============================================================
-switchCareSubtab('due');
+switchCareSubtab('status');
 loadPlants();
 </script>
 </body>
 </html>"""
 
-components.html(html_app, height=920, scrolling=False)
+components.html(html_app, height=900, scrolling=False)
