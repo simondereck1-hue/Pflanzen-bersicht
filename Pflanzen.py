@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import json, math
+import pandas as pd
 
 # ============================================================
 # KONFIGURATION
