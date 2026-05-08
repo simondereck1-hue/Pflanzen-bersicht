@@ -448,7 +448,6 @@ input,select{{font-family:inherit}}
 .dc-lbl{{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}}
 .dc-val{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text)}}
 .dc-unit{{font-size:13px;font-weight:500;color:var(--muted);margin-left:4px}}
-/* Extra detail fields (humidity, besonderheit, besprühen) */
 .detail-extra-row{{
   background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--r);
   padding:14px 16px;display:flex;flex-direction:column;gap:4px;
@@ -479,12 +478,35 @@ input,select{{font-family:inherit}}
 .lib-header h2{{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);}}
 .lib-header-sub{{font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}}
 .lib-search{{
-  margin-left:auto;padding:12px 20px;background:var(--surface-solid);border:1px solid var(--border);
-  border-radius:99px;color:var(--text);font-size:15px;width:300px;
+  padding:12px 20px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:99px;color:var(--text);font-size:15px;width:240px;
   box-shadow:inset 0 2px 6px rgba(45,71,57,0.02);transition:all .3s;
 }}
 .lib-search::placeholder{{color:var(--muted2)}}
 .lib-search:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);}}
+
+/* ── NEU: Sort Controls ── */
+.lib-sort-wrap{{
+  display:flex;align-items:center;gap:10px;margin-left:auto;
+}}
+.lib-sort-label{{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;}}
+.lib-sort-select{{
+  padding:8px 14px;background:var(--surface-solid);border:1px solid var(--border);
+  border-radius:99px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;
+  box-shadow:0 2px 8px rgba(45,71,57,0.02);transition:all .3s;appearance:none;
+  -webkit-appearance:none;padding-right:28px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23688E7B' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+}}
+.lib-sort-select:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}}
+.lib-sort-dir-btn{{
+  width:36px;height:36px;border-radius:99px;border:1px solid var(--border);
+  background:var(--surface-solid);color:var(--text);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);cursor:pointer;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(45,71,57,0.02);
+}}
+.lib-sort-dir-btn:hover{{background:var(--surface-2);border-color:var(--accent-glow);transform:scale(1.08);}}
 
 .lib-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:24px;padding-bottom:32px;}}
 
@@ -546,7 +568,6 @@ input,select{{font-family:inherit}}
 .lib-care-cell-val{{font-size:15px;font-weight:700;color:var(--text)}}
 .lib-care-cell-unit{{font-size:11px;color:var(--muted);margin-left:3px;font-weight:500}}
 
-/* Besonderheit field in library */
 .lib-besonderheit{{
   background:linear-gradient(135deg,rgba(124,179,66,0.04),rgba(92,155,214,0.04));
   border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;
@@ -659,6 +680,30 @@ input,select{{font-family:inherit}}
 .cal-event.due-water{{background:rgba(100,181,246,0.3);color:#1565C0;border:1px solid rgba(100,181,246,0.4);}}
 .cal-event.due-fertilize{{background:rgba(124,179,66,0.25);color:var(--accent-dark);border:1px solid var(--accent-glow);}}
 
+/* ── NEU: Bulk-Action-Bar (Pflege-Status) ── */
+#bulk-action-bar{{
+  display:none;align-items:center;gap:12px;padding:14px 20px;
+  background:var(--surface-solid);border:1px solid var(--accent-glow);border-radius:var(--rx);
+  box-shadow:0 4px 16px var(--accent-dim);flex-shrink:0;flex-wrap:wrap;
+}}
+#bulk-action-bar.visible{{display:flex;}}
+.bulk-count-badge{{
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);
+  background:var(--surface-2);padding:6px 14px;border-radius:99px;border:1px solid var(--border);
+}}
+.bulk-btn{{
+  padding:10px 20px;font-size:13px;font-weight:600;border-radius:99px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
+  transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);
+}}
+.bulk-btn:hover{{transform:translateY(-1px);}}
+.bulk-btn.water{{border-color:rgba(100,181,246,0.5);color:#1976d2;background:rgba(100,181,246,0.08);}}
+.bulk-btn.water:hover{{background:rgba(100,181,246,0.18);box-shadow:0 4px 14px rgba(100,181,246,0.18);}}
+.bulk-btn.fertilize{{border-color:var(--accent-glow);color:var(--accent);background:var(--surface-2);}}
+.bulk-btn.fertilize:hover{{background:var(--surface-3);box-shadow:0 4px 14px var(--accent-dim);}}
+.bulk-btn.clear{{color:var(--muted);}}
+.bulk-btn.clear:hover{{color:var(--danger);border-color:rgba(229,115,115,0.4);background:var(--danger-dim);}}
+
 /* Care Status Pane */
 .care-section-title{{
   font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);
@@ -686,8 +731,31 @@ input,select{{font-family:inherit}}
 .care-card.soon::before{{background:var(--warn);}}
 .care-card.done::before{{background:var(--muted2);}}
 .care-card:hover{{box-shadow:0 8px 32px rgba(45,71,57,0.07);transform:translateY(-1px);}}
+/* NEU: selected-Zustand für Checkbox-Selektion */
+.care-card.selected-card{{
+  border-color:var(--accent-glow);
+  box-shadow:0 0 0 3px var(--accent-dim), 0 8px 32px rgba(45,71,57,0.07);
+}}
 
-/* Care card plant thumbnail */
+/* NEU: Checkbox-Wrapper in care-card */
+.care-card-checkbox-wrap{{
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  width:24px;height:24px;
+}}
+.care-checkbox{{
+  width:18px;height:18px;border-radius:6px;border:2px solid var(--border-2);
+  background:var(--surface-solid);cursor:pointer;appearance:none;-webkit-appearance:none;
+  transition:all .2s;flex-shrink:0;position:relative;
+}}
+.care-checkbox:checked{{
+  background:var(--accent);border-color:var(--accent);
+}}
+.care-checkbox:checked::after{{
+  content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:11px;font-weight:700;color:#fff;line-height:1;
+}}
+.care-checkbox:hover{{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}}
+
 .care-card-thumb{{
   width:52px;height:52px;border-radius:var(--r);overflow:hidden;flex-shrink:0;
   background:var(--surface-2);border:1px solid var(--border);
@@ -706,7 +774,6 @@ input,select{{font-family:inherit}}
 .care-chip.soon{{background:var(--warn-dim);color:#c27a3e;border-color:rgba(226,167,111,0.3);}}
 .care-chip.ok{{background:var(--surface-2);color:var(--accent);border-color:var(--accent-glow);}}
 
-/* Progress bars for water and fertilizer */
 .care-progress-wrap{{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}}
 .care-progress-row{{display:flex;align-items:center;gap:8px;}}
 .care-progress-icon{{font-size:12px;flex-shrink:0;width:16px;}}
@@ -735,6 +802,9 @@ input,select{{font-family:inherit}}
 .care-btn.fertilize{{border-color:var(--accent-glow);color:var(--accent);background:var(--surface-2);}}
 .care-btn.fertilize:hover{{background:var(--surface-3);box-shadow:0 4px 12px var(--accent-dim);}}
 .care-btn.done-btn{{opacity:.5;pointer-events:none;}}
+/* NEU: Standort-Button */
+.care-btn.location{{border-color:rgba(92,155,214,0.4);color:var(--dli-color);background:rgba(92,155,214,0.07);}}
+.care-btn.location:hover{{background:rgba(92,155,214,0.14);box-shadow:0 4px 12px rgba(92,155,214,0.14);}}
 
 /* Historie */
 .care-history{{
@@ -872,6 +942,17 @@ input,select{{font-family:inherit}}
         <div class="lib-header-sub" id="lib-sub-label"></div>
       </div>
       <input class="lib-search" id="lib-search" type="text" placeholder="🔍 Pflanze suchen…" oninput="filterLibrary(this.value)">
+      <!-- NEU: Sort Controls -->
+      <div class="lib-sort-wrap">
+        <span class="lib-sort-label">Sortieren:</span>
+        <select class="lib-sort-select" id="lib-sort-key" onchange="renderLibrary()">
+          <option value="name">Name</option>
+          <option value="licht">Lichtbedarf</option>
+          <option value="giessen">Gießbedarf</option>
+        </select>
+        <button class="lib-sort-dir-btn" id="lib-sort-dir-btn" title="Sortierrichtung umkehren"
+                onclick="toggleSortDir()" style="font-size:14px;">↑</button>
+      </div>
     </div>
     <div class="lib-grid" id="lib-grid"></div>
   </div>
@@ -900,9 +981,7 @@ input,select{{font-family:inherit}}
 
     <!-- Calendar pane -->
     <div id="care-calendar-pane">
-      <!-- Upcoming 14 days urgency list -->
       <div id="care-upcoming-section"></div>
-
       <div class="calendar-wrap">
         <div class="calendar-nav">
           <button class="calendar-nav-btn" onclick="changeCalMonth(-1)">‹</button>
@@ -915,6 +994,13 @@ input,select{{font-family:inherit}}
 
     <!-- Status pane -->
     <div id="care-status-pane">
+      <!-- NEU: Bulk-Action-Bar -->
+      <div id="bulk-action-bar">
+        <span class="bulk-count-badge" id="bulk-count-label">0 ausgewählt</span>
+        <button class="bulk-btn water" onclick="bulkWater()">💧 Alle ausgewählten gießen</button>
+        <button class="bulk-btn fertilize" onclick="bulkFertilize()">🌿 Alle ausgewählten düngen</button>
+        <button class="bulk-btn clear" onclick="clearSelection()" style="margin-left:auto;">✕ Auswahl aufheben</button>
+      </div>
       <div id="care-overdue-section"></div>
       <div id="care-soon-section"></div>
       <div id="care-all-section"></div>
@@ -970,10 +1056,17 @@ let inventoryFilter = "";
 let libraryFilter   = "";
 let saveTimeout     = null;
 let sunState        = {{ azimuth:180, elevation:0, factor:0 }};
-let dliMode         = false;      // DLI overlay vs. live overlay
-let dliCache        = {{}};        // floor -> Map of "rx,ry" -> dliScore
+let dliMode         = false;
+let dliCache        = {{}};
 let calMonth        = NOW_MONTH;
 let calYear         = NOW.getFullYear();
+
+// NEU: Sortier-State (Bibliothek)
+let libSortKey = "name";   // "name" | "licht" | "giessen"
+let libSortAsc = true;
+
+// NEU: Multi-Selektion (Pflege-Status)
+let selectedPlantIdxs = new Set();
 
 // ============================================================
 // UTILITY
@@ -1008,73 +1101,54 @@ $("month-label").textContent = MONTHS_DE[NOW_MONTH]+" "+NOW.getFullYear();
 function calcSunPosition(date) {{
   const JD = date / 86400000 + 2440587.5;
   const n  = JD - 2451545.0;
-
   const L  = (280.460 + 0.9856474*n) % 360;
   const g  = ((357.528 + 0.9856003*n) % 360) * Math.PI/180;
   const lam= (L + 1.915*Math.sin(g) + 0.020*Math.sin(2*g)) * Math.PI/180;
   const eps = (23.439 - 0.0000004*n) * Math.PI/180;
-
   const sinDec = Math.sin(eps)*Math.sin(lam);
   const dec    = Math.asin(sinDec);
   const RA     = Math.atan2(Math.cos(eps)*Math.sin(lam), Math.cos(lam));
-
   const GMST = (6.697375 + 0.0657098242*n + (date.getUTCHours()+(date.getUTCMinutes()+date.getUTCSeconds()/60)/60)) % 24;
   const LMST = (GMST*15 + LON_DEG_VAL) % 360;
   const HA   = (LMST - RA*180/Math.PI) * Math.PI/180;
-
   const sinElev = Math.sin(LAT_RAD)*Math.sin(dec) + Math.cos(LAT_RAD)*Math.cos(dec)*Math.cos(HA);
   const elev    = Math.asin(sinElev);
   const cosAz   = (Math.sin(dec) - Math.sin(elev)*Math.sin(LAT_RAD)) / (Math.cos(elev)*Math.cos(LAT_RAD));
   const azBase  = Math.acos(Math.max(-1,Math.min(1,cosAz))) * 180/Math.PI;
   const az      = Math.sin(HA)>0 ? 360-azBase : azBase;
-
   const elevDeg = elev * 180/Math.PI;
-
   let airmass = 1;
   if(elevDeg > 0) airmass = 1 / (Math.sin(elev) + 0.50572*Math.pow(elevDeg+6.07995,-1.6364));
-
   const transmit = elevDeg > 0 ? Math.pow(0.7, Math.pow(airmass, 0.678)) : 0;
-
   return {{ azimuth:az, elevation:elevDeg, transmittance:transmit, factor:transmit }};
 }}
 
 // ============================================================
-// ★ DLI (Daily Light Integral) SIMULATION
-// Simuliert Sonnenverlauf in 1h-Schritten, berechnet gewichteten
-// Tagesmittelwert (0-10) für jeden Punkt auf der Karte.
+// ★ DLI SIMULATION
 // ============================================================
 function computeDLI(px, py, floor) {{
   const today = new Date();
   const year  = today.getFullYear();
   const month = today.getMonth();
   const day   = today.getDate();
-
   let sumScore   = 0;
   let weightSum  = 0;
-
-  // Simuliere 24 Stunden in 1h-Schritten
   for(let h = 0; h < 24; h++) {{
-    const dt = new Date(Date.UTC(year, month, day, h - 1, 0, 0)); // UTC offset ~-1 für MEZ
+    const dt = new Date(Date.UTC(year, month, day, h - 1, 0, 0));
     const sun = calcSunPosition(dt);
-    if(sun.elevation <= 0) continue; // Nacht überspringen
-
-    // Speichere sunState temporär
+    if(sun.elevation <= 0) continue;
     const savedState = {{...sunState}};
     sunState = sun;
     const score = computeLichtFull(px, py, floor).score;
     sunState = savedState;
-
-    // Gewichtung nach Sonnenelevation (sin-Kurve = natürliche Tageskurve)
     const weight = Math.sin(sun.elevation * Math.PI / 180);
     sumScore  += score * weight;
     weightSum += weight;
   }}
-
-  if(weightSum === 0) return 1; // Polarnacht / Sonderfälle
+  if(weightSum === 0) return 1;
   return Math.min(10, Math.max(1, Math.round(sumScore / weightSum * 10) / 10));
 }}
 
-// DLI-Cache befüllen (asynchron, nach Frame)
 let dliComputeScheduled = false;
 function scheduleDLICompute(floor) {{
   if(dliComputeScheduled) return;
@@ -1082,8 +1156,7 @@ function scheduleDLICompute(floor) {{
   requestAnimationFrame(()=>{{
     dliComputeScheduled = false;
     if(!dliMode) return;
-    const fd   = FLOOR_DATA[floor];
-    const step = 0.05; // 5% Schritte = 400 Punkte pro Etage
+    const step = 0.05;
     const cache = {{}};
     for(let ry=0; ry<=1.01; ry+=step) {{
       for(let rx=0; rx<=1.01; rx+=step) {{
@@ -1098,7 +1171,6 @@ function scheduleDLICompute(floor) {{
 
 function getDLIScore(px, py, floor) {{
   if(!dliCache[floor]) return null;
-  // Finde nächsten Cache-Punkt
   const step = 0.05;
   const rx = Math.round(px / step) * step;
   const ry = Math.round(py / step) * step;
@@ -1154,7 +1226,6 @@ function roomPenetrationFactor(sunElevDeg, winSide, buildingNorthAzimuth) {{
 function updateSunInfo() {{
   const now = new Date();
   sunState  = calcSunPosition(now);
-
   const elev = sunState.elevation.toFixed(1);
   const az   = sunState.azimuth.toFixed(0);
   if(sunState.elevation > 0) {{
@@ -1196,72 +1267,54 @@ function computeLichtFull(px, py, floor) {{
   const realW = fd.realW;
   const realH = fd.realH;
   const bldAz = fd.buildingNorthAzimuth || 0;
-
   const pAX = fd.floorX1 + px * fw;
   const pAY = fd.floorY1 + py * fh;
-
   const margin = 4;
   if(pAX < fd.floorX1-margin || pAX > fd.floorX2+margin ||
      pAY < fd.floorY1-margin || pAY > fd.floorY2+margin) {{
     return {{ score:1, components:{{}}, windowHits:[] }};
   }}
-
   const sunElevDeg = sunState.elevation;
   const sunAzDeg   = sunState.azimuth;
   const sunDirect  = sunState.factor;
   const skyDiff    = skyDiffuse(sunElevDeg);
   const wallReflectance = 0.15;
-
   let totalIlluminance = 0;
   const windowHits = [];
-
   for(const w of fd.windows) {{
     const winAz = windowAzimuth(w.side, bldAz);
     let winContrib      = 0;
     let samplesVisible  = 0;
     let totalSamples    = 0;
     let bestIncFactor   = 0;
-
     for(let s=0; s<WIN_SAMPLES; s++) {{
       const t = WIN_SAMPLES===1 ? 0.5 : s/(WIN_SAMPLES-1);
       const sAX = w.x1 + t*(w.x2-w.x1);
       const sAY = w.y1 + t*(w.y2-w.y1);
-
       totalSamples++;
-
       if(isBlockedByInnerWall(pAX,pAY,sAX,sAY,fd)) continue;
       if(isBlockedByOuterWall(pAX,pAY,sAX,sAY,fd)) continue;
-
       samplesVisible++;
-
       const dxM   = (px - px2rel(sAX,fd.floorX1,fd.floorX2)) * realW;
       const dyM   = (py - px2rel(sAY,fd.floorY1,fd.floorY2)) * realH;
       const distM = Math.sqrt(dxM*dxM + dyM*dyM);
-
       const incFactor = directSunFactor(winAz, sunAzDeg, sunElevDeg);
       bestIncFactor = Math.max(bestIncFactor, incFactor);
-
       const penetration = roomPenetrationFactor(sunElevDeg, w.side, bldAz);
       const kDirect = 0.2 + 0.6*(1-penetration);
       const directContrib = incFactor * sunDirect / (1 + kDirect * distM * distM);
-
       const kDiffuse = 0.3;
       const diffuseContrib = skyDiff / (1 + kDiffuse * distM);
-
       winContrib += directContrib + diffuseContrib;
     }}
-
     if(totalSamples > 0) {{
       const avgContrib = winContrib / totalSamples;
       const winPxLen = Math.sqrt((w.x2-w.x1)**2 + (w.y2-w.y1)**2);
       const isVertical = Math.abs(w.x2-w.x1) < Math.abs(w.y2-w.y1);
-      const winMeter = isVertical
-        ? (winPxLen / fh) * realH
-        : (winPxLen / fw) * realW;
+      const winMeter = isVertical ? (winPxLen / fh) * realH : (winPxLen / fw) * realW;
       const winSizeFactor = Math.min(3, winMeter) / 1.0;
       totalIlluminance += avgContrib * winSizeFactor;
     }}
-
     windowHits.push({{
       side:       w.side,
       winAz:      winAz.toFixed(0),
@@ -1270,17 +1323,10 @@ function computeLichtFull(px, py, floor) {{
       occluded:   samplesVisible === 0,
     }});
   }}
-
   totalIlluminance *= (1 + wallReflectance);
-
   const scaleFactor = 22;
   const score = Math.min(10, Math.max(1, Math.round(totalIlluminance * scaleFactor * 10) / 10));
-
-  return {{
-    score,
-    components: {{ totalIlluminance, skyDiff, sunDirect }},
-    windowHits,
-  }};
+  return {{ score, components: {{ totalIlluminance, skyDiff, sunDirect }}, windowHits }};
 }}
 
 function computeLicht(px, py, floor) {{
@@ -1315,7 +1361,6 @@ function drawLightMap() {{
   const fd  = FLOOR_DATA[currentFloor];
   const fw  = fd.floorX2-fd.floorX1, fh = fd.floorY2-fd.floorY1;
   const step= 20;
-
   for(let iy=fd.floorY1; iy<=fd.floorY2; iy+=step) {{
     for(let ix=fd.floorX1; ix<=fd.floorX2; ix+=step) {{
       const rx=(ix-fd.floorX1)/fw, ry=(iy-fd.floorY1)/fh;
@@ -1323,7 +1368,6 @@ function drawLightMap() {{
       if(dliMode) {{
         const cached = getDLIScore(rx, ry, currentFloor);
         lv = cached !== null ? cached : computeLicht(rx, ry, currentFloor);
-        // DLI mode: blue tint
         const alpha = (lv/10)*0.28;
         const r = Math.round(92 + (lv/10)*50);
         const g = Math.round(155 + (lv/10)*30);
@@ -1340,9 +1384,6 @@ function drawLightMap() {{
   }}
 }}
 
-// ============================================================
-// IMAGE READY
-// ============================================================
 function onImageReady() {{
   const img  = $("floor-img");
   const cvs  = $("map-canvas");
@@ -1361,14 +1402,6 @@ window.addEventListener("resize",onImageReady);
 function getPlantImageUrl(plantName) {{
   const safeName = plantName.replace(/\s+/g, '%20');
   return `${{GITHUB_BASE}}/${{safeName}}.png`;
-}}
-
-function makePlantImgTag(plant, cls, style) {{
-  const url = getPlantImageUrl(plant.name);
-  const fallback = plant.emoji || '🌿';
-  return `<img src="${{url}}" class="${{cls}}" style="${{style||''}}"
-    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-  <div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:54px;opacity:.4;">${{fallback}}</div>`;
 }}
 
 // ============================================================
@@ -1392,11 +1425,9 @@ async function loadPlants() {{
   }}
   plants.forEach((p,i)=>{{ if(!p.emoji) p.emoji=PLANT_EMOJIS[i%PLANT_EMOJIS.length]; }});
   $("inv-count").textContent = plants.length;
-
   loadPositionsLocal();
-
   renderInventory();
-  loadCareData(); // async: lädt localStorage sofort, dann Sheets im Hintergrund
+  loadCareData();
   renderLibrary();
   setFloor(currentFloor);
   $("loading").classList.add("hidden");
@@ -1406,7 +1437,7 @@ async function loadPlants() {{
 }}
 
 // ============================================================
-// CSV PARSE — erweitert mit neuen Spalten
+// CSV PARSE
 // ============================================================
 function parseCSV(text) {{
   const lines   = text.trim().split("\\n");
@@ -1418,7 +1449,6 @@ function parseCSV(text) {{
     }}
     return -1;
   }};
-
   const colName      = col(["Pflanze","Name","name"]);
   const colBotanisch = col(["Botanischer","botanisch","Botanisch"]);
   const colLicht     = col(["Lichtbedarf"]);
@@ -1427,7 +1457,6 @@ function parseCSV(text) {{
   const colBespr     = col(["Besprühen","Bespruhen","besprühen"]);
   const colBesond    = col(["Besonderheit","besonderheit"]);
 
-  // Robuste Spaltensuche: normalisiert Umlaute + Encoding-Varianten
   function norm(s) {{
     return s.toLowerCase()
       .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue")
@@ -1437,10 +1466,8 @@ function parseCSV(text) {{
   }}
   function colFor(prefix, month) {{
     const target = norm(prefix + month);
-    // 1. exakter normalisierter Match
     let idx = headers.findIndex(h => norm(h) === target);
     if(idx >= 0) return idx;
-    // 2. enthält beide Teile
     const nMonth = norm(month);
     const nPre   = norm(prefix);
     idx = headers.findIndex(h => {{ const nh=norm(h); return nh.includes(nMonth) && nh.includes(nPre.slice(0,4)); }});
@@ -1456,16 +1483,12 @@ function parseCSV(text) {{
     duengAll[m] = colFor("Düngen_", m);
   }});
 
-  // Debug-Log im Browser (öffne F12 → Konsole um Spalten zu prüfen)
   console.log("[CSV] Headers:", headers.join(" | "));
   console.log("[CSV] Monat:", monthName, " → Gießen-Idx:", colGiess, " Düngen-Idx:", colDueng);
-  if(colGiess<0) console.warn("[CSV] ⚠ Gießen_"+monthName+" nicht gefunden!");
-  if(colDueng<0) console.warn("[CSV] ⚠ Düngen_"+monthName+" nicht gefunden!");
 
   return lines.slice(1).filter(l=>l.trim()).map((line,i)=>{{
     const cols=splitCSVLine(line);
     const safeCol = (idx) => idx>=0 ? (cols[idx]||"").trim().replace(/"/g,"") : "";
-
     const obj={{
       id:i,
       name:          safeCol(colName) || "Pflanze "+(i+1),
@@ -1513,35 +1536,11 @@ function loadPositionsLocal() {{
   }} catch(e) {{ positions = {{}}; }}
 }}
 
-// ============================================================
-// ★ GOOGLE SHEETS APPS SCRIPT URLS
-// WICHTIG: Beide URLs müssen auf dasselbe Google Apps Script Deployment zeigen.
-// Das Script muss zwei Aktionen unterstützen: "savePositions" und "saveCare" / "loadCare"
-// Deployment-Anleitung: Siehe README / Kommentare unten.
-// ============================================================
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9Vf0xJ4gJPFt6j3SaQQjW2PKT29upU-UxmyoioOEs_upOXVA0MgKGmu17yZQm0uuM/exec";
 
-// ──────────────────────────────────────────────────────────────────────────────
-// PFLEGE-PERSISTENZ via Google Sheets Log-Sheet
-//
-// Das Apps Script (selbes Deployment wie Positionen) muss folgende POST-Aktionen
-// zusätzlich unterstützen:
-//
-//   action:"saveCare"  → body: {{ action:"saveCare", careData:{{}}, careHistory:[] }}
-//     Schreibt/aktualisiert das Sheet "PflegeLog" in der Google-Datei.
-//     Spalten: PlantIdx | LastWatered | LastFertilized
-//     History-Sheet "PflegeHistory": Timestamp | Type | PlantIdx | PlantName
-//
-//   action:"loadCare"  → body: {{ action:"loadCare" }}
-//     Gibt JSON zurück: {{ careData:{{}}, careHistory:[] }}
-//
-// Fallback: localStorage wird immer zusätzlich geschrieben (Offline-Modus).
-// ──────────────────────────────────────────────────────────────────────────────
+let careSheetSyncing = false;
+let careSyncPending  = false;
 
-let careSheetSyncing = false;   // Verhindert parallele Sync-Requests
-let careSyncPending  = false;   // Markiert ob ein weiterer Sync nötig ist nach laufendem
-
-// Lokal speichern (immer, als Offline-Fallback)
 function saveCareDataLocal() {{
   try {{
     localStorage.setItem("pflanzen_care_v2", JSON.stringify(careData));
@@ -1549,7 +1548,6 @@ function saveCareDataLocal() {{
   }} catch(e) {{ console.warn("care localStorage write failed:", e); }}
 }}
 
-// In Google Sheets schreiben (via Apps Script POST)
 async function saveCareDataToSheets() {{
   saveCareDataLocal();
   if(!APPS_SCRIPT_URL) return;
@@ -1557,11 +1555,7 @@ async function saveCareDataToSheets() {{
   careSheetSyncing = true;
   updateCareSyncStatus("sync");
   try {{
-    const payload = {{
-      action: "saveCare",
-      careData: careData,
-      careHistory: careHistory.slice(0, 200),
-    }};
+    const payload = {{ action: "saveCare", careData: careData, careHistory: careHistory.slice(0, 200) }};
     await fetch(APPS_SCRIPT_URL, {{
       method: "POST", mode: "no-cors",
       headers: {{ "Content-Type": "application/json" }},
@@ -1569,7 +1563,7 @@ async function saveCareDataToSheets() {{
     }});
     updateCareSyncStatus("ok");
   }} catch(e) {{
-    console.warn("Sheets saveCare failed, using localStorage only:", e);
+    console.warn("Sheets saveCare failed:", e);
     updateCareSyncStatus("offline");
   }} finally {{
     careSheetSyncing = false;
@@ -1577,7 +1571,6 @@ async function saveCareDataToSheets() {{
   }}
 }}
 
-// Haupt-Speicherfunktion – immer diese aufrufen
 function saveCareData() {{
   saveCareDataLocal();
   if(saveCareTimeout) clearTimeout(saveCareTimeout);
@@ -1585,9 +1578,7 @@ function saveCareData() {{
 }}
 let saveCareTimeout = null;
 
-// Aus Google Sheets laden (mit localStorage-Fallback)
 async function loadCareData() {{
-  // 1. Zuerst localStorage laden (schnell, sofort verfügbar)
   try {{
     const rc = localStorage.getItem("pflanzen_care_v2");
     if(rc) careData = JSON.parse(rc);
@@ -1595,21 +1586,14 @@ async function loadCareData() {{
     if(rh) careHistory = JSON.parse(rh);
   }} catch(e) {{ careData={{}}; careHistory=[]; }}
 
-  // 2. Danach Google Sheets laden (aktuell, geräteübergreifend)
   if(!APPS_SCRIPT_URL) return;
   updateCareSyncStatus("sync");
   try {{
-    const res = await fetch(APPS_SCRIPT_URL + "?action=loadCare", {{
-      method: "GET", mode: "cors",
-    }});
+    const res = await fetch(APPS_SCRIPT_URL + "?action=loadCare", {{ method: "GET", mode: "cors" }});
     if(res.ok) {{
       const data = await res.json();
-      if(data && data.careData) {{
-        // Mergen: Sheets-Daten gewinnen (neuere Quelle)
-        Object.assign(careData, data.careData);
-      }}
+      if(data && data.careData) Object.assign(careData, data.careData);
       if(data && data.careHistory && Array.isArray(data.careHistory) && data.careHistory.length > 0) {{
-        // Mergen: eindeutige Einträge kombinieren, nach Zeit sortieren
         const merged = [...careHistory, ...data.careHistory];
         const seen = new Set();
         careHistory = merged
@@ -1617,20 +1601,17 @@ async function loadCareData() {{
           .sort((a,b) => new Date(b.time) - new Date(a.time))
           .slice(0, 200);
       }}
-      saveCareDataLocal(); // Aktualisierten Stand lokal cachen
+      saveCareDataLocal();
       updateCareSyncStatus("ok");
       renderCare();
       renderCalendar();
-    }} else {{
-      updateCareSyncStatus("offline");
-    }}
+    }} else {{ updateCareSyncStatus("offline"); }}
   }} catch(e) {{
-    console.warn("Sheets loadCare failed, using localStorage:", e);
+    console.warn("Sheets loadCare failed:", e);
     updateCareSyncStatus("offline");
   }}
 }}
 
-// Sync-Status-Anzeige im Pflege-Header
 function updateCareSyncStatus(state) {{
   const el = $("care-sync-status");
   if(!el) return;
@@ -1768,7 +1749,7 @@ function showEmptyDetail() {{
 }}
 
 // ============================================================
-// ★ RENDER DETAIL (mit DLI + neuen Feldern + Bild)
+// ★ RENDER DETAIL
 // ============================================================
 function renderDetail(idx) {{
   const p  =plants[idx];
@@ -1776,11 +1757,8 @@ function renderDetail(idx) {{
   const floor=pos?pos.floor:currentFloor;
   const lf = pos ? computeLichtFull(pos.x,pos.y,floor) : null;
   const liveScore = lf ? lf.score : null;
-
-  // DLI Score
   const dliScore = pos ? getDLIScore(pos.x, pos.y, floor) : null;
   const primaryScore = dliMode && dliScore ? dliScore : liveScore;
-
   const stat=primaryScore?getLichtStatus(primaryScore,p.licht):null;
   const sc  =stat?STATUS_CFG[stat]:null;
 
@@ -1788,7 +1766,6 @@ function renderDetail(idx) {{
   const det=$("rsb-detail");
   det.classList.add("visible");
 
-  // Plant image header
   const imgUrl = getPlantImageUrl(p.name);
   const imgHTML = `
     <div class="detail-img-wrap">
@@ -1803,7 +1780,6 @@ function renderDetail(idx) {{
       <span class="floor-tag">📍 ${{pos.floor}}</span>`
     :`<span class="floor-tag">📦 Im Inventar</span>`;
 
-  // DLI Panel
   let dliHTML = "";
   if(pos) {{
     const hasCache = dliScore !== null;
@@ -1811,8 +1787,7 @@ function renderDetail(idx) {{
     const dliPct   = hasCache ? ((dliScore/10)*100).toFixed(0) : 0;
     const liveVal  = liveScore !== null ? liveScore : "—";
     const nightMode = sunState.elevation <= -6;
-    const liveLabel = nightMode ? "🌙 Nacht (kein Tageslicht)" : `${{"☀️"}} Live-Score ${{liveVal}}/10`;
-
+    const liveLabel = nightMode ? "🌙 Nacht (kein Tageslicht)" : `☀️ Live-Score ${{liveVal}}/10`;
     dliHTML = `
       <div class="dli-panel">
         <div class="dli-panel-title">📊 Daily Light Integral</div>
@@ -1838,7 +1813,6 @@ function renderDetail(idx) {{
     `;
   }}
 
-  // Astro panel
   let astroHTML="";
   if(lf) {{
     const winChips=lf.windowHits.map(w=>{{
@@ -1849,13 +1823,11 @@ function renderDetail(idx) {{
         ${{w.side}}${{w.occluded?" (verdeckt)": bright?" ☀️":""}}${{partialLabel}}
       </span>`;
     }}).join("");
-
     const nightMode = sunState.elevation <= -6;
     const dawnMode  = sunState.elevation <= 0 && !nightMode;
     const timeLabel = nightMode ? "🌙 Nacht" : dawnMode ? "🌅 Dämmerung" : "☀️ Tageslicht";
     const skyPct    = (lf.components.skyDiff * 100 / 0.15).toFixed(0);
     const dirPct    = (lf.components.sunDirect * 100).toFixed(0);
-
     astroHTML=`
       <div class="astro-panel">
         <div class="astro-title">☀️ Lichtanalyse (Live)</div>
@@ -1898,15 +1870,13 @@ function renderDetail(idx) {{
       </div>
       <div class="lbw-label"><span style="color:var(--muted);font-weight:500;">Bedarf: ${{p.licht}}/10</span><span style="color:var(--muted);font-weight:500;">Verfügbar: ${{scoreToShow}}/10</span></div>
     </div>
-    ${{dliHTML}}
-    ${{astroHTML}}
+    ${{dliHTML}}${{astroHTML}}
   `:`
     ${{dliHTML || '<div style="font-size:14px;font-weight:500;color:var(--muted);background:var(--surface-solid);border-radius:var(--rx);padding:20px;text-align:center;box-shadow:0 4px 16px rgba(45,71,57,0.02);border:1px solid var(--border);">Pflanze auf Karte platzieren, um Lichtwert zu berechnen.</div>'}}
   `;
 
   const removeHTML=pos?`<button class="act-btn danger-btn" onclick="removePlant(${{idx}})">🗑️ Entfernen</button>`:"";
 
-  // Extra fields
   const extraHTML = `
     <div style="display:flex;flex-direction:column;gap:10px;">
       ${{p.luftfeuchtigkeit ? `<div class="detail-extra-row"><div class="detail-extra-lbl">💧 Opt. Luftfeuchtigkeit</div><div class="detail-extra-val">${{p.luftfeuchtigkeit}}</div></div>` : ''}}
@@ -1990,25 +1960,19 @@ function renderInventory() {{
       if(isOther)        cls+=" placed-elsewhere";
       item.className=cls;
       item.dataset.pidx=i;
-
       const badgeHtml=isPlaced
         ?`<span class="inv-badge placed-badge">📍 ${{positions[i]?.floor||""}}</span>`
         :`<span class="inv-badge">Verfügbar</span>`;
-
       item.innerHTML=`
         <span class="inv-emoji">${{p.emoji}}</span>
         <span class="inv-name">${{p.name}}</span>
         ${{badgeHtml}}
       `;
-
       item.addEventListener("click",()=>{{
         activePIdx=i;
-        if(positions[i] && positions[i].floor!==currentFloor) {{
-          setFloor(positions[i].floor);
-        }}
+        if(positions[i] && positions[i].floor!==currentFloor) setFloor(positions[i].floor);
         render(); renderInventory(); renderDetail(i);
       }});
-
       if(!isPlaced) {{
         item.draggable=true;
         item.addEventListener("dragstart",e=>{{
@@ -2098,28 +2062,63 @@ function setupPinDrag(pin,idx) {{
 }}
 
 // ============================================================
-// ★ LIBRARY VIEW — Premium Cards mit Bildern & neuen Feldern
+// ★ NEU: SORT HELPERS (Bibliothek)
+// ============================================================
+function toggleSortDir() {{
+  libSortAsc = !libSortAsc;
+  $("lib-sort-dir-btn").textContent = libSortAsc ? "↑" : "↓";
+  $("lib-sort-dir-btn").title = libSortAsc ? "Aufsteigend (klicken für ↓)" : "Absteigend (klicken für ↑)";
+  renderLibrary();
+}}
+
+function getSortValue(plant, key) {{
+  if(key === "licht") return plant.licht || 0;
+  if(key === "giessen") {{
+    // Numerischen Gießwert aus aktuellem Monat extrahieren
+    const monthName = MONTHS_DE[NOW_MONTH];
+    const raw = plant.giessAll ? plant.giessAll[monthName] : plant.giessen;
+    const n = parseFloat(raw);
+    return isNaN(n) ? 9999 : n;
+  }}
+  return plant.name.toLowerCase();
+}}
+
+// ============================================================
+// ★ LIBRARY VIEW — mit Sortierfunktion
 // ============================================================
 function renderLibrary() {{
   const grid=$("lib-grid");
   const filter=libraryFilter.toLowerCase();
   grid.innerHTML="";
 
-  const filtered=plants.filter(p=>!filter||p.name.toLowerCase().includes(filter));
+  // Sortier-State aus Select lesen
+  libSortKey = $("lib-sort-key") ? $("lib-sort-key").value : libSortKey;
+
+  let filtered = plants.filter(p=>!filter||p.name.toLowerCase().includes(filter));
+
+  // NEU: Sortieren
+  filtered = [...filtered].sort((a,b) => {{
+    const va = getSortValue(a, libSortKey);
+    const vb = getSortValue(b, libSortKey);
+    if(va < vb) return libSortAsc ? -1 : 1;
+    if(va > vb) return libSortAsc ?  1 : -1;
+    return 0;
+  }});
+
   const libSub=$("lib-sub-label");
   if(libSub) {{
     const placed=Object.keys(positions).length;
-    libSub.textContent=`${{filtered.length}} Pflanzen · ${{placed}} platziert · ${{MONTHS_DE[NOW_MONTH]}}`;
+    const sortLabel = libSortKey==="licht" ? "Lichtbedarf" : libSortKey==="giessen" ? "Gießbedarf" : "Name";
+    libSub.textContent=`${{filtered.length}} Pflanzen · ${{placed}} platziert · Sortiert nach ${{sortLabel}} ${{libSortAsc?"↑":"↓"}}`;
   }}
 
-  filtered.forEach((p,idx)=>{{
+  filtered.forEach((p)=>{{
     const i=plants.indexOf(p);
     const pos=positions[i];
     const lf=pos?computeLichtFull(pos.x,pos.y,pos.floor):null;
     const ist=lf?lf.score:null;
     const stat=ist?getLichtStatus(ist,p.licht):null;
     const floorLabel=pos?`📍 ${{pos.floor}}`:"📦 Im Inventar";
-
     const barColor=stat==='ideal'?'var(--accent)':stat==='ok'?'var(--warn)':'var(--danger)';
     const lightPct=ist?(ist/10*100).toFixed(1):0;
 
@@ -2133,16 +2132,12 @@ function renderLibrary() {{
     }}
 
     const imgUrl = getPlantImageUrl(p.name);
-
-    // Besonderheit block
     const besondHTML = p.besonderheit ? `
       <div class="lib-besonderheit">
         <div class="lib-besonderheit-lbl">💡 Besonderheit</div>
         ${{p.besonderheit}}
       </div>
     ` : '';
-
-    // Humidity & Spray
     const humiHTML = (p.luftfeuchtigkeit || p.besprühen) ? `
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         ${{p.luftfeuchtigkeit ? `<div class="lib-humidity-row">💧 <span class="lib-humidity-badge">${{p.luftfeuchtigkeit}}</span></div>` : ''}}
@@ -2237,10 +2232,79 @@ $("map-area").addEventListener("click",()=>{{activePIdx=null;render();renderInve
 // ============================================================
 // ★ PFLEGE-KALENDER — Kalender-Grid
 // ============================================================
-// (Funktionen changeCalMonth und renderCalendar sind bereits oben definiert)
+function changeCalMonth(delta) {{
+  calMonth += delta;
+  if(calMonth > 11){{ calMonth=0; calYear++; }}
+  if(calMonth < 0) {{ calMonth=11; calYear--; }}
+  renderCalendar();
+}}
+
+function renderCalendar() {{
+  const titleEl = $("cal-month-title");
+  if(titleEl) titleEl.textContent = MONTHS_DE[calMonth]+" "+calYear;
+  const grid = $("cal-grid");
+  if(!grid) return;
+
+  let html = DAYS_DE.map(d=>`<div class="cal-day-header">${{d}}</div>`).join("");
+  const firstDay = new Date(calYear, calMonth, 1);
+  const lastDay  = new Date(calYear, calMonth+1, 0);
+  const startDow = firstDay.getDay();
+  const totalDays= lastDay.getDate();
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+
+  for(let d=startDow-1; d>=0; d--) {{
+    html += `<div class="cal-cell other-month"><div class="cal-day-num">${{prevLast-d}}</div></div>`;
+  }}
+
+  const todayD = NOW.getDate(), todayM = NOW.getMonth(), todayY = NOW.getFullYear();
+
+  const eventsByDay = {{}};
+  careHistory.forEach(h=>{{
+    const d = new Date(h.time);
+    if(d.getMonth()===calMonth && d.getFullYear()===calYear) {{
+      const day = d.getDate();
+      if(!eventsByDay[day]) eventsByDay[day]=[];
+      eventsByDay[day].push({{ type:h.type, name:h.name, emoji:h.emoji }});
+    }}
+  }});
+
+  plants.forEach((p,i)=>{{
+    const ws = getCareStatus(i,'water');
+    const fs = getCareStatus(i,'fertilize');
+    [['water',ws],['fertilize',fs]].forEach(([type,status])=>{{
+      if(!status) return;
+      const nd = status.nextDate;
+      if(nd.getMonth()===calMonth && nd.getFullYear()===calYear) {{
+        const day = nd.getDate();
+        if(!eventsByDay[day]) eventsByDay[day]=[];
+        eventsByDay[day].push({{ type:'due-'+type, name:p.name, emoji:p.emoji }});
+      }}
+    }});
+  }});
+
+  for(let d=1; d<=totalDays; d++) {{
+    const isToday = d===todayD && calMonth===todayM && calYear===todayY;
+    let cellClass = "cal-cell" + (isToday?" today":"");
+    const events  = eventsByDay[d] || [];
+    const evHTML  = events.slice(0,3).map(e=>{{
+      const cls = e.type==='water' ? 'water' : e.type==='fertilize' ? 'fertilize' : e.type==='due-water' ? 'due-water' : 'due-fertilize';
+      const icon = e.type.includes('water') ? '💧' : '🌿';
+      return `<div class="cal-event ${{cls}}">${{icon}} ${{e.name}}</div>`;
+    }}).join("");
+    const moreHTML = events.length>3 ? `<div class="cal-event" style="color:var(--muted);background:transparent;">+${{events.length-3}} weitere</div>` : "";
+    html += `<div class="${{cellClass}}"><div class="cal-day-num">${{d}}</div><div class="cal-events">${{evHTML}}${{moreHTML}}</div></div>`;
+  }}
+
+  const cellsUsed = startDow + totalDays;
+  const remaining = (7 - (cellsUsed % 7)) % 7;
+  for(let d=1; d<=remaining; d++) {{
+    html += `<div class="cal-cell other-month"><div class="cal-day-num">${{d}}</div></div>`;
+  }}
+  grid.innerHTML = html;
+}}
 
 // ============================================================
-// ★ PFLEGE-STATUS — Liste mit Fortschrittsbalken
+// ★ PFLEGE-STATUS — Liste
 // ============================================================
 function renderCareStatus() {{
   const overdueItems  = [];
@@ -2256,7 +2320,6 @@ function renderCareStatus() {{
     const fOverdue = fs && fs.overdueDays > 0;
     const wSoon = ws && !wOverdue && ws.nextDate <= in3days;
     const fSoon = fs && !fOverdue && fs.nextDate <= in3days;
-
     const entry = {{idx:i, ws, fs}};
     if(wOverdue || fOverdue) overdueItems.push(entry);
     else if(wSoon || fSoon) soonItems.push(entry);
@@ -2285,30 +2348,28 @@ function renderCareStatus() {{
   }}
 
   const soonSection = $("care-soon-section");
-  if(soonItems.length > 0) {{
-    soonSection.innerHTML = `
-      <div class="care-section-title">
-        📅 In den nächsten 3 Tagen
-        <span class="care-badge warn">${{soonItems.length}} Pflanze${{soonItems.length!==1?'n':''}}</span>
-      </div>
-      ${{soonItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
-    `;
-  }} else {{
-    soonSection.innerHTML = '';
-  }}
+  soonSection.innerHTML = soonItems.length > 0 ? `
+    <div class="care-section-title">
+      📅 In den nächsten 3 Tagen
+      <span class="care-badge warn">${{soonItems.length}} Pflanze${{soonItems.length!==1?'n':''}}</span>
+    </div>
+    ${{soonItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
+  ` : '';
 
   const allSection = $("care-all-section");
-  if(allItems.length > 0) {{
-    allSection.innerHTML = `
-      <div class="care-section-title">
-        🌿 Alle anderen Pflanzen
-        <span class="care-badge ok">${{allItems.length}} versorgt</span>
-      </div>
-      ${{allItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
-    `;
-  }} else {{
-    allSection.innerHTML = '';
-  }}
+  allSection.innerHTML = allItems.length > 0 ? `
+    <div class="care-section-title">
+      🌿 Alle anderen Pflanzen
+      <span class="care-badge ok">${{allItems.length}} versorgt</span>
+    </div>
+    ${{allItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
+  ` : '';
+
+  // Checkboxen nach dem Rendern verdrahten
+  bindCheckboxEvents();
+  // Selektion visuell wiederherstellen
+  restoreSelection();
+  updateBulkBar();
 }}
 
 function renderCareHistory() {{
@@ -2348,47 +2409,129 @@ function renderCareHistory() {{
 }}
 
 // ============================================================
-// ★ PFLEGE-KALENDER — Kernlogik
+// ★ NEU: MULTI-SELEKTION Logik
 // ============================================================
 
-// Ermittelt Tage im gegebenen Monat (für monatsgenaue Frequenz-Berechnung)
+function bindCheckboxEvents() {{
+  document.querySelectorAll(".care-checkbox").forEach(cb => {{
+    cb.addEventListener("change", () => {{
+      const idx = parseInt(cb.dataset.pidx);
+      if(cb.checked) selectedPlantIdxs.add(idx);
+      else selectedPlantIdxs.delete(idx);
+      // Card-Klasse aktualisieren
+      const card = cb.closest(".care-card");
+      if(card) card.classList.toggle("selected-card", cb.checked);
+      updateBulkBar();
+    }});
+  }});
+}}
+
+function restoreSelection() {{
+  document.querySelectorAll(".care-checkbox").forEach(cb => {{
+    const idx = parseInt(cb.dataset.pidx);
+    const isSelected = selectedPlantIdxs.has(idx);
+    cb.checked = isSelected;
+    const card = cb.closest(".care-card");
+    if(card) card.classList.toggle("selected-card", isSelected);
+  }});
+}}
+
+function updateBulkBar() {{
+  const bar = $("bulk-action-bar");
+  const countEl = $("bulk-count-label");
+  const n = selectedPlantIdxs.size;
+  if(n > 0) {{
+    bar.classList.add("visible");
+    countEl.textContent = `${{n}} ausgewählt`;
+  }} else {{
+    bar.classList.remove("visible");
+  }}
+}}
+
+function clearSelection() {{
+  selectedPlantIdxs.clear();
+  document.querySelectorAll(".care-checkbox").forEach(cb => {{
+    cb.checked = false;
+    const card = cb.closest(".care-card");
+    if(card) card.classList.remove("selected-card");
+  }});
+  updateBulkBar();
+}}
+
+// NEU: Bulk-Gießen
+function bulkWater() {{
+  if(selectedPlantIdxs.size === 0) return;
+  const now = new Date().toISOString();
+  selectedPlantIdxs.forEach(idx => {{
+    if(!careData[idx]) careData[idx]={{}};
+    careData[idx].lastWatered = now;
+    careHistory.unshift({{
+      type:'water', plantIdx:idx,
+      name: plants[idx].name, emoji: plants[idx].emoji, time: now
+    }});
+  }});
+  const count = selectedPlantIdxs.size;
+  selectedPlantIdxs.clear();
+  saveCareData();
+  renderCare();
+  renderCalendar();
+  showToast(`💧 ${{count}} Pflanzen gegossen`);
+}}
+
+// NEU: Bulk-Düngen (inklusive automatisches Gießen — Feature 2)
+function bulkFertilize() {{
+  if(selectedPlantIdxs.size === 0) return;
+  const now = new Date().toISOString();
+  selectedPlantIdxs.forEach(idx => {{
+    if(!careData[idx]) careData[idx]={{}};
+    // Düngen impliziert Gießen — gleicher Zeitstempel
+    careData[idx].lastFertilized = now;
+    careData[idx].lastWatered    = now;
+    careHistory.unshift({{
+      type:'fertilize', plantIdx:idx,
+      name: plants[idx].name, emoji: plants[idx].emoji, time: now
+    }});
+    careHistory.unshift({{
+      type:'water', plantIdx:idx,
+      name: plants[idx].name, emoji: plants[idx].emoji, time: now
+    }});
+  }});
+  const count = selectedPlantIdxs.size;
+  selectedPlantIdxs.clear();
+  saveCareData();
+  renderCare();
+  renderCalendar();
+  showToast(`🌿 ${{count}} Pflanzen gedüngt & gegossen`);
+}}
+
+// ============================================================
+// ★ PFLEGE-KERN-LOGIK
+// ============================================================
 function daysInMonth(year, month) {{
   return new Date(year, month + 1, 0).getDate();
 }}
 
-// Gibt das Gieß-/Düng-Intervall für den aktuellen Monat in Tagen zurück.
-// Formel: (Tage im Monat / Frequenz) — falls Frequenz > 0 vorhanden.
-// Falls der Wert eine Tageszahl ist (> 1), wird er direkt als Intervall genutzt.
 function parseIntervalDays(val) {{
   if(!val || val==="—" || val.trim()==="") return null;
   const n = parseFloat(val);
   if(isNaN(n) || n <= 0) return null;
-  // Wert wird DIREKT als Intervall in Tagen interpretiert.
-  // Beispiel: 7 = alle 7 Tage, 14 = alle 14 Tage, 3 = alle 3 Tage.
-  // Kein Umrechnen von Frequenz → Tage, da im Sheet bereits Tage stehen.
   return n;
 }}
 
-// Gibt Pflege-Status-Objekt für eine Pflanze zurück
 function getCareStatus(plantIdx, type) {{
   const p = plants[plantIdx];
-  // Aktuelle Monats-Spalte nutzen (giessAll / duengAll für aktuellen Monat)
   const monthName = MONTHS_DE[NOW.getMonth()];
   const rawVal = type==='water'
     ? (p.giessAll ? p.giessAll[monthName] : p.giessen)
     : (p.duengAll ? p.duengAll[monthName] : p.dungen);
   const intervalDays = parseIntervalDays(rawVal);
-
   if(!intervalDays) return null;
 
   const cd = careData[plantIdx] || {{}};
   const lastStr = type==='water' ? cd.lastWatered : cd.lastFertilized;
   const lastDate = lastStr ? new Date(lastStr) : null;
   const now = new Date();
-
-  let nextDate;
-  let overdueDays = 0;
-  let moisturePct = 50;
+  let nextDate, overdueDays = 0, moisturePct = 50;
 
   if(lastDate) {{
     nextDate = new Date(lastDate.getTime() + intervalDays*24*3600*1000);
@@ -2401,7 +2544,6 @@ function getCareStatus(plantIdx, type) {{
     overdueDays = 1;
     moisturePct = 0;
   }}
-
   return {{ nextDate, overdueDays, intervalDays, moisturePct, lastDate }};
 }}
 
@@ -2423,39 +2565,38 @@ function formatAbsDate(isoStr) {{
     + " " + d.toLocaleTimeString("de-DE",{{hour:"2-digit",minute:"2-digit"}});
 }}
 
-// ──────────────────────────────────────────────────────────────────────────────
-// ★ AKTIONEN — Gießen / Düngen mit sofortigem Sheets-Sync
-// ──────────────────────────────────────────────────────────────────────────────
+// ★ FEATURE 2: Düngen impliziert Gießen
 function doWater(plantIdx) {{
   if(!careData[plantIdx]) careData[plantIdx]={{}};
   const now = new Date().toISOString();
   careData[plantIdx].lastWatered = now;
   careHistory.unshift({{
     type:'water', plantIdx,
-    name: plants[plantIdx].name,
-    emoji: plants[plantIdx].emoji,
-    time: now
+    name: plants[plantIdx].name, emoji: plants[plantIdx].emoji, time: now
   }});
   saveCareData();
-  renderCare();
-  renderCalendar();
+  renderCare(); renderCalendar();
   showToast(`💧 ${{plants[plantIdx].name}} gegossen`);
 }}
 
 function doFertilize(plantIdx) {{
   if(!careData[plantIdx]) careData[plantIdx]={{}};
   const now = new Date().toISOString();
+  // Düngen setzt BEIDE Zeitstempel gleichzeitig
   careData[plantIdx].lastFertilized = now;
+  careData[plantIdx].lastWatered    = now;  // ← Feature 2
   careHistory.unshift({{
     type:'fertilize', plantIdx,
-    name: plants[plantIdx].name,
-    emoji: plants[plantIdx].emoji,
-    time: now
+    name: plants[plantIdx].name, emoji: plants[plantIdx].emoji, time: now
+  }});
+  // Gieß-Historie-Eintrag ebenfalls hinzufügen
+  careHistory.unshift({{
+    type:'water', plantIdx,
+    name: plants[plantIdx].name, emoji: plants[plantIdx].emoji, time: now
   }});
   saveCareData();
-  renderCare();
-  renderCalendar();
-  showToast(`🌿 ${{plants[plantIdx].name}} gedüngt`);
+  renderCare(); renderCalendar();
+  showToast(`🌿 ${{plants[plantIdx].name}} gedüngt & gegossen`);
 }}
 
 function waterAllDue() {{
@@ -2469,21 +2610,16 @@ function waterAllDue() {{
       count++;
     }}
   }});
-  saveCareData();
-  renderCare();
-  renderCalendar();
+  saveCareData(); renderCare(); renderCalendar();
   showToast(`💧 ${{count}} Pflanzen gegossen`);
 }}
 
-// Sheets manuell neu laden + UI aktualisieren
 async function refreshCareFromSheets() {{
   showToast("🔄 Lade Daten…", 1500);
   await loadCareData();
-  renderCare();
-  renderCalendar();
+  renderCare(); renderCalendar();
 }}
 
-// Care-History als CSV exportieren
 function exportCareCSV() {{
   const rows = [["Zeitstempel","Typ","Pflanze"]];
   careHistory.forEach(h => {{
@@ -2525,22 +2661,19 @@ function renderCareStatusCounts() {{
     `${{plants.length}} Pflanzen · ${{dueCount}} fällig · ${{soonCount}} in den nächsten 3 Tagen`;
 }}
 
-// ──────────────────────────────────────────────────────────────────────────────
-// ★ UPCOMING-PANEL — Nächste 14 Tage sortiert nach Dringlichkeit
-// ──────────────────────────────────────────────────────────────────────────────
+// ============================================================
+// ★ UPCOMING-PANEL
+// ============================================================
 function renderUpcoming() {{
   const el = $("care-upcoming-section");
   if(!el) return;
-
   const now     = new Date();
   const in14    = new Date(now.getTime() + 14*24*3600*1000);
   const items   = [];
-
   plants.forEach((p, i) => {{
     [['water','💧'],['fertilize','🌿']].forEach(([type, icon]) => {{
       const s = getCareStatus(i, type);
       if(!s) return;
-      // Überfällige UND kommende bis in 14 Tagen
       if(s.nextDate <= in14 || s.overdueDays > 0) {{
         const diffDays = Math.round((s.nextDate - now) / (24*3600*1000));
         items.push({{ plantIdx:i, type, icon, plant:p, status:s, diffDays }});
@@ -2551,8 +2684,7 @@ function renderUpcoming() {{
   if(items.length === 0) {{
     el.innerHTML = `
       <div style="background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
-        padding:20px 24px;display:flex;align-items:center;gap:14px;
-        box-shadow:0 4px 16px rgba(45,71,57,0.03);">
+        padding:20px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(45,71,57,0.03);">
         <span style="font-size:28px;">🎉</span>
         <div>
           <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);">Alles versorgt!</div>
@@ -2562,55 +2694,40 @@ function renderUpcoming() {{
     return;
   }}
 
-  // Sortieren: Überfällige zuerst, dann nach Datum
   items.sort((a,b) => a.diffDays - b.diffDays);
-
   const overdueItems = items.filter(it => it.diffDays < 0);
-  const upcomingItems= items.filter(it => it.diffDays >= 0);
 
   let html = `
     <div style="background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
       overflow:hidden;box-shadow:0 4px 16px rgba(45,71,57,0.03);">
-      <div style="padding:16px 20px;border-bottom:1px solid var(--border);
-        display:flex;align-items:center;gap:10px;">
-        <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);">
-          📅 Nächste 14 Tage
-        </span>
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+        <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);">📅 Nächste 14 Tage</span>
         ${{overdueItems.length > 0 ? `<span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;
           background:var(--danger-dim);color:var(--danger);border:1px solid rgba(229,115,115,0.3);">
           ${{overdueItems.length}} überfällig</span>` : ''}}
         <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;
-          background:var(--surface-2);color:var(--muted);margin-left:auto;">
-          ${{items.length}} Aktionen</span>
+          background:var(--surface-2);color:var(--muted);margin-left:auto;">${{items.length}} Aktionen</span>
       </div>
       <div style="display:flex;flex-direction:column;">
   `;
 
   items.forEach((it, idx) => {{
     const isOverdue = it.diffDays < 0;
-    const isToday   = it.diffDays === 0;
-    const isSoon    = it.diffDays > 0 && it.diffDays <= 3;
-    const bgColor   = isOverdue ? 'rgba(229,115,115,0.04)' : isToday ? 'rgba(226,167,111,0.05)' : 'transparent';
-    const chipCls   = isOverdue ? 'overdue' : isToday ? 'soon' : it.diffDays <= 3 ? 'soon' : 'ok';
+    const bgColor   = isOverdue ? 'rgba(229,115,115,0.04)' : it.diffDays===0 ? 'rgba(226,167,111,0.05)' : 'transparent';
+    const chipCls   = isOverdue ? 'overdue' : it.diffDays<=0 ? 'soon' : it.diffDays<=3 ? 'soon' : 'ok';
     const chipLabel = formatRelDate(it.status.nextDate);
-    const lastLabel = it.status.lastDate
-      ? `Zuletzt: ${{formatAbsDate(it.status.lastDate.toISOString())}}`
-      : "Noch nie";
+    const lastLabel = it.status.lastDate ? `Zuletzt: ${{formatAbsDate(it.status.lastDate.toISOString())}}` : "Noch nie";
     const actionLabel = it.type==='water' ? 'Gießen' : 'Düngen';
     const btnCls      = it.type==='water' ? 'water' : 'fertilize';
     const fnName      = it.type==='water' ? 'doWater' : 'doFertilize';
     const border      = idx < items.length-1 ? 'border-bottom:1px solid var(--border);' : '';
 
     html += `
-      <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;
-        background:${{bgColor}};${{border}}transition:background .2s;">
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 20px;background:${{bgColor}};${{border}}transition:background .2s;">
         <div style="width:36px;height:36px;border-radius:50%;background:var(--surface-2);
-          display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
-          ${{it.icon}}
-        </div>
+          display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${{it.icon}}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:14px;color:var(--text);
-            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          <div style="font-weight:600;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
             ${{it.plant.emoji}} ${{it.plant.name}}
           </div>
           <div style="font-size:11px;color:var(--muted);margin-top:2px;">
@@ -2619,9 +2736,7 @@ function renderUpcoming() {{
         </div>
         <span class="care-chip ${{chipCls}}" style="flex-shrink:0;">${{chipLabel}}</span>
         <button class="care-btn ${{btnCls}}" style="flex-shrink:0;padding:7px 14px;font-size:12px;"
-          onclick="${{fnName}}(${{it.plantIdx}})">
-          ${{it.icon}} ${{actionLabel}}
-        </button>
+          onclick="${{fnName}}(${{it.plantIdx}})">${{it.icon}} ${{actionLabel}}</button>
       </div>
     `;
   }});
@@ -2630,116 +2745,47 @@ function renderUpcoming() {{
   el.innerHTML = html;
 }}
 
-// ──────────────────────────────────────────────────────────────────────────────
-// ★ PFLEGE-KALENDER — Monatsgrid
-// ──────────────────────────────────────────────────────────────────────────────
-function changeCalMonth(delta) {{
-  calMonth += delta;
-  if(calMonth > 11){{ calMonth=0; calYear++; }}
-  if(calMonth < 0) {{ calMonth=11; calYear--; }}
-  renderCalendar();
-}}
-
-function renderCalendar() {{
-  const titleEl = $("cal-month-title");
-  if(titleEl) titleEl.textContent = MONTHS_DE[calMonth]+" "+calYear;
-  const grid = $("cal-grid");
-  if(!grid) return;
-
-  // Day headers
-  let html = DAYS_DE.map(d=>`<div class="cal-day-header">${{d}}</div>`).join("");
-
-  const firstDay = new Date(calYear, calMonth, 1);
-  const lastDay  = new Date(calYear, calMonth+1, 0);
-  const startDow = firstDay.getDay();
-  const totalDays= lastDay.getDate();
-
-  const prevLast = new Date(calYear, calMonth, 0).getDate();
-  for(let d=startDow-1; d>=0; d--) {{
-    html += `<div class="cal-cell other-month"><div class="cal-day-num">${{prevLast-d}}</div></div>`;
-  }}
-
-  const todayD = NOW.getDate(), todayM = NOW.getMonth(), todayY = NOW.getFullYear();
-
-  // Vergangene Pflege-Ereignisse
-  const eventsByDay = {{}};
-  careHistory.forEach(h=>{{
-    const d = new Date(h.time);
-    if(d.getMonth()===calMonth && d.getFullYear()===calYear) {{
-      const day = d.getDate();
-      if(!eventsByDay[day]) eventsByDay[day]=[];
-      eventsByDay[day].push({{ type:h.type, name:h.name, emoji:h.emoji }});
+// ============================================================
+// ★ FEATURE 4: Standort-Quicklink
+// ============================================================
+function showOnMap(plantIdx) {{
+  const pos = positions[plantIdx];
+  if(pos) setFloor(pos.floor);
+  switchTab("planer");
+  setTimeout(()=>{{
+    activePIdx = plantIdx;
+    render();
+    renderDetail(plantIdx);
+    const pin = $("map-canvas").querySelector(`[data-idx="${{plantIdx}}"]`);
+    if(pin) {{
+      pin.classList.add("highlight-pulse");
+      setTimeout(()=>pin.classList.remove("highlight-pulse"), 4500);
     }}
-  }});
-
-  // Zukünftige fällige Termine
-  plants.forEach((p,i)=>{{
-    const ws = getCareStatus(i,'water');
-    const fs = getCareStatus(i,'fertilize');
-    [['water',ws],['fertilize',fs]].forEach(([type,status])=>{{
-      if(!status) return;
-      const nd = status.nextDate;
-      if(nd.getMonth()===calMonth && nd.getFullYear()===calYear) {{
-        const day = nd.getDate();
-        if(!eventsByDay[day]) eventsByDay[day]=[];
-        eventsByDay[day].push({{ type:'due-'+type, name:p.name, emoji:p.emoji }});
-      }}
-    }});
-  }});
-
-  for(let d=1; d<=totalDays; d++) {{
-    const isToday = d===todayD && calMonth===todayM && calYear===todayY;
-    let cellClass = "cal-cell" + (isToday?" today":"");
-    const events  = eventsByDay[d] || [];
-    const evHTML  = events.slice(0,3).map(e=>{{
-      const cls = e.type==='water' ? 'water' : e.type==='fertilize' ? 'fertilize' : e.type==='due-water' ? 'due-water' : 'due-fertilize';
-      const icon = e.type.includes('water') ? '💧' : '🌿';
-      return `<div class="cal-event ${{cls}}">${{icon}} ${{e.name}}</div>`;
-    }}).join("");
-    const moreHTML = events.length>3 ? `<div class="cal-event" style="color:var(--muted);background:transparent;">+${{events.length-3}} weitere</div>` : "";
-    html += `
-      <div class="${{cellClass}}">
-        <div class="cal-day-num">${{d}}</div>
-        <div class="cal-events">${{evHTML}}${{moreHTML}}</div>
-      </div>
-    `;
-  }}
-
-  const cellsUsed = startDow + totalDays;
-  const remaining = (7 - (cellsUsed % 7)) % 7;
-  for(let d=1; d<=remaining; d++) {{
-    html += `<div class="cal-cell other-month"><div class="cal-day-num">${{d}}</div></div>`;
-  }}
-
-  grid.innerHTML = html;
+  }}, 120);
 }}
 
+// ============================================================
+// ★ CARE CARD (mit Checkbox + Standort-Button)
+// ============================================================
 function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
   const p = plants[plantIdx];
   const cd = careData[plantIdx] || {{}};
-
   const wOver = waterStatus && waterStatus.overdueDays > 0;
   const fOver = fertilizeStatus && fertilizeStatus.overdueDays > 0;
   let cardClass = "care-card";
   if(wOver || fOver) cardClass += " overdue";
 
-  // Water chip
   let waterChip = "";
   if(waterStatus) {{
     const cls = waterStatus.overdueDays > 0 ? "overdue" : waterStatus.nextDate <= new Date(Date.now()+3*86400000) ? "soon" : "ok";
-    const label = formatRelDate(waterStatus.nextDate);
-    waterChip = `<span class="care-chip ${{cls}}">💧 ${{label}}</span>`;
+    waterChip = `<span class="care-chip ${{cls}}">💧 ${{formatRelDate(waterStatus.nextDate)}}</span>`;
   }}
-
-  // Fertilize chip
   let fertChip = "";
   if(fertilizeStatus) {{
     const cls = fertilizeStatus.overdueDays > 0 ? "overdue" : fertilizeStatus.nextDate <= new Date(Date.now()+3*86400000) ? "soon" : "ok";
-    const label = formatRelDate(fertilizeStatus.nextDate);
-    fertChip = `<span class="care-chip ${{cls}}">🌿 ${{label}}</span>`;
+    fertChip = `<span class="care-chip ${{cls}}">🌿 ${{formatRelDate(fertilizeStatus.nextDate)}}</span>`;
   }}
 
-  // Progress bars
   let progressBars = "";
   if(waterStatus) {{
     const wPct = waterStatus.moisturePct;
@@ -2748,24 +2794,19 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
       <div class="care-progress-wrap">
         <div class="care-progress-row">
           <span class="care-progress-icon">💧</span>
-          <div class="care-progress-track">
-            <div class="care-progress-fill water" style="width:${{wPct}}%"></div>
-          </div>
+          <div class="care-progress-track"><div class="care-progress-fill water" style="width:${{wPct}}%"></div></div>
           <span class="care-progress-pct">${{wPct}}%</span>
         </div>
         ${{fPct !== null ? `
         <div class="care-progress-row">
           <span class="care-progress-icon">🌿</span>
-          <div class="care-progress-track">
-            <div class="care-progress-fill fertilize" style="width:${{fPct}}%"></div>
-          </div>
+          <div class="care-progress-track"><div class="care-progress-fill fertilize" style="width:${{fPct}}%"></div></div>
           <span class="care-progress-pct">${{fPct}}%</span>
         </div>` : ''}}
       </div>
     `;
   }}
 
-  // Plant thumbnail
   const imgUrl = getPlantImageUrl(p.name);
   const thumbHTML = `
     <div class="care-card-thumb">
@@ -2775,15 +2816,21 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
     </div>
   `;
 
-  // Buttons immer anzeigen – Gießen immer, Düngen nur wenn Düngen-Daten vorhanden
-  const waterBtn = `<button class="care-btn water" onclick="doWater(${{plantIdx}})">💧 Gießen</button>`;
-  const fertBtn  = `<button class="care-btn fertilize" onclick="doFertilize(${{plantIdx}})">🌿 Düngen</button>`;
+  const lastW = cd.lastWatered   ? `Zuletzt: ${{formatAbsDate(cd.lastWatered)}}`   : "Noch nie gegossen";
+  const lastF = cd.lastFertilized? `Zuletzt: ${{formatAbsDate(cd.lastFertilized)}}` : "Noch nie gedüngt";
 
-  const lastW = cd.lastWatered ? `Zuletzt: ${{formatAbsDate(cd.lastWatered)}}` : "Noch nie gegossen";
-  const lastF = cd.lastFertilized ? `Zuletzt: ${{formatAbsDate(cd.lastFertilized)}}` : "Noch nie gedüngt";
+  // NEU: Standort-Button nur wenn platziert
+  const hasPos = !!positions[plantIdx];
+  const locationBtn = hasPos
+    ? `<button class="care-btn location" onclick="showOnMap(${{plantIdx}})">📍 Standort</button>`
+    : '';
 
   return `
-    <div class="${{cardClass}}">
+    <div class="${{cardClass}}" data-plant-idx="${{plantIdx}}">
+      <!-- NEU: Checkbox für Multi-Selektion -->
+      <div class="care-card-checkbox-wrap">
+        <input type="checkbox" class="care-checkbox" data-pidx="${{plantIdx}}">
+      </div>
       ${{thumbHTML}}
       <div class="care-card-info">
         <div class="care-card-name">${{p.name}}</div>
@@ -2798,8 +2845,9 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
         </div>
       </div>
       <div class="care-card-actions">
-        ${{waterBtn}}
-        ${{fertBtn}}
+        <button class="care-btn water" onclick="doWater(${{plantIdx}})">💧 Gießen</button>
+        <button class="care-btn fertilize" onclick="doFertilize(${{plantIdx}})">🌿 Düngen</button>
+        ${{locationBtn}}
       </div>
     </div>
   `;
@@ -2808,7 +2856,6 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
 // ============================================================
 // BOOT
 // ============================================================
-// Initialize subtab visibility
 switchCareSubtab('calendar');
 loadPlants();
 </script>
