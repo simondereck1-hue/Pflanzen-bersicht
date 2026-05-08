@@ -1427,14 +1427,40 @@ function parseCSV(text) {{
   const colBespr     = col(["Besprühen","Bespruhen","besprühen"]);
   const colBesond    = col(["Besonderheit","besonderheit"]);
 
+  // Robuste Spaltensuche: normalisiert Umlaute + Encoding-Varianten
+  function norm(s) {{
+    return s.toLowerCase()
+      .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue")
+      .replace(/ß/g,"ss").replace(/Ä/g,"ae").replace(/Ö/g,"oe").replace(/Ü/g,"ue")
+      .replace(/gißen/g,"giessen").replace(/düngen/g,"duengen")
+      .replace(/[_ ]/g,"");
+  }}
+  function colFor(prefix, month) {{
+    const target = norm(prefix + month);
+    // 1. exakter normalisierter Match
+    let idx = headers.findIndex(h => norm(h) === target);
+    if(idx >= 0) return idx;
+    // 2. enthält beide Teile
+    const nMonth = norm(month);
+    const nPre   = norm(prefix);
+    idx = headers.findIndex(h => {{ const nh=norm(h); return nh.includes(nMonth) && nh.includes(nPre.slice(0,4)); }});
+    return idx;
+  }}
+
   const monthName = MONTHS_DE[NOW_MONTH];
-  const colGiess  = col(["Gießen_"+monthName,"Giessen_"+monthName]);
-  const colDueng  = col(["Düngen_"+monthName,"Dunegen_"+monthName,"Düngen_"+monthName]);
+  const colGiess  = colFor("Gießen_", monthName);
+  const colDueng  = colFor("Düngen_", monthName);
   const giessAll={{}}, duengAll={{}};
   MONTHS_DE.forEach(m=>{{
-    giessAll[m]=col(["Gießen_"+m,"Giessen_"+m]);
-    duengAll[m]=col(["Düngen_"+m,"Dunegen_"+m,"Düngen_"+m]);
+    giessAll[m] = colFor("Gießen_", m);
+    duengAll[m] = colFor("Düngen_", m);
   }});
+
+  // Debug-Log im Browser (öffne F12 → Konsole um Spalten zu prüfen)
+  console.log("[CSV] Headers:", headers.join(" | "));
+  console.log("[CSV] Monat:", monthName, " → Gießen-Idx:", colGiess, " Düngen-Idx:", colDueng);
+  if(colGiess<0) console.warn("[CSV] ⚠ Gießen_"+monthName+" nicht gefunden!");
+  if(colDueng<0) console.warn("[CSV] ⚠ Düngen_"+monthName+" nicht gefunden!");
 
   return lines.slice(1).filter(l=>l.trim()).map((line,i)=>{{
     const cols=splitCSVLine(line);
@@ -2337,18 +2363,10 @@ function parseIntervalDays(val) {{
   if(!val || val==="—" || val.trim()==="") return null;
   const n = parseFloat(val);
   if(isNaN(n) || n <= 0) return null;
-  // Wenn Wert < 1: Häufigkeit pro Monat (z.B. 0.5 = alle 2 Monate)
-  if(n < 1) {{
-    const dim = daysInMonth(NOW.getFullYear(), NOW.getMonth());
-    return Math.round(dim / n);
-  }}
-  // Wenn Wert 1-7: wahrscheinlich Häufigkeit pro Monat (z.B. 4 = 4× / Monat)
-  // Wenn Wert > 7: direkt als Intervall in Tagen (z.B. 14 = alle 14 Tage)
-  if(n <= 7) {{
-    const dim = daysInMonth(NOW.getFullYear(), NOW.getMonth());
-    return Math.round(dim / n);
-  }}
-  return n; // direkt als Tage
+  // Wert wird DIREKT als Intervall in Tagen interpretiert.
+  // Beispiel: 7 = alle 7 Tage, 14 = alle 14 Tage, 3 = alle 3 Tage.
+  // Kein Umrechnen von Frequenz → Tage, da im Sheet bereits Tage stehen.
+  return n;
 }}
 
 // Gibt Pflege-Status-Objekt für eine Pflanze zurück
@@ -2757,12 +2775,9 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
     </div>
   `;
 
-  const waterBtn = waterStatus
-    ? `<button class="care-btn water" onclick="doWater(${{plantIdx}})">💧 Gießen</button>`
-    : "";
-  const fertBtn = fertilizeStatus
-    ? `<button class="care-btn fertilize" onclick="doFertilize(${{plantIdx}})">🌿 Düngen</button>`
-    : "";
+  // Buttons immer anzeigen – Gießen immer, Düngen nur wenn Düngen-Daten vorhanden
+  const waterBtn = `<button class="care-btn water" onclick="doWater(${{plantIdx}})">💧 Gießen</button>`;
+  const fertBtn  = `<button class="care-btn fertilize" onclick="doFertilize(${{plantIdx}})">🌿 Düngen</button>`;
 
   const lastW = cd.lastWatered ? `Zuletzt: ${{formatAbsDate(cd.lastWatered)}}` : "Noch nie gegossen";
   const lastF = cd.lastFertilized ? `Zuletzt: ${{formatAbsDate(cd.lastFertilized)}}` : "Noch nie gedüngt";
@@ -2774,11 +2789,12 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
         <div class="care-card-name">${{p.name}}</div>
         <div class="care-card-meta">
           ${{waterChip}}${{fertChip}}
+          ${{!waterChip && !fertChip ? '<span class="care-chip">Kein Intervall hinterlegt</span>' : ''}}
         </div>
         ${{progressBars}}
         <div style="font-size:11px;color:var(--muted);margin-top:4px;display:flex;gap:16px;flex-wrap:wrap;">
           <span>💧 ${{lastW}}</span>
-          ${{fertilizeStatus?`<span>🌿 ${{lastF}}</span>`:''}}
+          <span>🌿 ${{lastF}}</span>
         </div>
       </div>
       <div class="care-card-actions">
