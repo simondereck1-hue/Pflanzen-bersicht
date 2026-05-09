@@ -1,6 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import json, math
+from dataclasses import dataclass, field
+from typing import Optional, Dict
 
 # ============================================================
 # KONFIGURATION
@@ -11,7 +13,7 @@ st.markdown("""
 <style>
   #MainMenu, header, footer { visibility: hidden; }
   .block-container { padding: 0 !important; max-width: 100% !important; }
-  .stApp { background: #FCFAF7; }
+  .stApp { background: #F9F7F2; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -19,6 +21,33 @@ SHEET_ID  = "1cbOPNq-CrYrin-U0OkUJ5AE2AWF6Ba7RqIHlVOtUCK0"
 CSV_URL   = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
 GITHUB_BASE = "https://raw.githubusercontent.com/simondereck1-hue/Pflanzen-bersicht/main"
+
+# ============================================================
+# DATACLASS: Plant
+# ============================================================
+# (Python-seitig für spätere Erweiterungen; JS-Parsing erfolgt im Browser)
+@dataclass
+class Plant:
+    """Repräsentiert eine Pflanze aus dem Google Sheet."""
+    id: int
+    name: str
+    botanisch: str = ""
+    licht: float = 5.0
+    giessen: str = "—"           # Gießintervall aktueller Monat (Tage)
+    dungen: str = "—"            # Düngungsintervall aktueller Monat
+    umtopfen: str = "—"
+    luftfeuchtigkeit: str = ""
+    besprühen: str = ""
+    besonderheit: str = ""
+    emoji: str = "🌿"
+    giessAll: Dict[str, str] = field(default_factory=dict)
+    duengAll: Dict[str, str] = field(default_factory=dict)
+    # Vital-Score-Felder (werden clientseitig berechnet und gespeichert)
+    vital_score: Optional[float] = None    # 0-100 Glücks-Index
+    licht_score: Optional[float] = None    # Lichtanteil am Score
+    giess_score: Optional[float] = None    # Gießanteil am Score
+    dueng_score: Optional[float] = None    # Düngungsanteil am Score
+    staunässe_risk: bool = False           # True wenn Gießintervall stark unterschritten
 
 # ============================================================
 # STANDORT: Rielingshausen (71672)
@@ -139,732 +168,1115 @@ html_app = f"""<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-/* ── TOKENS (Biophilic Palette) ── */
+/* ══════════════════════════════════════════════════════
+   DESIGN TOKENS — Biophilic High-End Palette
+   ══════════════════════════════════════════════════════ */
 :root {{
-  --bg: #FCFAF7;
-  --surface: rgba(255, 255, 255, 0.85);
-  --surface-solid: #FFFFFF;
-  --surface-2: #F1F8E9;
-  --surface-3: #E8F5E9;
-  --border: rgba(45, 71, 57, 0.08);
-  --border-2: rgba(45, 71, 57, 0.15);
-  --accent: #7CB342;
-  --accent-dim: rgba(124, 179, 66, 0.15);
-  --accent-glow: rgba(124, 179, 66, 0.35);
-  --accent-dark: #558B2F;
-  --warn: #E2A76F;
-  --warn-dim: rgba(226, 167, 111, 0.15);
-  --danger: #E57373;
-  --danger-dim: rgba(229, 115, 115, 0.15);
-  --dli-color: #5C9BD6;
-  --dli-dim: rgba(92, 155, 214, 0.15);
-  --text: #2D4739;
-  --muted: #688E7B;
-  --muted2: #9EB5A8;
-  --r: 16px; --rs: 12px; --rx: 24px;
-  --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Farben */
+  --bg:           #F9F7F2;          /* Warmes Creme */
+  --bg-2:         #F3F0E8;
+  --surface:      rgba(255,255,255,0.82);
+  --surface-solid:#FFFFFF;
+  --surface-2:    rgba(141,170,145,0.10);
+  --surface-3:    rgba(141,170,145,0.18);
+  --border:       rgba(74,90,78,0.09);
+  --border-2:     rgba(74,90,78,0.17);
+
+  /* Sage-Grün Akzent */
+  --accent:       #8DAA91;
+  --accent-dark:  #5C7A62;
+  --accent-deep:  #3D5C42;
+  --accent-dim:   rgba(141,170,145,0.18);
+  --accent-glow:  rgba(141,170,145,0.38);
+
+  /* Status */
+  --warn:         #C9956A;
+  --warn-dim:     rgba(201,149,106,0.14);
+  --danger:       #C97070;
+  --danger-dim:   rgba(201,112,112,0.13);
+  --staunaesse:   #7BAEC4;
+  --staunaesse-dim:rgba(123,174,196,0.14);
+  --dli-color:    #6B9EC4;
+  --dli-dim:      rgba(107,158,196,0.14);
+
+  /* Typografie */
+  --text:         #2C3B2E;          /* Tiefes Waldgrün */
+  --text-2:       #3F5442;
+  --muted:        #6E8A72;
+  --muted2:       #9BB39F;
+
+  /* Geometrie */
+  --r:  14px; --rs: 10px; --rx: 22px;
   --sidebar-w: 340px;
-  --header-h: 68px; --tab-h: 56px;
+  --header-h:  70px; --tab-h: 60px;
+
+  /* Transitions */
+  --ease:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-s:cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --t:     0.3s;
 }}
-*,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
-html,body{{width:100%;height:100%;overflow:hidden}}
-body{{
+
+*,*::before,*::after {{ box-sizing:border-box; margin:0; padding:0 }}
+html,body {{ width:100%; height:100%; overflow:hidden }}
+body {{
   font-family:'DM Sans',sans-serif;
   background: var(--bg);
-  background-image: radial-gradient(circle at 0% 0%, rgba(241, 248, 233, 0.8) 0%, transparent 40%),
-                    radial-gradient(circle at 100% 100%, rgba(232, 245, 233, 0.8) 0%, transparent 40%);
-  color:var(--text);display:flex;flex-direction:column;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(141,170,145,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 80% at 100% 100%, rgba(201,149,106,0.07) 0%, transparent 55%);
+  color:var(--text);
+  display:flex; flex-direction:column;
 }}
-button{{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}}
-input,select{{font-family:inherit}}
+button {{ font-family:inherit; cursor:pointer; border:none; background:none; color:inherit }}
+input,select {{ font-family:inherit }}
 
 /* ── HEADER ── */
-#header{{
-  height:var(--header-h);background:var(--surface);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+#header {{
+  height:var(--header-h);
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   border-bottom: 1px solid rgba(255,255,255,0.5);
-  box-shadow: 0 4px 30px rgba(45, 71, 57, 0.04);
-  display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;z-index:200;
+  box-shadow: 0 2px 24px rgba(44,59,46,0.05);
+  display:flex; align-items:center; padding:0 28px; gap:14px;
+  flex-shrink:0; z-index:200;
 }}
-.logo{{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--accent);letter-spacing:-.5px}}
-.logo-sep{{color:var(--border-2);font-size:20px;font-weight:300;}}
-.header-meta{{display:flex;align-items:center;gap:14px;margin-left:auto}}
-.sun-info{{
-  display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text);
-  background:var(--surface-solid);border:1px solid var(--border);border-radius:99px;
-  padding:6px 16px;box-shadow: 0 2px 10px rgba(45, 71, 57, 0.03);
+.logo {{
+  font-family:'Playfair Display',serif;
+  font-weight:700; font-size:19px;
+  color:var(--accent-deep); letter-spacing:-.3px;
 }}
-.sun-dot{{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 10px var(--warn);flex-shrink:0}}
-.status-wrap{{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:500;}}
-.sdot{{width:8px;height:8px;border-radius:50%;background:var(--muted2);transition:background .3s}}
-.sdot.ok{{background:var(--accent);box-shadow:0 0 10px var(--accent)}}
+.logo-sep {{ color:var(--border-2); font-size:22px; font-weight:200 }}
+.header-meta {{ display:flex; align-items:center; gap:14px; margin-left:auto }}
+.sun-info {{
+  display:flex; align-items:center; gap:9px;
+  font-size:13px; font-weight:500; color:var(--text-2);
+  background:rgba(255,255,255,0.7);
+  border:1px solid var(--border);
+  border-radius:99px; padding:7px 18px;
+  backdrop-filter:blur(8px);
+  box-shadow:0 2px 12px rgba(44,59,46,0.04);
+  transition: box-shadow var(--t) var(--ease-s);
+}}
+.sun-info:hover {{ box-shadow:0 4px 20px rgba(141,170,145,0.15) }}
+.sun-dot {{
+  width:8px; height:8px; border-radius:50%;
+  background:var(--warn); box-shadow:0 0 10px var(--warn);
+  flex-shrink:0; animation:sunPulse 3s ease-in-out infinite;
+}}
+@keyframes sunPulse {{ 0%,100%{{opacity:1}} 50%{{opacity:0.5}} }}
+.status-wrap {{
+  display:flex; align-items:center; gap:8px;
+  font-size:13px; color:var(--muted); font-weight:500;
+}}
+.sdot {{
+  width:8px; height:8px; border-radius:50%;
+  background:var(--muted2); transition:all .4s;
+}}
+.sdot.ok {{
+  background:var(--accent);
+  box-shadow:0 0 10px var(--accent-glow);
+}}
 
 /* ── TABS ── */
-#tabs{{
-  height:var(--tab-h);background:transparent;
-  display:flex;align-items:center;justify-content:flex-start;padding:0 24px;gap:10px;flex-shrink:0;z-index:150;
-  margin-top: 12px;
+#tabs {{
+  height:var(--tab-h);
+  display:flex; align-items:center;
+  padding:0 28px; gap:10px;
+  flex-shrink:0; z-index:150;
+  margin-top:10px;
 }}
-.tab{{
-  padding:12px 24px;font-size:14px;font-weight:600;color:var(--muted);
-  border-radius:99px;cursor:pointer;
-  background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border:1px solid var(--border);transition:all var(--transition);
-  box-shadow: 0 2px 10px rgba(45, 71, 57, 0.02);
+.tab {{
+  padding:11px 26px; font-size:13.5px; font-weight:500;
+  color:var(--muted); border-radius:99px; cursor:pointer;
+  background:rgba(255,255,255,0.55);
+  backdrop-filter:blur(8px) saturate(1.2);
+  border:1px solid rgba(255,255,255,0.6);
+  transition:all var(--t) var(--ease);
+  box-shadow:0 2px 8px rgba(44,59,46,0.02);
+  letter-spacing:.01em;
 }}
-.tab:hover{{color:var(--text);background:rgba(255, 255, 255, 0.9);transform:translateY(-2px);box-shadow: 0 6px 16px rgba(45, 71, 57, 0.05);}}
-.tab.active{{color:var(--text);background:var(--surface-solid);border-color:var(--accent);box-shadow: 0 4px 16px var(--accent-dim);}}
-.tab-icon{{margin-right:8px;font-size:16px;}}
+.tab:hover {{
+  color:var(--text);
+  background:rgba(255,255,255,0.88);
+  transform:translateY(-2px);
+  box-shadow:0 6px 20px rgba(44,59,46,0.06);
+}}
+.tab.active {{
+  color:var(--accent-deep);
+  background:var(--surface-solid);
+  border-color:var(--accent-glow);
+  box-shadow:0 4px 18px var(--accent-dim);
+  font-weight:600;
+}}
+.tab-icon {{ margin-right:7px; font-size:15px }}
 
 /* ── MAIN ── */
-#main{{display:flex;flex:1;overflow:hidden;position:relative;padding:0 16px 16px 16px;gap:16px;}}
+#main {{
+  display:flex; flex:1; overflow:hidden;
+  position:relative; padding:0 16px 16px 16px; gap:14px;
+}}
 
-/* ── SIDEBARS ── */
-#left-sidebar, #right-sidebar{{
-  width:var(--sidebar-w);background:var(--surface);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border:1px solid rgba(255,255,255,0.6);
-  border-radius: var(--rx);
-  box-shadow: 0 12px 40px rgba(45, 71, 57, 0.05);
-  display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
+/* ── SIDEBARS (Glassmorphism) ── */
+#left-sidebar, #right-sidebar {{
+  width:var(--sidebar-w);
+  background:rgba(255,255,255,0.78);
+  backdrop-filter:blur(28px) saturate(1.3);
+  -webkit-backdrop-filter:blur(28px) saturate(1.3);
+  border:1px solid rgba(255,255,255,0.7);
+  border-radius:var(--rx);
+  box-shadow:0 8px 40px rgba(44,59,46,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+  display:flex; flex-direction:column; overflow:hidden; flex-shrink:0;
 }}
-#left-sidebar.hidden, #right-sidebar.hidden{{display:none}}
+#left-sidebar.hidden, #right-sidebar.hidden {{ display:none }}
 
-.sidebar-header{{
-  padding:20px 20px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
-  color:var(--text);letter-spacing:.02em;
-  border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:8px;
+.sidebar-header {{
+  padding:22px 22px 16px;
+  font-family:'Playfair Display',serif;
+  font-weight:600; font-size:14px;
+  color:var(--accent-deep); letter-spacing:.02em;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0; display:flex; align-items:center; gap:10px;
 }}
-.sidebar-header span{{flex:1}}
-.inv-search{{
-  margin:16px;padding:10px 16px;background:var(--surface-solid);border:1px solid var(--border);
-  border-radius:var(--r);color:var(--text);font-size:14px;width:calc(100% - 32px);
-  box-shadow: inset 0 2px 4px rgba(45,71,57,0.02); transition: border-color .3s;
-}}
-.inv-search::placeholder{{color:var(--muted2)}}
-.inv-search:focus{{outline:none;border-color:var(--accent);box-shadow: 0 0 0 3px var(--accent-dim);}}
+.sidebar-header span {{ flex:1 }}
 
-.inv-group{{padding:12px 0 4px 0}}
-.inv-group-label{{
-  padding:4px 20px 8px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;
+.inv-search {{
+  margin:14px 16px; padding:11px 18px;
+  background:rgba(255,255,255,0.8);
+  border:1px solid var(--border);
+  border-radius:var(--r); color:var(--text);
+  font-size:13.5px; width:calc(100% - 32px);
+  box-shadow:inset 0 2px 6px rgba(44,59,46,0.03);
+  transition:all var(--t) var(--ease-s);
 }}
-.inv-item{{
-  display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;
-  transition:all var(--transition);user-select:none; border-left: 3px solid transparent;
+.inv-search::placeholder {{ color:var(--muted2) }}
+.inv-search:focus {{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-dim);
 }}
-.inv-item:hover{{background:rgba(255,255,255,0.5);}}
-.inv-item.dragging-source{{opacity:.4; transform: scale(0.95);}}
-.inv-item.selected{{background:var(--surface-solid);border-left:3px solid var(--accent);box-shadow: 0 4px 12px rgba(45,71,57,0.03);}}
-.inv-item.placed-elsewhere{{opacity:.6}}
-.inv-emoji{{font-size:20px;width:28px;text-align:center;background:var(--surface-2);border-radius:8px;padding:4px;}}
-.inv-name{{font-size:14px;font-weight:500;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-.inv-badge{{
-  font-size:11px;padding:4px 10px;border-radius:99px;font-weight:600;
-  background:var(--surface-3);color:var(--muted);white-space:nowrap
+
+.inv-group {{ padding:10px 0 4px }}
+.inv-group-label {{
+  padding:4px 22px 8px;
+  font-size:10.5px; font-weight:600;
+  color:var(--muted); text-transform:uppercase; letter-spacing:.09em;
 }}
-.inv-badge.placed-badge{{background:var(--surface-solid);border: 1px solid var(--accent-glow);color:var(--accent)}}
-.inv-floor-switcher{{
-  margin:auto 16px 16px;padding:6px;
-  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
-  display:flex;gap:4px;flex-shrink:0; box-shadow: 0 4px 16px rgba(45,71,57,0.03);
+.inv-item {{
+  display:flex; align-items:center; gap:12px;
+  padding:10px 22px; cursor:pointer;
+  transition:all var(--t) var(--ease-s);
+  user-select:none; border-left:3px solid transparent;
 }}
-.floor-btn{{
-  flex:1;padding:10px 8px;font-size:13px;font-weight:600;
-  border-radius:var(--r);transition:all var(--transition);color:var(--muted)
+.inv-item:hover {{ background:rgba(141,170,145,0.08) }}
+.inv-item.selected {{
+  background:rgba(255,255,255,0.7);
+  border-left:3px solid var(--accent);
+  box-shadow:0 2px 12px rgba(141,170,145,0.08);
 }}
-.floor-btn:hover{{background:var(--surface-2);color:var(--text)}}
-.floor-btn.active{{background:var(--accent);color:#fff;box-shadow:0 4px 12px var(--accent-glow);}}
+.inv-item.placed-elsewhere {{ opacity:.55 }}
+.inv-item.dragging-source {{ opacity:.35; transform:scale(0.95) }}
+.inv-emoji {{
+  font-size:20px; width:30px; text-align:center;
+  background:var(--surface-2); border-radius:9px; padding:5px;
+}}
+.inv-name {{ font-size:13.5px; font-weight:500; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }}
+.inv-badge {{
+  font-size:10.5px; padding:4px 10px; border-radius:99px; font-weight:600;
+  background:var(--bg-2); color:var(--muted); white-space:nowrap;
+  border:1px solid var(--border);
+}}
+.inv-badge.placed-badge {{
+  background:rgba(255,255,255,0.9);
+  border:1px solid var(--accent-glow); color:var(--accent-dark);
+}}
+
+.inv-floor-switcher {{
+  margin:auto 16px 16px;
+  padding:6px; background:rgba(255,255,255,0.7);
+  border:1px solid var(--border); border-radius:var(--rx);
+  display:flex; gap:4px; flex-shrink:0;
+  box-shadow:0 4px 16px rgba(44,59,46,0.03);
+}}
+.floor-btn {{
+  flex:1; padding:10px 8px; font-size:13px; font-weight:600;
+  border-radius:var(--r); transition:all var(--t) var(--ease); color:var(--muted);
+}}
+.floor-btn:hover {{ background:var(--surface-2); color:var(--text) }}
+.floor-btn.active {{
+  background:var(--accent); color:#fff;
+  box-shadow:0 4px 14px var(--accent-glow);
+}}
 
 /* ── MAP AREA ── */
-#map-area{{
-  flex:1;position:relative;overflow:hidden;
-  background:radial-gradient(ellipse at 50% 50%,rgba(124,179,66,.05) 0%,transparent 70%);
-  border-radius: var(--rx);
-  box-shadow: inset 0 0 30px rgba(45,71,57,0.02);
+#map-area {{
+  flex:1; position:relative; overflow:hidden;
+  background:radial-gradient(ellipse at 50% 50%, rgba(141,170,145,0.06) 0%, transparent 70%);
+  border-radius:var(--rx);
+  box-shadow:inset 0 0 40px rgba(44,59,46,0.02);
 }}
-#map-canvas{{
-  position:absolute;top:50%;left:50%;
+#map-canvas {{
+  position:absolute; top:50%; left:50%;
   transform:translate(-50%,-50%);
-  border-radius: 12px;
+  border-radius:12px;
 }}
-#floor-img{{
-  position:absolute;inset:0;width:100%;height:100%;
-  object-fit:contain;pointer-events:none;user-select:none;opacity:0.95;
+#floor-img {{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:contain; pointer-events:none; user-select:none; opacity:0.95;
 }}
-#light-canvas{{
-  position:absolute;inset:0;width:100%;height:100%;
-  pointer-events:none;opacity:.65; mix-blend-mode: multiply;
+#light-canvas {{
+  position:absolute; inset:0; width:100%; height:100%;
+  pointer-events:none; opacity:.6; mix-blend-mode:multiply;
 }}
-#map-canvas.drag-over{{
-  outline:3px dashed var(--accent);outline-offset:8px; border-radius: 16px;
-  background: rgba(124,179,66,0.05);
+#map-canvas.drag-over {{
+  outline:2px dashed var(--accent); outline-offset:8px; border-radius:16px;
+  background:rgba(141,170,145,0.04);
 }}
 
 /* DLI Toggle */
-.dli-toggle-wrap{{
-  position:absolute;top:16px;right:16px;z-index:100;
-  display:flex;gap:8px;align-items:center;
-  background:rgba(255,255,255,0.9);backdrop-filter:blur(8px);
-  border:1px solid var(--border);border-radius:99px;padding:6px 14px;
-  box-shadow:0 4px 16px rgba(45,71,57,0.06);
+.dli-toggle-wrap {{
+  position:absolute; top:16px; right:16px; z-index:100;
+  display:flex; gap:9px; align-items:center;
+  background:rgba(255,255,255,0.88); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:99px; padding:7px 16px;
+  box-shadow:0 4px 18px rgba(44,59,46,0.07);
 }}
-.dli-toggle-label{{font-size:12px;font-weight:600;color:var(--muted)}}
-.dli-toggle{{
-  width:36px;height:20px;border-radius:10px;background:var(--muted2);
-  position:relative;cursor:pointer;transition:background .3s;border:none;
+.dli-toggle-label {{ font-size:12px; font-weight:600; color:var(--muted) }}
+.dli-toggle {{
+  width:36px; height:20px; border-radius:10px; background:var(--muted2);
+  position:relative; cursor:pointer; transition:background var(--t) var(--ease-s); border:none;
 }}
-.dli-toggle.on{{background:var(--dli-color);}}
-.dli-toggle::after{{
-  content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;
-  border-radius:50%;background:#fff;transition:transform .3s;
-  box-shadow:0 1px 4px rgba(0,0,0,0.15);
+.dli-toggle.on {{ background:var(--dli-color) }}
+.dli-toggle::after {{
+  content:''; position:absolute; top:3px; left:3px;
+  width:14px; height:14px; border-radius:50%;
+  background:#fff; transition:transform var(--t) var(--ease);
+  box-shadow:0 1px 4px rgba(0,0,0,.15);
 }}
-.dli-toggle.on::after{{transform:translateX(16px);}}
+.dli-toggle.on::after {{ transform:translateX(16px) }}
 
 /* ── PLANT PINS ── */
-.plant-pin{{
-  position:absolute;display:flex;flex-direction:column;align-items:center;
-  cursor:grab;user-select:none;touch-action:none;z-index:10;
-  transition:transform 0.1s;
+.plant-pin {{
+  position:absolute; display:flex; flex-direction:column; align-items:center;
+  cursor:grab; user-select:none; touch-action:none; z-index:10;
+  transition:transform .12s;
 }}
-.plant-pin:hover{{z-index:50;}}
-.plant-pin.dragging{{cursor:grabbing;z-index:100;}}
-.plant-pin.active .pin-bubble{{background:var(--surface-solid);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim), 0 8px 24px rgba(45,71,57,0.1);transform:scale(1.15);}}
-.plant-pin.highlight-pulse .pin-bubble{{animation:highlightPulse 1.5s ease-in-out 3}}
-@keyframes highlightPulse{{0%,100%{{box-shadow:0 0 0 0 var(--accent-glow)}}50%{{box-shadow:0 0 0 16px rgba(124,179,66,0)}}}}
-.pin-bubble{{
-  width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,0.9); backdrop-filter:blur(4px);
-  border:2px solid var(--accent-glow);display:flex;align-items:center;justify-content:center;
-  font-size:22px;transition:transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s;
-  box-shadow:0 4px 16px rgba(45,71,57,0.08);
+.plant-pin:hover {{ z-index:50 }}
+.plant-pin.dragging {{ cursor:grabbing; z-index:100 }}
+.plant-pin.active .pin-bubble {{
+  background:rgba(255,255,255,0.95);
+  border-color:var(--accent);
+  box-shadow:0 0 0 4px var(--accent-dim), 0 8px 28px rgba(44,59,46,0.12);
+  transform:scale(1.18);
 }}
-.plant-pin:hover .pin-bubble{{transform:scale(1.2);box-shadow:0 8px 24px rgba(124,179,66,0.25);border-color:var(--accent);}}
-.plant-pin.dragging .pin-bubble{{transform:scale(1.1) translateY(-5px);box-shadow:0 12px 30px rgba(124,179,66,0.3);}}
-.pin-indicator{{width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--muted);transition:background .3s;border:2px solid #fff;}}
-.pin-indicator.ideal{{background:var(--accent);box-shadow:0 0 8px var(--accent)}}
-.pin-indicator.ok{{background:var(--warn);box-shadow:0 0 8px var(--warn)}}
-.pin-indicator.bad{{background:var(--danger);box-shadow:0 0 8px var(--danger)}}
-.pin-label{{
-  font-size:11px;font-weight:600;color:var(--text);margin-top:4px;white-space:nowrap;
-  max-width:80px;overflow:hidden;text-overflow:ellipsis;text-align:center;
-  background:rgba(255,255,255,0.8);padding:3px 8px;border-radius:8px;backdrop-filter:blur(4px);
-  box-shadow:0 2px 8px rgba(45,71,57,0.05);
+.plant-pin.highlight-pulse .pin-bubble {{ animation:highlightPulse 1.6s ease-in-out 3 }}
+@keyframes highlightPulse {{
+  0%,100% {{ box-shadow:0 0 0 0 var(--accent-glow) }}
+  50%      {{ box-shadow:0 0 0 18px rgba(141,170,145,0) }}
 }}
-.pin-light-badge{{
-  font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;margin-top:4px;
-  background:var(--surface-solid);color:var(--muted);font-variant-numeric:tabular-nums;
-  box-shadow:0 2px 6px rgba(45,71,57,0.04);
+.pin-bubble {{
+  width:48px; height:48px; border-radius:50%;
+  background:rgba(255,255,255,0.88);
+  backdrop-filter:blur(6px) saturate(1.2);
+  border:1.5px solid rgba(141,170,145,0.4);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px;
+  transition:transform var(--t) var(--ease), box-shadow var(--t) var(--ease-s);
+  box-shadow:0 4px 18px rgba(44,59,46,0.09);
+}}
+.plant-pin:hover .pin-bubble {{
+  transform:scale(1.22);
+  box-shadow:0 10px 28px rgba(141,170,145,0.28);
+  border-color:var(--accent);
+}}
+.plant-pin.dragging .pin-bubble {{
+  transform:scale(1.12) translateY(-6px);
+  box-shadow:0 14px 36px rgba(141,170,145,0.32);
+}}
+.pin-indicator {{
+  width:10px; height:10px; border-radius:50%;
+  margin-top:5px; background:var(--muted);
+  transition:background .3s; border:2px solid rgba(255,255,255,0.9);
+}}
+.pin-indicator.ideal {{ background:var(--accent);  box-shadow:0 0 8px var(--accent) }}
+.pin-indicator.ok    {{ background:var(--warn);    box-shadow:0 0 8px var(--warn)   }}
+.pin-indicator.bad   {{ background:var(--danger);  box-shadow:0 0 8px var(--danger) }}
+.pin-label {{
+  font-size:11px; font-weight:600; color:var(--text);
+  margin-top:4px; white-space:nowrap; max-width:82px;
+  overflow:hidden; text-overflow:ellipsis; text-align:center;
+  background:rgba(255,255,255,0.82); padding:3px 9px; border-radius:8px;
+  backdrop-filter:blur(6px);
+  box-shadow:0 2px 8px rgba(44,59,46,0.06);
+}}
+.pin-light-badge {{
+  font-size:10px; font-weight:600; padding:2px 8px;
+  border-radius:99px; margin-top:3px;
+  background:rgba(255,255,255,0.85); color:var(--muted);
+  font-variant-numeric:tabular-nums;
+  box-shadow:0 2px 6px rgba(44,59,46,0.04);
 }}
 
 /* ── RIGHT SIDEBAR (Detail) ── */
-#rsb-empty{{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--muted);padding:32px;text-align:center}}
-#rsb-empty .empty-icon{{font-size:54px;opacity:.5;filter:grayscale(0.5);}}
-#rsb-detail{{flex:1;display:none;flex-direction:column;overflow-y:auto;padding:24px;gap:20px}}
-#rsb-detail.visible{{display:flex}}
-#rsb-detail::-webkit-scrollbar{{width:6px}}
-#rsb-detail::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:3px}}
+#rsb-empty {{
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:16px; color:var(--muted); padding:32px; text-align:center;
+}}
+#rsb-empty .empty-icon {{ font-size:56px; opacity:.4; filter:grayscale(0.3) }}
+#rsb-detail {{ flex:1; display:none; flex-direction:column; overflow-y:auto; padding:24px; gap:18px }}
+#rsb-detail.visible {{ display:flex }}
+#rsb-detail::-webkit-scrollbar {{ width:5px }}
+#rsb-detail::-webkit-scrollbar-thumb {{ background:var(--border-2); border-radius:3px }}
 
 /* Detail Plant Image */
-.detail-img-wrap{{
-  width:100%;height:160px;border-radius:var(--rx);overflow:hidden;position:relative;
-  background:var(--surface-2);border:1px solid var(--border);
-  box-shadow:0 4px 16px rgba(45,71,57,0.04);
+.detail-img-wrap {{
+  width:100%; height:155px; border-radius:var(--rx); overflow:hidden;
+  position:relative; background:var(--surface-2); border:1px solid var(--border);
+  box-shadow:0 4px 18px rgba(44,59,46,0.05);
 }}
-.detail-img-wrap img{{width:100%;height:100%;object-fit:cover;}}
-.detail-img-fallback{{
-  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
-  font-size:64px;opacity:.4;
-}}
-
-.plant-hdr{{display:flex;align-items:flex-start;gap:16px}}
-.big-emoji{{font-size:42px;flex-shrink:0;line-height:1;background:var(--surface-solid);padding:12px;border-radius:var(--r);box-shadow:0 4px 16px rgba(45,71,57,0.04);}}
-.plant-hdr-text h2{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;line-height:1.2;color:var(--text);}}
-.plant-hdr-text .botanical{{font-size:12px;color:var(--muted);font-style:italic;margin-top:3px;}}
-.coords-row{{font-size:12px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums;font-weight:500;}}
-.floor-tag{{
-  display:inline-block;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;
-  background:var(--surface-solid);color:var(--text);margin-top:8px;border:1px solid var(--border);
-  box-shadow:0 2px 8px rgba(45,71,57,0.02);
+.detail-img-wrap img {{ width:100%; height:100%; object-fit:cover }}
+.detail-img-fallback {{
+  width:100%; height:100%; display:flex; align-items:center;
+  justify-content:center; font-size:60px; opacity:.35;
 }}
 
-/* DLI Score Panel */
-.dli-panel{{
-  background:linear-gradient(135deg, rgba(92,155,214,0.08) 0%, rgba(124,179,66,0.06) 100%);
-  border:1px solid rgba(92,155,214,0.25);border-radius:var(--rx);padding:16px;
-  display:flex;flex-direction:column;gap:12px;box-shadow:0 4px 16px rgba(92,155,214,0.06);
+.plant-hdr {{ display:flex; align-items:flex-start; gap:14px }}
+.big-emoji {{
+  font-size:40px; flex-shrink:0; line-height:1;
+  background:var(--surface-2); padding:12px; border-radius:var(--r);
+  box-shadow:0 4px 14px rgba(44,59,46,0.05);
 }}
-.dli-panel-title{{font-size:11px;font-weight:700;color:var(--dli-color);text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:6px;}}
-.dli-score-row{{display:flex;align-items:baseline;gap:8px;}}
-.dli-score-val{{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;color:var(--text);}}
-.dli-score-unit{{font-size:13px;color:var(--muted);font-weight:500;}}
-.dli-bar-wrap{{display:flex;flex-direction:column;gap:6px;}}
-.dli-bar-track{{height:8px;border-radius:4px;background:rgba(45,71,57,0.08);position:relative;overflow:hidden;}}
-.dli-bar-fill{{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34,1.56,.64,1);background:linear-gradient(90deg,var(--dli-dim),var(--dli-color));}}
-.dli-bar-labels{{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted);}}
-.dli-live-row{{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.7);border-radius:var(--rs);border:1px solid var(--border);}}
-.dli-live-dot{{width:6px;height:6px;border-radius:50%;background:var(--warn);box-shadow:0 0 6px var(--warn);animation:pulse2 2s infinite;flex-shrink:0;}}
-@keyframes pulse2{{0%,100%{{opacity:1}}50%{{opacity:.4}}}}
-.dli-live-text{{font-size:12px;font-weight:600;color:var(--text);flex:1;}}
-.dli-live-val{{font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;}}
-
-.score-badge{{border-radius:var(--rx);padding:16px;display:flex;align-items:center;gap:16px;background:var(--surface-solid);box-shadow:0 4px 16px rgba(45,71,57,0.03);}}
-.score-badge .sc-icon{{font-size:28px}}
-.score-badge .sc-text h3{{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}}
-.score-badge .sc-text p{{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}}
-.score-badge.ideal{{border:1px solid var(--accent-glow);background:var(--surface-solid);}}
-.score-badge.ideal .sc-text h3{{color:var(--accent)}}
-.score-badge.ok{{border:1px solid rgba(226,167,111,0.4);background:var(--surface-solid);}}
-.score-badge.ok .sc-text h3{{color:var(--warn)}}
-.score-badge.bad{{border:1px solid rgba(229,115,115,0.4);background:var(--surface-solid);}}
-.score-badge.bad .sc-text h3{{color:var(--danger)}}
-
-.astro-panel{{
-  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
-  padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 4px 16px rgba(45,71,57,0.03);
+.plant-hdr-text h2 {{
+  font-family:'Playfair Display',serif;
+  font-size:21px; font-weight:700; line-height:1.25; color:var(--text);
 }}
-.astro-title{{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}}
-.astro-grid{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
-.astro-cell{{background:var(--bg);border-radius:var(--r);padding:12px}}
-.astro-cell-lbl{{font-size:10px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}}
-.astro-cell-val{{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text)}}
-.astro-cell-unit{{font-size:12px;font-weight:500;color:var(--muted);margin-left:4px}}
-.window-chips{{display:flex;gap:6px;flex-wrap:wrap}}
-.win-chip{{
-  font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--bg);
-  border:1px solid var(--border);color:var(--muted);
+.plant-hdr-text .botanical {{ font-size:12px; color:var(--muted); font-style:italic; margin-top:3px }}
+.coords-row {{ font-size:12px; color:var(--muted); margin-top:6px; font-variant-numeric:tabular-nums; font-weight:500 }}
+.floor-tag {{
+  display:inline-block; padding:4px 11px; border-radius:99px;
+  font-size:11px; font-weight:600;
+  background:rgba(255,255,255,0.8); color:var(--text); margin-top:8px;
+  border:1px solid var(--border); box-shadow:0 2px 8px rgba(44,59,46,0.03);
 }}
-.win-chip.hit{{background:var(--warn-dim);border-color:rgba(226,167,111,0.4);color:#d38e53;}}
 
-.light-bar-wrap{{display:flex;flex-direction:column;gap:10px;background:var(--surface-solid);padding:16px;border-radius:var(--rx);border:1px solid var(--border);box-shadow:0 4px 16px rgba(45,71,57,0.03);}}
-.lbw-label{{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--text)}}
-.lbw-track{{height:12px;border-radius:6px;background:rgba(45,71,57,0.05);position:relative;overflow:hidden}}
-.lbw-fill{{height:100%;border-radius:6px;background:linear-gradient(90deg, var(--accent-glow), var(--accent));transition:width .8s cubic-bezier(.34, 1.56, .64, 1)}}
-.lbw-needle{{position:absolute;top:-2px;bottom:-2px;width:4px;background:#fff;border-radius:2px;box-shadow:0 0 4px rgba(0,0,0,0.2);}}
-
-.data-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px}}
-.dc{{background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:0 4px 16px rgba(45,71,57,0.02);}}
-.dc-lbl{{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}}
-.dc-val{{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--text)}}
-.dc-unit{{font-size:13px;font-weight:500;color:var(--muted);margin-left:4px}}
-.detail-extra-row{{
-  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--r);
-  padding:14px 16px;display:flex;flex-direction:column;gap:4px;
-  box-shadow:0 4px 16px rgba(45,71,57,0.02);
+/* ══ VITAL-SCORE RING (NEU) ══ */
+.vital-card {{
+  background:rgba(255,255,255,0.75);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,0.65);
+  border-radius:var(--rx);
+  padding:20px;
+  display:flex; align-items:center; gap:20px;
+  box-shadow:0 8px 32px rgba(44,59,46,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
 }}
-.detail-extra-lbl{{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}}
-.detail-extra-val{{font-size:13px;font-weight:500;color:var(--text);line-height:1.5;}}
-
-.action-row{{display:flex;gap:10px;margin-top:8px}}
-.act-btn{{
-  flex:1;padding:12px;border-radius:var(--r);font-size:13px;font-weight:600;
-  transition:all var(--transition);border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
-  box-shadow:0 2px 8px rgba(45,71,57,0.02);
+.vital-ring-wrap {{
+  flex-shrink:0; position:relative;
+  width:82px; height:82px;
 }}
-.act-btn:hover{{background:var(--bg);transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,71,57,0.05);}}
-.act-btn.primary{{background:var(--accent);border-color:var(--accent);color:#fff;}}
-.act-btn.primary:hover{{background:#6aa335;box-shadow:0 4px 16px var(--accent-glow);}}
-.act-btn.danger-btn{{background:var(--surface-solid);border-color:rgba(229,115,115,0.4);color:var(--danger)}}
-.act-btn.danger-btn:hover{{background:var(--danger-dim);}}
+.vital-ring-wrap svg {{ transform:rotate(-90deg) }}
+.vital-ring-track {{ fill:none; stroke:rgba(44,59,46,0.07); stroke-width:8 }}
+.vital-ring-fill  {{ fill:none; stroke-width:8; stroke-linecap:round; transition:stroke-dashoffset 1.2s var(--ease) }}
+.vital-score-label {{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:1px;
+}}
+.vital-score-num {{
+  font-family:'Playfair Display',serif;
+  font-size:21px; font-weight:700; line-height:1;
+  color:var(--text);
+}}
+.vital-score-pct {{ font-size:10px; font-weight:600; color:var(--muted) }}
+.vital-info {{ flex:1 }}
+.vital-title {{
+  font-family:'Playfair Display',serif;
+  font-size:15px; font-weight:600; color:var(--text); margin-bottom:6px;
+}}
+.vital-sub-row {{ display:flex; flex-direction:column; gap:6px }}
+.vital-sub {{
+  display:flex; align-items:center; gap:8px;
+  font-size:12px; font-weight:500; color:var(--muted);
+}}
+.vital-sub-bar-wrap {{ flex:1 }}
+.vital-sub-bar-track {{
+  height:5px; border-radius:3px;
+  background:rgba(44,59,46,0.07); overflow:hidden;
+}}
+.vital-sub-bar-fill {{
+  height:100%; border-radius:3px;
+  transition:width 1s var(--ease);
+}}
+.vital-sub-val {{
+  font-size:11px; font-weight:700;
+  min-width:30px; text-align:right; color:var(--text);
+}}
+
+/* Staunässe-Warnung (NEU) */
+.staunaesse-warn {{
+  background:rgba(123,174,196,0.12);
+  border:1px solid rgba(123,174,196,0.35);
+  border-radius:var(--rs); padding:12px 14px;
+  display:flex; align-items:flex-start; gap:10px;
+  backdrop-filter:blur(8px);
+}}
+.staunaesse-icon {{ font-size:20px; flex-shrink:0 }}
+.staunaesse-text {{ font-size:12.5px; font-weight:500; color:var(--text-2); line-height:1.5 }}
+.staunaesse-title {{ font-weight:700; color:var(--staunaesse); font-size:13px; margin-bottom:2px }}
+
+/* DLI Panel */
+.dli-panel {{
+  background:linear-gradient(135deg, rgba(107,158,196,0.07) 0%, rgba(141,170,145,0.06) 100%);
+  border:1px solid rgba(107,158,196,0.22); border-radius:var(--rx); padding:16px;
+  display:flex; flex-direction:column; gap:12px;
+  box-shadow:0 4px 18px rgba(107,158,196,0.05);
+}}
+.dli-panel-title {{
+  font-size:11px; font-weight:700; color:var(--dli-color);
+  text-transform:uppercase; letter-spacing:.08em;
+  display:flex; align-items:center; gap:6px;
+}}
+.dli-score-row {{ display:flex; align-items:baseline; gap:8px }}
+.dli-score-val {{
+  font-family:'Playfair Display',serif;
+  font-size:30px; font-weight:700; color:var(--text);
+}}
+.dli-score-unit {{ font-size:13px; color:var(--muted); font-weight:500 }}
+.dli-bar-wrap {{ display:flex; flex-direction:column; gap:6px }}
+.dli-bar-track {{
+  height:7px; border-radius:4px;
+  background:rgba(44,59,46,0.07); position:relative; overflow:hidden;
+}}
+.dli-bar-fill {{
+  height:100%; border-radius:4px;
+  transition:width .8s var(--ease);
+  background:linear-gradient(90deg, var(--dli-dim), var(--dli-color));
+}}
+.dli-bar-labels {{
+  display:flex; justify-content:space-between;
+  font-size:11px; font-weight:600; color:var(--muted);
+}}
+.dli-live-row {{
+  display:flex; align-items:center; gap:8px; padding:8px 12px;
+  background:rgba(255,255,255,0.65); border-radius:var(--rs); border:1px solid var(--border);
+}}
+.dli-live-dot {{
+  width:6px; height:6px; border-radius:50%;
+  background:var(--warn); box-shadow:0 0 6px var(--warn);
+  animation:pulse2 2s infinite; flex-shrink:0;
+}}
+@keyframes pulse2 {{ 0%,100%{{opacity:1}} 50%{{opacity:.4}} }}
+.dli-live-text {{ font-size:12px; font-weight:600; color:var(--text); flex:1 }}
+.dli-live-val  {{ font-size:12px; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums }}
+
+.score-badge {{
+  border-radius:var(--rx); padding:14px 16px;
+  display:flex; align-items:center; gap:14px;
+  background:rgba(255,255,255,0.75); backdrop-filter:blur(8px);
+  box-shadow:0 4px 18px rgba(44,59,46,0.04);
+}}
+.score-badge .sc-icon {{ font-size:26px }}
+.score-badge .sc-text h3 {{ font-family:'Playfair Display',serif; font-size:15px; font-weight:600 }}
+.score-badge .sc-text p  {{ font-size:12.5px; color:var(--muted); margin-top:4px; line-height:1.45 }}
+.score-badge.ideal {{ border:1px solid var(--accent-glow) }}
+.score-badge.ideal .sc-text h3 {{ color:var(--accent-dark) }}
+.score-badge.ok    {{ border:1px solid rgba(201,149,106,0.35) }}
+.score-badge.ok .sc-text h3    {{ color:var(--warn) }}
+.score-badge.bad   {{ border:1px solid rgba(201,112,112,0.35) }}
+.score-badge.bad .sc-text h3   {{ color:var(--danger) }}
+
+.astro-panel {{
+  background:rgba(255,255,255,0.72); backdrop-filter:blur(10px);
+  border:1px solid var(--border); border-radius:var(--rx); padding:16px;
+  display:flex; flex-direction:column; gap:10px;
+  box-shadow:0 4px 18px rgba(44,59,46,0.04);
+}}
+.astro-title {{
+  font-size:12px; font-weight:600; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;
+}}
+.astro-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:10px }}
+.astro-cell {{ background:rgba(249,247,242,0.8); border-radius:var(--rs); padding:12px }}
+.astro-cell-lbl {{ font-size:10px; font-weight:600; color:var(--muted2); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px }}
+.astro-cell-val {{
+  font-family:'Playfair Display',serif;
+  font-size:20px; font-weight:700; color:var(--text);
+}}
+.astro-cell-unit {{ font-size:12px; font-weight:500; color:var(--muted); margin-left:4px }}
+.window-chips {{ display:flex; gap:6px; flex-wrap:wrap }}
+.win-chip {{
+  font-size:11px; font-weight:600; padding:4px 10px; border-radius:99px;
+  background:var(--bg-2); border:1px solid var(--border); color:var(--muted);
+}}
+.win-chip.hit {{ background:var(--warn-dim); border-color:rgba(201,149,106,0.35); color:#a06b3a }}
+
+.light-bar-wrap {{
+  display:flex; flex-direction:column; gap:10px;
+  background:rgba(255,255,255,0.72); padding:16px; border-radius:var(--rx);
+  border:1px solid var(--border); box-shadow:0 4px 18px rgba(44,59,46,0.04);
+}}
+.lbw-label {{ display:flex; justify-content:space-between; font-size:13px; font-weight:600; color:var(--text) }}
+.lbw-track {{ height:11px; border-radius:6px; background:rgba(44,59,46,0.06); position:relative; overflow:hidden }}
+.lbw-fill {{
+  height:100%; border-radius:6px;
+  background:linear-gradient(90deg, var(--accent-glow), var(--accent));
+  transition:width .8s var(--ease);
+}}
+.lbw-needle {{
+  position:absolute; top:-2px; bottom:-2px; width:3px;
+  background:#fff; border-radius:2px; box-shadow:0 0 4px rgba(0,0,0,.15);
+}}
+
+.data-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:10px }}
+.dc {{
+  background:rgba(255,255,255,0.72); backdrop-filter:blur(8px);
+  border:1px solid var(--border); border-radius:var(--r); padding:14px;
+  box-shadow:0 4px 14px rgba(44,59,46,0.03);
+}}
+.dc-lbl {{ font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px }}
+.dc-val {{ font-family:'Playfair Display',serif; font-size:21px; font-weight:700; color:var(--text) }}
+.dc-unit {{ font-size:12px; font-weight:500; color:var(--muted); margin-left:4px }}
+.detail-extra-row {{
+  background:rgba(255,255,255,0.72); backdrop-filter:blur(8px);
+  border:1px solid var(--border); border-radius:var(--r); padding:14px 16px;
+  display:flex; flex-direction:column; gap:4px;
+  box-shadow:0 4px 14px rgba(44,59,46,0.03);
+}}
+.detail-extra-lbl {{ font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em }}
+.detail-extra-val {{ font-size:13px; font-weight:500; color:var(--text); line-height:1.5 }}
+
+.action-row {{ display:flex; gap:10px; margin-top:6px }}
+.act-btn {{
+  flex:1; padding:12px; border-radius:var(--r); font-size:13px; font-weight:600;
+  transition:all var(--t) var(--ease);
+  border:1px solid var(--border); background:rgba(255,255,255,0.75); color:var(--text);
+  box-shadow:0 2px 8px rgba(44,59,46,0.03);
+}}
+.act-btn:hover {{
+  background:rgba(255,255,255,0.95);
+  transform:translateY(-1px);
+  box-shadow:0 5px 16px rgba(44,59,46,0.07);
+}}
+.act-btn.primary {{
+  background:var(--accent); border-color:var(--accent); color:#fff;
+}}
+.act-btn.primary:hover {{
+  background:var(--accent-dark);
+  box-shadow:0 5px 18px var(--accent-glow);
+}}
+.act-btn.danger-btn {{
+  background:rgba(255,255,255,0.75);
+  border-color:rgba(201,112,112,0.35); color:var(--danger);
+}}
+.act-btn.danger-btn:hover {{ background:var(--danger-dim) }}
 
 /* ── LIBRARY VIEW ── */
-#library-view{{display:none;flex:1;overflow-y:auto;padding:24px 32px;flex-direction:column;gap:24px}}
-#library-view.active{{display:flex}}
-#library-view::-webkit-scrollbar{{width:8px}}
-#library-view::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:4px}}
+#library-view {{
+  display:none; flex:1; overflow-y:auto; padding:24px 30px;
+  flex-direction:column; gap:22px;
+}}
+#library-view.active {{ display:flex }}
+#library-view::-webkit-scrollbar {{ width:7px }}
+#library-view::-webkit-scrollbar-thumb {{ background:var(--border-2); border-radius:4px }}
 
-.lib-header{{display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;background:var(--surface);padding:24px;border-radius:var(--rx);border:1px solid var(--border);backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(45,71,57,0.04);}}
-.lib-header h2{{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);}}
-.lib-header-sub{{font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}}
-.lib-search{{
-  padding:12px 20px;background:var(--surface-solid);border:1px solid var(--border);
-  border-radius:99px;color:var(--text);font-size:15px;width:240px;
-  box-shadow:inset 0 2px 6px rgba(45,71,57,0.02);transition:all .3s;
+.lib-header {{
+  display:flex; align-items:center; gap:16px; flex-shrink:0; flex-wrap:wrap;
+  background:rgba(255,255,255,0.75); backdrop-filter:blur(20px) saturate(1.3);
+  padding:22px 26px; border-radius:var(--rx); border:1px solid rgba(255,255,255,0.7);
+  box-shadow:0 8px 36px rgba(44,59,46,0.05), inset 0 1px 0 rgba(255,255,255,0.85);
 }}
-.lib-search::placeholder{{color:var(--muted2)}}
-.lib-search:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-dim);}}
+.lib-header h2 {{
+  font-family:'Playfair Display',serif;
+  font-size:25px; font-weight:700; color:var(--text);
+}}
+.lib-header-sub {{ font-size:13.5px; font-weight:500; color:var(--muted); margin-top:4px }}
+.lib-search {{
+  padding:11px 20px; background:rgba(255,255,255,0.8);
+  border:1px solid var(--border); border-radius:99px;
+  color:var(--text); font-size:14px; width:230px;
+  box-shadow:inset 0 2px 6px rgba(44,59,46,0.03); transition:all var(--t) var(--ease-s);
+}}
+.lib-search::placeholder {{ color:var(--muted2) }}
+.lib-search:focus {{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim) }}
 
-/* ── NEU: Sort Controls ── */
-.lib-sort-wrap{{
-  display:flex;align-items:center;gap:10px;margin-left:auto;
+.lib-sort-wrap {{ display:flex; align-items:center; gap:10px; margin-left:auto }}
+.lib-sort-label {{ font-size:12px; font-weight:600; color:var(--muted); white-space:nowrap }}
+.lib-sort-select {{
+  padding:8px 14px; background:rgba(255,255,255,0.8);
+  border:1px solid var(--border); border-radius:99px;
+  color:var(--text); font-size:13px; font-weight:600; cursor:pointer;
+  box-shadow:0 2px 8px rgba(44,59,46,0.03); transition:all var(--t) var(--ease-s);
+  appearance:none; -webkit-appearance:none; padding-right:28px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236E8A72' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 10px center;
 }}
-.lib-sort-label{{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;}}
-.lib-sort-select{{
-  padding:8px 14px;background:var(--surface-solid);border:1px solid var(--border);
-  border-radius:99px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;
-  box-shadow:0 2px 8px rgba(45,71,57,0.02);transition:all .3s;appearance:none;
-  -webkit-appearance:none;padding-right:28px;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23688E7B' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;
+.lib-sort-select:focus {{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim) }}
+.lib-sort-dir-btn {{
+  width:36px; height:36px; border-radius:99px; border:1px solid var(--border);
+  background:rgba(255,255,255,0.8); color:var(--text); font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all var(--t) var(--ease); cursor:pointer; flex-shrink:0;
+  box-shadow:0 2px 8px rgba(44,59,46,0.03);
 }}
-.lib-sort-select:focus{{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}}
-.lib-sort-dir-btn{{
-  width:36px;height:36px;border-radius:99px;border:1px solid var(--border);
-  background:var(--surface-solid);color:var(--text);font-size:16px;
-  display:flex;align-items:center;justify-content:center;
-  transition:all var(--transition);cursor:pointer;flex-shrink:0;
-  box-shadow:0 2px 8px rgba(45,71,57,0.02);
-}}
-.lib-sort-dir-btn:hover{{background:var(--surface-2);border-color:var(--accent-glow);transform:scale(1.08);}}
+.lib-sort-dir-btn:hover {{ background:var(--surface-2); border-color:var(--accent-glow); transform:scale(1.1) }}
 
-.lib-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:24px;padding-bottom:32px;}}
-
-/* Premium Library Card */
-.lib-card{{
-  background:var(--surface-solid);border:1px solid rgba(255,255,255,0.8);border-radius:var(--rx);
-  display:flex;flex-direction:column;overflow:hidden;position:relative;
-  transition:all var(--transition); cursor:default;
-  box-shadow:0 8px 24px rgba(45,71,57,0.04);
+.lib-grid {{
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(370px, 1fr));
+  gap:22px; padding-bottom:28px;
 }}
-.lib-card:hover{{
+
+/* ══ LIBRARY CARD mit Vital-Score Ring ══ */
+.lib-card {{
+  background:rgba(255,255,255,0.8);
+  backdrop-filter:blur(16px) saturate(1.2);
+  border:1px solid rgba(255,255,255,0.75);
+  border-radius:var(--rx); display:flex; flex-direction:column;
+  overflow:hidden; position:relative;
+  transition:all var(--t) var(--ease);
+  box-shadow:0 8px 28px rgba(44,59,46,0.05), inset 0 1px 0 rgba(255,255,255,0.9);
+}}
+.lib-card:hover {{
   border-color:var(--accent-glow);
-  box-shadow:0 20px 60px rgba(45,71,57,0.1);
-  transform:translateY(-6px);
+  box-shadow:0 22px 64px rgba(44,59,46,0.11), inset 0 1px 0 rgba(255,255,255,0.9);
+  transform:translateY(-7px);
 }}
-.lib-card-img{{
-  width:100%;height:180px;overflow:hidden;position:relative;
-  background:linear-gradient(135deg,var(--surface-2),var(--surface-3));
+.lib-card-img {{
+  width:100%; height:175px; overflow:hidden; position:relative;
+  background:linear-gradient(135deg, var(--surface-2), var(--surface-3));
   flex-shrink:0;
 }}
-.lib-card-img img{{
-  width:100%;height:100%;object-fit:cover;transition:transform .6s ease;
+.lib-card-img img {{
+  width:100%; height:100%; object-fit:cover;
+  transition:transform .65s var(--ease-s);
 }}
-.lib-card:hover .lib-card-img img{{transform:scale(1.06);}}
-.lib-card-img-fallback{{
-  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
-  font-size:72px;opacity:.35;
+.lib-card:hover .lib-card-img img {{ transform:scale(1.07) }}
+.lib-card-img-fallback {{
+  width:100%; height:100%; display:flex;
+  align-items:center; justify-content:center;
+  font-size:70px; opacity:.3;
 }}
-.lib-card-img-overlay{{
-  position:absolute;bottom:0;left:0;right:0;
-  background:linear-gradient(to top, rgba(45,71,57,0.6) 0%, transparent 100%);
+.lib-card-img-overlay {{
+  position:absolute; bottom:0; left:0; right:0;
+  background:linear-gradient(to top, rgba(44,59,46,0.65) 0%, transparent 100%);
   padding:16px;
 }}
-.lib-card-img-overlay .lib-card-name{{
-  font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#fff;
-  text-shadow:0 2px 8px rgba(0,0,0,0.3);
+.lib-card-img-overlay .lib-card-name {{
+  font-family:'Playfair Display',serif; font-size:17px; font-weight:700;
+  color:#fff; text-shadow:0 2px 8px rgba(0,0,0,.3);
 }}
-.lib-card-img-overlay .lib-card-botanical{{font-size:12px;color:rgba(255,255,255,0.75);font-style:italic;margin-top:2px;}}
-.lib-card-body{{padding:20px;display:flex;flex-direction:column;gap:16px;}}
+.lib-card-img-overlay .lib-card-botanical {{
+  font-size:11.5px; color:rgba(255,255,255,0.72); font-style:italic; margin-top:2px;
+}}
 
-.lib-card-top-row{{display:flex;align-items:center;gap:12px;}}
-.lib-card-loc{{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--muted);}}
-.lib-card-loc-dot{{width:6px;height:6px;border-radius:50%;background:var(--muted2);flex-shrink:0}}
-.lib-card-loc-dot.placed{{background:var(--accent);box-shadow:0 0 6px var(--accent);}}
+/* Vital-Score Badge auf der Karte */
+.lib-vital-badge {{
+  position:absolute; top:12px; right:12px;
+  width:52px; height:52px;
+  background:rgba(255,255,255,0.92); backdrop-filter:blur(8px);
+  border-radius:50%; border:1px solid rgba(255,255,255,0.8);
+  box-shadow:0 4px 16px rgba(44,59,46,0.12);
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:1px;
+}}
+.lib-vital-badge svg {{ transform:rotate(-90deg) }}
+.lib-vital-badge-num {{
+  position:absolute; font-family:'Playfair Display',serif;
+  font-size:13px; font-weight:700; color:var(--text); line-height:1;
+}}
+.lib-vital-badge-pct {{
+  position:absolute; font-size:8px; font-weight:600;
+  color:var(--muted); margin-top:16px;
+}}
 
-.lib-light-row{{display:flex;align-items:center;gap:12px;background:var(--bg);padding:12px 16px;border-radius:var(--r);}}
-.lib-light-icon{{font-size:18px;flex-shrink:0}}
-.lib-light-bar-wrap{{flex:1}}
-.lib-light-bar-track{{height:8px;border-radius:4px;background:rgba(45,71,57,0.06);position:relative;overflow:hidden}}
-.lib-light-bar-fill{{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34, 1.56, .64, 1)}}
-.lib-light-labels{{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--muted);margin-top:6px}}
-.lib-light-score{{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;min-width:44px;text-align:right;flex-shrink:0}}
+.lib-card-body {{ padding:18px; display:flex; flex-direction:column; gap:14px }}
 
-.lib-divider{{height:1px;background:var(--border);margin:0}}
+.lib-card-top-row {{ display:flex; align-items:center; gap:10px }}
+.lib-card-loc {{ display:flex; align-items:center; gap:6px; font-size:13px; font-weight:500; color:var(--muted) }}
+.lib-card-loc-dot {{ width:6px; height:6px; border-radius:50%; background:var(--muted2); flex-shrink:0 }}
+.lib-card-loc-dot.placed {{ background:var(--accent); box-shadow:0 0 6px var(--accent) }}
 
-.lib-care-grid{{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
-.lib-care-cell{{background:var(--bg);border-radius:var(--rs);padding:10px 14px;display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);}}
-.lib-care-cell-lbl{{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}}
-.lib-care-cell-val{{font-size:15px;font-weight:700;color:var(--text)}}
-.lib-care-cell-unit{{font-size:11px;color:var(--muted);margin-left:3px;font-weight:500}}
+.lib-light-row {{
+  display:flex; align-items:center; gap:12px;
+  background:var(--bg-2); padding:11px 14px; border-radius:var(--rs);
+  border:1px solid var(--border);
+}}
+.lib-light-icon {{ font-size:17px; flex-shrink:0 }}
+.lib-light-bar-wrap {{ flex:1 }}
+.lib-light-bar-track {{ height:7px; border-radius:4px; background:rgba(44,59,46,0.07); position:relative; overflow:hidden }}
+.lib-light-bar-fill {{ height:100%; border-radius:4px; transition:width .8s var(--ease) }}
+.lib-light-labels {{ display:flex; justify-content:space-between; font-size:11px; font-weight:600; color:var(--muted); margin-top:5px }}
+.lib-light-score {{ font-family:'Playfair Display',serif; font-size:16px; font-weight:700; min-width:44px; text-align:right; flex-shrink:0 }}
 
-.lib-besonderheit{{
-  background:linear-gradient(135deg,rgba(124,179,66,0.04),rgba(92,155,214,0.04));
-  border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;
-  font-size:13px;color:var(--text);line-height:1.5;font-style:italic;
+.lib-divider {{ height:1px; background:var(--border) }}
+.lib-care-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:9px }}
+.lib-care-cell {{
+  background:var(--bg-2); border-radius:var(--rs); padding:10px 13px;
+  display:flex; flex-direction:column; gap:4px; border:1px solid var(--border);
+}}
+.lib-care-cell-lbl {{ font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em }}
+.lib-care-cell-val {{ font-size:14.5px; font-weight:700; color:var(--text) }}
+.lib-care-cell-unit {{ font-size:11px; color:var(--muted); margin-left:3px; font-weight:500 }}
+
+.lib-besonderheit {{
+  background:linear-gradient(135deg, rgba(141,170,145,0.06), rgba(107,158,196,0.05));
+  border:1px solid var(--border); border-radius:var(--rs); padding:12px 14px;
+  font-size:12.5px; color:var(--text); line-height:1.55; font-style:italic;
   border-left:3px solid var(--accent-glow);
 }}
-.lib-besonderheit-lbl{{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;font-style:normal;}}
+.lib-besonderheit-lbl {{ font-size:10px; font-weight:700; color:var(--accent-dark); text-transform:uppercase; letter-spacing:.08em; margin-bottom:3px; font-style:normal }}
 
-.lib-humidity-row{{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);font-weight:500;}}
-.lib-humidity-badge{{
-  padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;
-  background:rgba(92,155,214,0.12);color:var(--dli-color);border:1px solid rgba(92,155,214,0.2);
+.lib-humidity-row {{ display:flex; align-items:center; gap:9px; font-size:13px; color:var(--muted); font-weight:500 }}
+.lib-humidity-badge {{
+  padding:4px 10px; border-radius:99px; font-size:11px; font-weight:700;
+  background:var(--dli-dim); color:var(--dli-color); border:1px solid rgba(107,158,196,0.2);
 }}
 
-.lib-status-chip{{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:600;}}
-.lib-status-chip.ideal{{background:var(--surface-solid);color:var(--accent);border:1px solid var(--accent-glow);box-shadow:0 2px 8px var(--accent-dim);}}
-.lib-status-chip.ok{{background:var(--surface-solid);color:#d38e53;border:1px solid rgba(226,167,111,0.4);box-shadow:0 2px 8px var(--warn-dim);}}
-.lib-status-chip.bad{{background:var(--surface-solid);color:var(--danger);border:1px solid rgba(229,115,115,0.4);box-shadow:0 2px 8px var(--danger-dim);}}
-.lib-status-chip.none{{background:var(--surface-solid);color:var(--muted);border:1px solid var(--border)}}
-
-.lib-card-footer{{display:flex;align-items:center;gap:12px;padding:0 20px 20px;margin-top:auto;}}
-.show-on-map-btn{{
-  flex:1;padding:12px;border-radius:var(--r);font-size:13px;font-weight:600;
-  background:var(--surface-solid);border:1px solid var(--border);color:var(--text);
-  transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);
+.lib-status-chip {{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 12px; border-radius:99px; font-size:12px; font-weight:600;
 }}
-.show-on-map-btn:hover{{background:var(--bg);border-color:var(--accent-glow);color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(45,71,57,0.05);}}
+.lib-status-chip.ideal {{
+  background:rgba(255,255,255,0.8); color:var(--accent-dark);
+  border:1px solid var(--accent-glow); box-shadow:0 2px 8px var(--accent-dim);
+}}
+.lib-status-chip.ok {{
+  background:rgba(255,255,255,0.8); color:#a06b3a;
+  border:1px solid rgba(201,149,106,0.35); box-shadow:0 2px 8px var(--warn-dim);
+}}
+.lib-status-chip.bad {{
+  background:rgba(255,255,255,0.8); color:var(--danger);
+  border:1px solid rgba(201,112,112,0.35); box-shadow:0 2px 8px var(--danger-dim);
+}}
+.lib-status-chip.none {{
+  background:rgba(255,255,255,0.8); color:var(--muted); border:1px solid var(--border);
+}}
+
+.lib-card-footer {{ display:flex; align-items:center; gap:10px; padding:0 18px 18px; margin-top:auto }}
+.show-on-map-btn {{
+  flex:1; padding:11px; border-radius:var(--r); font-size:13px; font-weight:600;
+  background:rgba(255,255,255,0.75); border:1px solid var(--border); color:var(--text);
+  transition:all var(--t) var(--ease); box-shadow:0 2px 8px rgba(44,59,46,0.03);
+}}
+.show-on-map-btn:hover {{
+  background:rgba(255,255,255,0.95); border-color:var(--accent-glow);
+  color:var(--accent-dark); transform:translateY(-1px);
+  box-shadow:0 5px 16px rgba(44,59,46,0.07);
+}}
 
 /* ── PFLEGE-KALENDER VIEW ── */
-#care-view{{display:none;flex:1;overflow-y:auto;padding:24px 32px;flex-direction:column;gap:20px}}
-#care-view.active{{display:flex}}
-#care-view::-webkit-scrollbar{{width:8px}}
-#care-view::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:4px}}
+#care-view {{
+  display:none; flex:1; overflow-y:auto; padding:24px 30px;
+  flex-direction:column; gap:18px;
+}}
+#care-view.active {{ display:flex }}
+#care-view::-webkit-scrollbar {{ width:7px }}
+#care-view::-webkit-scrollbar-thumb {{ background:var(--border-2); border-radius:4px }}
 
-.care-header{{
-  display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;
-  background:var(--surface);padding:24px;border-radius:var(--rx);border:1px solid var(--border);
-  backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(45,71,57,0.04);
+.care-header {{
+  display:flex; align-items:center; gap:16px; flex-shrink:0; flex-wrap:wrap;
+  background:rgba(255,255,255,0.75); backdrop-filter:blur(20px) saturate(1.3);
+  padding:22px 26px; border-radius:var(--rx); border:1px solid rgba(255,255,255,0.7);
+  box-shadow:0 8px 36px rgba(44,59,46,0.05), inset 0 1px 0 rgba(255,255,255,0.85);
 }}
-.care-header h2{{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);}}
-.care-header-sub{{font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}}
-.care-header-actions{{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;}}
-.care-mass-btn{{
-  padding:10px 20px;font-size:13px;font-weight:600;border-radius:99px;
-  border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
-  transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);cursor:pointer;
+.care-header h2 {{
+  font-family:'Playfair Display',serif; font-size:25px; font-weight:700; color:var(--text);
 }}
-.care-mass-btn:hover{{background:var(--bg);border-color:var(--accent-glow);color:var(--accent);transform:translateY(-1px);}}
-.care-mass-btn.primary{{background:var(--accent);border-color:var(--accent);color:#fff;}}
-.care-mass-btn.primary:hover{{background:#6aa335;box-shadow:0 4px 16px var(--accent-glow);transform:translateY(-1px);}}
+.care-header-sub {{ font-size:13.5px; font-weight:500; color:var(--muted); margin-top:4px }}
+.care-header-actions {{ margin-left:auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap }}
+.care-mass-btn {{
+  padding:10px 20px; font-size:13px; font-weight:600; border-radius:99px;
+  border:1px solid var(--border); background:rgba(255,255,255,0.75); color:var(--text);
+  transition:all var(--t) var(--ease); box-shadow:0 2px 8px rgba(44,59,46,0.03); cursor:pointer;
+}}
+.care-mass-btn:hover {{
+  background:rgba(255,255,255,0.95); border-color:var(--accent-glow);
+  color:var(--accent-dark); transform:translateY(-1px);
+}}
+.care-mass-btn.primary {{
+  background:var(--accent); border-color:var(--accent); color:#fff;
+}}
+.care-mass-btn.primary:hover {{
+  background:var(--accent-dark); box-shadow:0 5px 18px var(--accent-glow); transform:translateY(-1px);
+}}
 
 /* Care Sub-tabs */
-.care-subtabs{{
-  display:flex;gap:8px;background:var(--surface-solid);border:1px solid var(--border);
-  border-radius:var(--rx);padding:6px;box-shadow:0 4px 16px rgba(45,71,57,0.03);flex-shrink:0;
+.care-subtabs {{
+  display:flex; gap:7px; background:rgba(255,255,255,0.7); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:var(--rx);
+  padding:6px; box-shadow:0 4px 18px rgba(44,59,46,0.04); flex-shrink:0;
 }}
-.care-subtab{{
-  flex:1;padding:10px 20px;font-size:13px;font-weight:600;color:var(--muted);
-  border-radius:var(--r);transition:all var(--transition);
+.care-subtab {{
+  flex:1; padding:10px 20px; font-size:13px; font-weight:600; color:var(--muted);
+  border-radius:var(--r); transition:all var(--t) var(--ease);
 }}
-.care-subtab:hover{{color:var(--text);background:var(--surface-2);}}
-.care-subtab.active{{background:var(--accent);color:#fff;box-shadow:0 4px 12px var(--accent-glow);}}
+.care-subtab:hover {{ color:var(--text); background:var(--surface-2) }}
+.care-subtab.active {{
+  background:var(--accent); color:#fff; box-shadow:0 4px 14px var(--accent-glow);
+}}
 
 /* Calendar Grid */
-#care-calendar-pane{{display:flex;flex-direction:column;gap:20px;}}
-#care-status-pane{{display:none;flex-direction:column;gap:16px;}}
+#care-calendar-pane {{ display:flex; flex-direction:column; gap:18px }}
+#care-status-pane   {{ display:none; flex-direction:column; gap:14px }}
 
-.calendar-wrap{{
-  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
-  overflow:hidden;box-shadow:0 8px 32px rgba(45,71,57,0.04);
+.calendar-wrap {{
+  background:rgba(255,255,255,0.75); backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.7); border-radius:var(--rx); overflow:hidden;
+  box-shadow:0 8px 36px rgba(44,59,46,0.05);
 }}
-.calendar-nav{{
-  display:flex;align-items:center;justify-content:space-between;padding:20px 24px;
+.calendar-nav {{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 24px; border-bottom:1px solid var(--border);
+}}
+.calendar-nav-title {{
+  font-family:'Playfair Display',serif; font-size:17px; font-weight:700; color:var(--text);
+}}
+.calendar-nav-btn {{
+  width:36px; height:36px; border-radius:50%; border:1px solid var(--border);
+  background:rgba(255,255,255,0.8); color:var(--text); font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all var(--t) var(--ease); cursor:pointer;
+}}
+.calendar-nav-btn:hover {{ background:var(--surface-2); border-color:var(--accent-glow); transform:scale(1.1) }}
+.cal-grid {{ display:grid; grid-template-columns:repeat(7,1fr) }}
+.cal-day-header {{
+  padding:11px 8px; text-align:center; font-size:11px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.06em; background:var(--bg-2);
   border-bottom:1px solid var(--border);
 }}
-.calendar-nav-title{{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);}}
-.calendar-nav-btn{{
-  width:36px;height:36px;border-radius:50%;border:1px solid var(--border);
-  background:var(--surface-solid);color:var(--text);font-size:16px;
-  display:flex;align-items:center;justify-content:center;
-  transition:all var(--transition);cursor:pointer;
+.cal-cell {{
+  min-height:88px; padding:10px 8px;
+  border-right:1px solid var(--border); border-bottom:1px solid var(--border);
+  position:relative; transition:background .2s;
 }}
-.calendar-nav-btn:hover{{background:var(--surface-2);border-color:var(--accent-glow);transform:scale(1.08);}}
-.cal-grid{{display:grid;grid-template-columns:repeat(7,1fr);}}
-.cal-day-header{{
-  padding:12px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.06em;background:var(--bg);border-bottom:1px solid var(--border);
+.cal-cell:nth-child(7n) {{ border-right:none }}
+.cal-cell:nth-last-child(-n+7) {{ border-bottom:none }}
+.cal-cell.other-month .cal-day-num {{ color:var(--muted2); opacity:.45 }}
+.cal-cell.today {{ background:linear-gradient(135deg,rgba(141,170,145,0.07),rgba(141,170,145,0.03)) }}
+.cal-cell.today .cal-day-num {{
+  background:var(--accent); color:#fff; width:27px; height:27px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-weight:700;
+  box-shadow:0 2px 10px var(--accent-glow);
 }}
-.cal-cell{{
-  min-height:90px;padding:10px 8px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);
-  position:relative;transition:background .2s;
+.cal-day-num {{
+  font-size:13px; font-weight:600; color:var(--text); margin-bottom:5px;
+  width:27px; height:27px; display:flex; align-items:center; justify-content:center;
 }}
-.cal-cell:nth-child(7n){{border-right:none;}}
-.cal-cell:nth-last-child(-n+7){{border-bottom:none;}}
-.cal-cell.other-month .cal-day-num{{color:var(--muted2);opacity:.5;}}
-.cal-cell.today{{background:linear-gradient(135deg,rgba(124,179,66,0.06),rgba(124,179,66,0.02));}}
-.cal-cell.today .cal-day-num{{
-  background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;font-weight:700;
-  box-shadow:0 2px 8px var(--accent-glow);
+.cal-events {{ display:flex; flex-direction:column; gap:3px }}
+.cal-event {{
+  font-size:10px; font-weight:600; padding:2px 6px; border-radius:4px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }}
-.cal-day-num{{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;}}
-.cal-events{{display:flex;flex-direction:column;gap:3px;}}
-.cal-event{{
-  font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}}
-.cal-event.water{{background:rgba(100,181,246,0.15);color:#1565C0;}}
-.cal-event.fertilize{{background:var(--accent-dim);color:var(--accent-dark);}}
-.cal-event.due-water{{background:rgba(100,181,246,0.3);color:#1565C0;border:1px solid rgba(100,181,246,0.4);}}
-.cal-event.due-fertilize{{background:rgba(124,179,66,0.25);color:var(--accent-dark);border:1px solid var(--accent-glow);}}
+.cal-event.water          {{ background:rgba(107,158,196,0.13); color:#2b6e9e }}
+.cal-event.fertilize      {{ background:var(--accent-dim); color:var(--accent-dark) }}
+.cal-event.due-water      {{ background:rgba(107,158,196,0.28); color:#2b6e9e; border:1px solid rgba(107,158,196,0.35) }}
+.cal-event.due-fertilize  {{ background:rgba(141,170,145,0.22); color:var(--accent-dark); border:1px solid var(--accent-glow) }}
 
-/* ── NEU: Bulk-Action-Bar (Pflege-Status) ── */
-#bulk-action-bar{{
-  display:none;align-items:center;gap:12px;padding:14px 20px;
-  background:var(--surface-solid);border:1px solid var(--accent-glow);border-radius:var(--rx);
-  box-shadow:0 4px 16px var(--accent-dim);flex-shrink:0;flex-wrap:wrap;
+/* Bulk-Action-Bar */
+#bulk-action-bar {{
+  display:none; align-items:center; gap:12px; padding:14px 20px;
+  background:rgba(255,255,255,0.82); backdrop-filter:blur(12px);
+  border:1px solid var(--accent-glow); border-radius:var(--rx);
+  box-shadow:0 4px 18px var(--accent-dim); flex-shrink:0; flex-wrap:wrap;
 }}
-#bulk-action-bar.visible{{display:flex;}}
-.bulk-count-badge{{
-  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);
-  background:var(--surface-2);padding:6px 14px;border-radius:99px;border:1px solid var(--border);
+#bulk-action-bar.visible {{ display:flex }}
+.bulk-count-badge {{
+  font-family:'Playfair Display',serif; font-size:14px; font-weight:700; color:var(--text);
+  background:var(--surface-2); padding:6px 14px; border-radius:99px; border:1px solid var(--border);
 }}
-.bulk-btn{{
-  padding:10px 20px;font-size:13px;font-weight:600;border-radius:99px;cursor:pointer;
-  border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
-  transition:all var(--transition);box-shadow:0 2px 8px rgba(45,71,57,0.02);
+.bulk-btn {{
+  padding:10px 20px; font-size:13px; font-weight:600; border-radius:99px; cursor:pointer;
+  border:1px solid var(--border); background:rgba(255,255,255,0.75); color:var(--text);
+  transition:all var(--t) var(--ease); box-shadow:0 2px 8px rgba(44,59,46,0.03);
 }}
-.bulk-btn:hover{{transform:translateY(-1px);}}
-.bulk-btn.water{{border-color:rgba(100,181,246,0.5);color:#1976d2;background:rgba(100,181,246,0.08);}}
-.bulk-btn.water:hover{{background:rgba(100,181,246,0.18);box-shadow:0 4px 14px rgba(100,181,246,0.18);}}
-.bulk-btn.fertilize{{border-color:var(--accent-glow);color:var(--accent);background:var(--surface-2);}}
-.bulk-btn.fertilize:hover{{background:var(--surface-3);box-shadow:0 4px 14px var(--accent-dim);}}
-.bulk-btn.clear{{color:var(--muted);}}
-.bulk-btn.clear:hover{{color:var(--danger);border-color:rgba(229,115,115,0.4);background:var(--danger-dim);}}
+.bulk-btn:hover {{ transform:translateY(-1px) }}
+.bulk-btn.water {{
+  border-color:rgba(107,158,196,0.45); color:#2b6e9e;
+  background:rgba(107,158,196,0.08);
+}}
+.bulk-btn.water:hover {{ background:rgba(107,158,196,0.16); box-shadow:0 4px 14px rgba(107,158,196,0.16) }}
+.bulk-btn.fertilize {{
+  border-color:var(--accent-glow); color:var(--accent-dark); background:var(--surface-2);
+}}
+.bulk-btn.fertilize:hover {{ background:var(--surface-3); box-shadow:0 4px 14px var(--accent-dim) }}
+.bulk-btn.clear {{ color:var(--muted) }}
+.bulk-btn.clear:hover {{ color:var(--danger); border-color:rgba(201,112,112,0.35); background:var(--danger-dim) }}
 
-/* Care Status Pane */
-.care-section-title{{
-  font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text);
-  display:flex;align-items:center;gap:10px;margin-bottom:4px;
+/* Care Status */
+.care-section-title {{
+  font-family:'Playfair Display',serif;
+  font-size:16px; font-weight:700; color:var(--text);
+  display:flex; align-items:center; gap:10px; margin-bottom:4px;
 }}
-.care-section-title .care-badge{{
-  font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;padding:3px 10px;
-  border-radius:99px;background:var(--danger-dim);color:var(--danger);border:1px solid rgba(229,115,115,0.3);
+.care-section-title .care-badge {{
+  font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600;
+  padding:3px 10px; border-radius:99px;
+  background:var(--danger-dim); color:var(--danger); border:1px solid rgba(201,112,112,0.28);
 }}
-.care-section-title .care-badge.warn{{background:var(--warn-dim);color:#c27a3e;border-color:rgba(226,167,111,0.3);}}
-.care-section-title .care-badge.ok{{background:var(--surface-2);color:var(--accent);border-color:var(--accent-glow);}}
+.care-section-title .care-badge.warn {{ background:var(--warn-dim); color:#a06b3a; border-color:rgba(201,149,106,0.28) }}
+.care-section-title .care-badge.ok  {{ background:var(--surface-2); color:var(--accent-dark); border-color:var(--accent-glow) }}
 
 /* Pflege-Karten */
-.care-card{{
-  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
-  padding:20px;display:flex;align-items:center;gap:16px;
-  transition:all var(--transition);box-shadow:0 4px 16px rgba(45,71,57,0.03);
-  position:relative;overflow:hidden;
+.care-card {{
+  background:rgba(255,255,255,0.78); backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,0.7); border-radius:var(--rx); padding:18px;
+  display:flex; align-items:center; gap:14px;
+  transition:all var(--t) var(--ease-s);
+  box-shadow:0 6px 24px rgba(44,59,46,0.05);
+  position:relative; overflow:hidden;
 }}
-.care-card::before{{
-  content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
-  background:var(--accent);border-radius:0;transition:background .3s;
+.care-card::before {{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+  background:var(--accent); border-radius:0; transition:background var(--t) var(--ease-s);
 }}
-.care-card.overdue::before{{background:var(--danger);}}
-.care-card.soon::before{{background:var(--warn);}}
-.care-card.done::before{{background:var(--muted2);}}
-.care-card:hover{{box-shadow:0 8px 32px rgba(45,71,57,0.07);transform:translateY(-1px);}}
-/* NEU: selected-Zustand für Checkbox-Selektion */
-.care-card.selected-card{{
+.care-card.overdue::before {{ background:var(--danger) }}
+.care-card.soon::before   {{ background:var(--warn) }}
+.care-card.done::before   {{ background:var(--muted2) }}
+.care-card:hover {{
+  box-shadow:0 10px 36px rgba(44,59,46,0.08);
+  transform:translateY(-1px);
+}}
+.care-card.selected-card {{
   border-color:var(--accent-glow);
-  box-shadow:0 0 0 3px var(--accent-dim), 0 8px 32px rgba(45,71,57,0.07);
+  box-shadow:0 0 0 3px var(--accent-dim), 0 10px 36px rgba(44,59,46,0.08);
 }}
 
-/* NEU: Checkbox-Wrapper in care-card */
-.care-card-checkbox-wrap{{
-  flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  width:24px;height:24px;
+/* Checkbox */
+.care-card-checkbox-wrap {{ flex-shrink:0; display:flex; align-items:center; justify-content:center; width:24px; height:24px }}
+.care-checkbox {{
+  width:18px; height:18px; border-radius:6px; border:2px solid var(--border-2);
+  background:rgba(255,255,255,0.85); cursor:pointer; appearance:none; -webkit-appearance:none;
+  transition:all .2s; flex-shrink:0; position:relative;
 }}
-.care-checkbox{{
-  width:18px;height:18px;border-radius:6px;border:2px solid var(--border-2);
-  background:var(--surface-solid);cursor:pointer;appearance:none;-webkit-appearance:none;
-  transition:all .2s;flex-shrink:0;position:relative;
+.care-checkbox:checked {{ background:var(--accent); border-color:var(--accent) }}
+.care-checkbox:checked::after {{
+  content:'✓'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-size:11px; font-weight:700; color:#fff; line-height:1;
 }}
-.care-checkbox:checked{{
-  background:var(--accent);border-color:var(--accent);
-}}
-.care-checkbox:checked::after{{
-  content:'✓';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  font-size:11px;font-weight:700;color:#fff;line-height:1;
-}}
-.care-checkbox:hover{{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}}
+.care-checkbox:hover {{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim) }}
 
-.care-card-thumb{{
-  width:52px;height:52px;border-radius:var(--r);overflow:hidden;flex-shrink:0;
-  background:var(--surface-2);border:1px solid var(--border);
-  display:flex;align-items:center;justify-content:center;
+/* Thumbnails in care cards */
+.care-card-thumb {{
+  width:52px; height:52px; border-radius:var(--r); overflow:hidden; flex-shrink:0;
+  background:var(--surface-2); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
 }}
-.care-card-thumb img{{width:100%;height:100%;object-fit:cover;}}
-.care-card-thumb-emoji{{font-size:26px;}}
-.care-card-info{{flex:1;min-width:0}}
-.care-card-name{{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px;}}
-.care-card-meta{{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}}
-.care-chip{{
-  font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;
-  background:var(--surface-2);color:var(--muted);border:1px solid var(--border);
+.care-card-thumb img {{ width:100%; height:100%; object-fit:cover }}
+.care-card-thumb-emoji {{ font-size:25px }}
+.care-card-info {{ flex:1; min-width:0 }}
+.care-card-name {{
+  font-family:'Playfair Display',serif; font-size:15px; font-weight:700;
+  color:var(--text); margin-bottom:4px;
 }}
-.care-chip.overdue{{background:var(--danger-dim);color:var(--danger);border-color:rgba(229,115,115,0.3);}}
-.care-chip.soon{{background:var(--warn-dim);color:#c27a3e;border-color:rgba(226,167,111,0.3);}}
-.care-chip.ok{{background:var(--surface-2);color:var(--accent);border-color:var(--accent-glow);}}
-
-.care-progress-wrap{{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}}
-.care-progress-row{{display:flex;align-items:center;gap:8px;}}
-.care-progress-icon{{font-size:12px;flex-shrink:0;width:16px;}}
-.care-progress-track{{flex:1;height:5px;border-radius:3px;background:rgba(45,71,57,0.08);overflow:hidden;}}
-.care-progress-fill{{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.34,1.56,.64,1);}}
-.care-progress-fill.water{{background:linear-gradient(90deg,rgba(100,181,246,0.5),#64B5F6);}}
-.care-progress-fill.fertilize{{background:linear-gradient(90deg,var(--accent-dim),var(--accent));}}
-.care-progress-pct{{font-size:10px;font-weight:700;color:var(--muted);min-width:30px;text-align:right;}}
-
-.moisture-wrap{{display:flex;align-items:center;gap:8px;}}
-.moisture-label{{font-size:11px;font-weight:600;color:var(--muted);min-width:64px;}}
-.moisture-track{{flex:1;height:6px;border-radius:3px;background:rgba(45,71,57,0.08);overflow:hidden;}}
-.moisture-fill{{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.34,1.56,.64,1);}}
-
-.care-card-actions{{display:flex;flex-direction:column;gap:8px;flex-shrink:0;}}
-.care-btn{{
-  padding:9px 16px;font-size:12px;font-weight:600;border-radius:var(--r);
-  border:1px solid var(--border);background:var(--surface-solid);color:var(--text);
-  transition:all var(--transition);cursor:pointer;white-space:nowrap;
-  box-shadow:0 2px 8px rgba(45,71,57,0.02);
+.care-card-meta {{ display:flex; gap:9px; flex-wrap:wrap; align-items:center; margin-bottom:9px }}
+.care-chip {{
+  font-size:11px; font-weight:600; padding:3px 10px; border-radius:99px;
+  background:var(--surface-2); color:var(--muted); border:1px solid var(--border);
 }}
-.care-btn:hover{{background:var(--bg);transform:translateY(-1px);}}
-.care-btn:active{{transform:scale(0.96);}}
-.care-btn.water{{border-color:rgba(100,181,246,0.5);color:#1976d2;background:rgba(100,181,246,0.08);}}
-.care-btn.water:hover{{background:rgba(100,181,246,0.15);box-shadow:0 4px 12px rgba(100,181,246,0.15);}}
-.care-btn.fertilize{{border-color:var(--accent-glow);color:var(--accent);background:var(--surface-2);}}
-.care-btn.fertilize:hover{{background:var(--surface-3);box-shadow:0 4px 12px var(--accent-dim);}}
-.care-btn.done-btn{{opacity:.5;pointer-events:none;}}
-/* NEU: Standort-Button */
-.care-btn.location{{border-color:rgba(92,155,214,0.4);color:var(--dli-color);background:rgba(92,155,214,0.07);}}
-.care-btn.location:hover{{background:rgba(92,155,214,0.14);box-shadow:0 4px 12px rgba(92,155,214,0.14);}}
+.care-chip.overdue {{ background:var(--danger-dim); color:var(--danger); border-color:rgba(201,112,112,0.28) }}
+.care-chip.soon    {{ background:var(--warn-dim); color:#a06b3a; border-color:rgba(201,149,106,0.28) }}
+.care-chip.ok      {{ background:var(--surface-2); color:var(--accent-dark); border-color:var(--accent-glow) }}
+
+.care-progress-wrap {{ display:flex; flex-direction:column; gap:5px; margin-bottom:7px }}
+.care-progress-row  {{ display:flex; align-items:center; gap:8px }}
+.care-progress-icon {{ font-size:12px; flex-shrink:0; width:16px }}
+.care-progress-track {{ flex:1; height:5px; border-radius:3px; background:rgba(44,59,46,0.08); overflow:hidden }}
+.care-progress-fill {{ height:100%; border-radius:3px; transition:width 1s var(--ease) }}
+.care-progress-fill.water {{ background:linear-gradient(90deg, rgba(107,158,196,0.45), #6B9EC4) }}
+.care-progress-fill.fertilize {{ background:linear-gradient(90deg, var(--accent-dim), var(--accent)) }}
+.care-progress-pct {{ font-size:10px; font-weight:700; color:var(--muted); min-width:30px; text-align:right }}
+
+.care-card-actions {{ display:flex; flex-direction:column; gap:7px; flex-shrink:0 }}
+.care-btn {{
+  padding:9px 14px; font-size:12px; font-weight:600; border-radius:var(--r);
+  border:1px solid var(--border); background:rgba(255,255,255,0.75); color:var(--text);
+  transition:all var(--t) var(--ease); cursor:pointer; white-space:nowrap;
+  box-shadow:0 2px 8px rgba(44,59,46,0.03);
+}}
+.care-btn:hover {{ background:rgba(255,255,255,0.95); transform:translateY(-1px) }}
+.care-btn:active {{ transform:scale(0.96) }}
+.care-btn.water {{
+  border-color:rgba(107,158,196,0.45); color:#2b6e9e;
+  background:rgba(107,158,196,0.08);
+}}
+.care-btn.water:hover {{ background:rgba(107,158,196,0.16); box-shadow:0 4px 12px rgba(107,158,196,0.14) }}
+.care-btn.fertilize {{
+  border-color:var(--accent-glow); color:var(--accent-dark); background:var(--surface-2);
+}}
+.care-btn.fertilize:hover {{ background:var(--surface-3); box-shadow:0 4px 12px var(--accent-dim) }}
+.care-btn.done-btn {{ opacity:.45; pointer-events:none }}
+.care-btn.location {{
+  border-color:rgba(107,158,196,0.35); color:var(--dli-color);
+  background:rgba(107,158,196,0.07);
+}}
+.care-btn.location:hover {{ background:rgba(107,158,196,0.14); box-shadow:0 4px 12px rgba(107,158,196,0.13) }}
 
 /* Historie */
-.care-history{{
-  background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
-  overflow:hidden;box-shadow:0 4px 16px rgba(45,71,57,0.03);
+.care-history {{
+  background:rgba(255,255,255,0.75); backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,0.7); border-radius:var(--rx); overflow:hidden;
+  box-shadow:0 6px 24px rgba(44,59,46,0.05);
 }}
-.care-history-header{{
-  padding:16px 20px;border-bottom:1px solid var(--border);
-  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);
-  display:flex;align-items:center;gap:10px;
+.care-history-header {{
+  padding:15px 20px; border-bottom:1px solid var(--border);
+  font-family:'Playfair Display',serif; font-size:14px; font-weight:700;
+  color:var(--text); display:flex; align-items:center; gap:10px;
 }}
-.history-entry{{
-  display:flex;align-items:center;gap:12px;padding:12px 20px;
-  border-bottom:1px solid var(--border);font-size:13px;
-  transition:background .2s;
+.history-entry {{
+  display:flex; align-items:center; gap:12px; padding:12px 20px;
+  border-bottom:1px solid var(--border); font-size:13px; transition:background .2s;
 }}
-.history-entry:last-child{{border-bottom:none}}
-.history-entry:hover{{background:var(--bg);}}
-.history-icon{{font-size:16px;flex-shrink:0;}}
-.history-text{{flex:1;color:var(--text);font-weight:500;}}
-.history-time{{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}}
+.history-entry:last-child {{ border-bottom:none }}
+.history-entry:hover {{ background:rgba(141,170,145,0.05) }}
+.history-icon {{ font-size:15px; flex-shrink:0 }}
+.history-text {{ flex:1; color:var(--text); font-weight:500 }}
+.history-time {{ font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums }}
 
-.care-empty{{
-  text-align:center;padding:48px 24px;color:var(--muted);
-  background:var(--surface-solid);border:1px dashed var(--border-2);border-radius:var(--rx);
+.care-empty {{
+  text-align:center; padding:44px 24px; color:var(--muted);
+  background:rgba(255,255,255,0.7); border:1px dashed var(--border-2);
+  border-radius:var(--rx); backdrop-filter:blur(8px);
 }}
-.care-empty .ce-icon{{font-size:48px;margin-bottom:12px;opacity:.5}}
-.care-empty p{{font-size:14px;font-weight:500;line-height:1.6;}}
+.care-empty .ce-icon {{ font-size:46px; margin-bottom:12px; opacity:.45 }}
+.care-empty p {{ font-size:14px; font-weight:500; line-height:1.6 }}
 
 /* ── TOAST & TOOLTIP ── */
-#tooltip{{
-  position:fixed;z-index:500;pointer-events:none;
-  background:rgba(255,255,255,0.95);backdrop-filter:blur(8px);border:1px solid var(--border-2);
-  border-radius:var(--rs);padding:10px 14px;font-size:12px;font-weight:600;color:var(--text);
-  box-shadow:0 8px 24px rgba(45,71,57,0.08);opacity:0;transition:opacity .15s;
-  max-width:240px;
+#tooltip {{
+  position:fixed; z-index:500; pointer-events:none;
+  background:rgba(255,255,255,0.92); backdrop-filter:blur(10px);
+  border:1px solid var(--border-2); border-radius:var(--rs);
+  padding:10px 14px; font-size:12px; font-weight:600; color:var(--text);
+  box-shadow:0 8px 28px rgba(44,59,46,0.09); opacity:0; transition:opacity .15s; max-width:240px;
 }}
-#tooltip.visible{{opacity:1}}
+#tooltip.visible {{ opacity:1 }}
 
-#save-toast{{
-  position:fixed;bottom:24px;right:24px;z-index:999;
-  background:var(--surface-solid);border:1px solid var(--accent-glow);
-  border-radius:var(--r);padding:14px 20px;font-size:14px;font-weight:600;color:var(--text);
-  box-shadow:0 8px 32px rgba(124,179,66,0.15);
-  transform:translateY(30px);opacity:0;
-  transition:all .4s cubic-bezier(.34, 1.56, .64, 1);
-  display:flex;align-items:center;gap:10px;
+#save-toast {{
+  position:fixed; bottom:24px; right:24px; z-index:999;
+  background:rgba(255,255,255,0.92); backdrop-filter:blur(16px);
+  border:1px solid var(--accent-glow); border-radius:var(--r);
+  padding:14px 20px; font-size:14px; font-weight:600; color:var(--text);
+  box-shadow:0 8px 36px rgba(141,170,145,0.18);
+  transform:translateY(30px); opacity:0;
+  transition:all .4s var(--ease);
+  display:flex; align-items:center; gap:10px;
 }}
-#save-toast.show{{transform:translateY(0);opacity:1}}
+#save-toast.show {{ transform:translateY(0); opacity:1 }}
 
 /* ── LOADING ── */
-#loading{{
-  position:fixed;inset:0;z-index:9999;background:var(--bg);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
-  transition:opacity .6s,visibility .6s;
+#loading {{
+  position:fixed; inset:0; z-index:9999; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px;
+  transition:opacity .6s, visibility .6s;
 }}
-#loading.hidden{{opacity:0;visibility:hidden}}
-#loading .ld-icon{{font-size:54px;animation:pulse 2s ease-in-out infinite}}
-#loading p{{font-size:16px;font-weight:500;color:var(--text)}}
-@keyframes pulse{{0%,100%{{transform:scale(1);opacity:.6}}50%{{transform:scale(1.1);opacity:1}}}}
+#loading.hidden {{ opacity:0; visibility:hidden }}
+#loading .ld-icon {{ font-size:56px; animation:breathe 3s ease-in-out infinite }}
+#loading p {{ font-size:16px; font-weight:400; color:var(--muted); letter-spacing:.01em }}
+@keyframes breathe {{
+  0%,100% {{ transform:scale(1); opacity:.55 }}
+  50%      {{ transform:scale(1.12); opacity:1 }}
+}}
 </style>
 </head>
 <body>
@@ -875,9 +1287,9 @@ input,select{{font-family:inherit}}
 
 <!-- HEADER -->
 <div id="header">
-  <span class="logo">🌿 Pflanzen-Planer Pro</span>
+  <span class="logo">🌿 Pflanzen-Planer</span>
   <span class="logo-sep">|</span>
-  <span style="font-size:14px;font-weight:500;color:var(--text)" id="month-label"></span>
+  <span style="font-size:14px;font-weight:500;color:var(--muted)" id="month-label"></span>
   <div class="header-meta">
     <div class="sun-info">
       <div class="sun-dot"></div>
@@ -929,7 +1341,7 @@ input,select{{font-family:inherit}}
     </div>
     <div id="map-canvas">
       <img id="floor-img" src="" alt="Grundriss" draggable="false"
-           onerror="this.src='https://placehold.co/1100x600/FCFAF7/7CB342?text=Grundriss+nicht+gefunden'">
+           onerror="this.src='https://placehold.co/1100x600/F9F7F2/8DAA91?text=Grundriss+nicht+gefunden'">
       <canvas id="light-canvas"></canvas>
     </div>
   </div>
@@ -942,13 +1354,13 @@ input,select{{font-family:inherit}}
         <div class="lib-header-sub" id="lib-sub-label"></div>
       </div>
       <input class="lib-search" id="lib-search" type="text" placeholder="🔍 Pflanze suchen…" oninput="filterLibrary(this.value)">
-      <!-- NEU: Sort Controls -->
       <div class="lib-sort-wrap">
         <span class="lib-sort-label">Sortieren:</span>
         <select class="lib-sort-select" id="lib-sort-key" onchange="renderLibrary()">
           <option value="name">Name</option>
           <option value="licht">Lichtbedarf</option>
           <option value="giessen">Gießbedarf</option>
+          <option value="vital">Vital-Score</option>
         </select>
         <button class="lib-sort-dir-btn" id="lib-sort-dir-btn" title="Sortierrichtung umkehren"
                 onclick="toggleSortDir()" style="font-size:14px;">↑</button>
@@ -972,14 +1384,12 @@ input,select{{font-family:inherit}}
       </div>
     </div>
 
-    <!-- Sub-tabs -->
     <div class="care-subtabs">
       <button class="care-subtab active" id="subtab-calendar" onclick="switchCareSubtab('calendar')">📅 Kalender</button>
       <button class="care-subtab" id="subtab-status" onclick="switchCareSubtab('status')">📋 Pflege-Status</button>
       <button class="care-subtab" id="subtab-history" onclick="switchCareSubtab('history')">🕐 Historie</button>
     </div>
 
-    <!-- Calendar pane -->
     <div id="care-calendar-pane">
       <div id="care-upcoming-section"></div>
       <div class="calendar-wrap">
@@ -992,9 +1402,7 @@ input,select{{font-family:inherit}}
       </div>
     </div>
 
-    <!-- Status pane -->
     <div id="care-status-pane">
-      <!-- NEU: Bulk-Action-Bar -->
       <div id="bulk-action-bar">
         <span class="bulk-count-badge" id="bulk-count-label">0 ausgewählt</span>
         <button class="bulk-btn water" onclick="bulkWater()">💧 Alle ausgewählten gießen</button>
@@ -1006,7 +1414,6 @@ input,select{{font-family:inherit}}
       <div id="care-all-section"></div>
     </div>
 
-    <!-- History pane -->
     <div id="care-history-pane" style="display:none">
       <div id="care-history-section"></div>
     </div>
@@ -1016,7 +1423,7 @@ input,select{{font-family:inherit}}
   <div id="right-sidebar">
     <div id="rsb-empty">
       <div class="empty-icon">🪴</div>
-      <p style="font-size:14px;line-height:1.6;color:var(--muted);font-weight:500;">Klicke auf eine Pflanze<br>für Details &amp; Pflegehinweise.</p>
+      <p style="font-size:14px;line-height:1.7;color:var(--muted);font-weight:400;">Klicke auf eine Pflanze<br>für Details &amp; Pflegehinweise.</p>
     </div>
     <div id="rsb-detail"></div>
   </div>
@@ -1060,12 +1467,8 @@ let dliMode         = false;
 let dliCache        = {{}};
 let calMonth        = NOW_MONTH;
 let calYear         = NOW.getFullYear();
-
-// NEU: Sortier-State (Bibliothek)
-let libSortKey = "name";   // "name" | "licht" | "giessen"
-let libSortAsc = true;
-
-// NEU: Multi-Selektion (Pflege-Status)
+let libSortKey      = "name";
+let libSortAsc      = true;
 let selectedPlantIdxs = new Set();
 
 // ============================================================
@@ -1077,7 +1480,6 @@ function setStatus(ok, msg) {{
   $("sdot").className = "sdot"+(ok?" ok":"");
   $("stext").textContent = msg;
 }}
-
 function showTooltip(msg, x, y) {{
   const t = $("tooltip");
   t.textContent = msg;
@@ -1086,14 +1488,143 @@ function showTooltip(msg, x, y) {{
   t.classList.add("visible");
 }}
 function hideTooltip() {{ $("tooltip").classList.remove("visible"); }}
-
 function showToast(msg, dur=2200) {{
   $("toast-msg").textContent = msg;
   $("save-toast").classList.add("show");
   setTimeout(()=>$("save-toast").classList.remove("show"), dur);
 }}
-
 $("month-label").textContent = MONTHS_DE[NOW_MONTH]+" "+NOW.getFullYear();
+
+// ============================================================
+// ★ VITAL-SCORE BERECHNUNG (0–100 Glücks-Index)
+// ============================================================
+
+/**
+ * Berechnet den Glücks-Index (0–100) einer Pflanze.
+ * Komponenten:
+ *   - Licht-Score:     Verhältnis verfügbares/benötigtes Licht (40%)
+ *   - Gieß-Score:      Nähe zum optimalen Gießzeitpunkt (35%)
+ *   - Dünge-Score:     Nähe zum optimalen Düngezeitpunkt (25%)
+ *
+ * Gibt außerdem staunaesseRisk zurück (true wenn
+ * das Gießintervall zu weniger als 20% verbraucht ist).
+ */
+function computeVitalScore(plantIdx) {{
+  const p = plants[plantIdx];
+  const pos = positions[plantIdx];
+
+  // 1) Licht-Score (40%)
+  let lichtScore = 0;
+  if (pos) {{
+    const ist = computeLicht(pos.x, pos.y, pos.floor);
+    const soll = p.licht || 5;
+    lichtScore = Math.min(1, ist / soll);
+  }} else {{
+    lichtScore = 0.5; // Unbekannt → neutral
+  }}
+
+  // 2) Gieß-Score (35%)
+  const ws = getCareStatus(plantIdx, 'water');
+  let giessScore = 0;
+  let staunaesseRisk = false;
+  if (ws) {{
+    const elapsed = ws.lastDate
+      ? (Date.now() - ws.lastDate.getTime()) / (1000 * 3600 * 24)
+      : ws.intervalDays; // noch nie → als überfällig werten
+    const ratio = elapsed / ws.intervalDays; // 0=gerade gegossen, 1=genau fällig, >1=überfällig
+    if (ratio <= 0.2) {{
+      // Gerade gegossen: zu feucht → Staunässegefahr
+      staunaesseRisk = true;
+      giessScore = 0.7; // nicht perfekt, aber besser als gar nicht
+    }} else if (ratio <= 1.0) {{
+      // Optimaler Bereich: Score zwischen 0.7 → 1.0 → 0.7 (Parabel)
+      const normalized = (ratio - 0.2) / 0.8; // 0 → 1
+      giessScore = 0.7 + 0.3 * Math.sin(normalized * Math.PI);
+    }} else {{
+      // Überfällig: Score fällt ab
+      const overRatio = Math.min(1, (ratio - 1) / 1); // 0 → 1 über 1 weiteren Zyklus
+      giessScore = Math.max(0, 0.7 * (1 - overRatio));
+    }}
+  }} else {{
+    giessScore = 0.6; // Kein Intervall → neutral-positiv
+  }}
+
+  // 3) Dünge-Score (25%)
+  const fs = getCareStatus(plantIdx, 'fertilize');
+  let duengScore = 0;
+  if (fs) {{
+    const elapsedF = fs.lastDate
+      ? (Date.now() - fs.lastDate.getTime()) / (1000 * 3600 * 24)
+      : fs.intervalDays;
+    const ratioF = elapsedF / fs.intervalDays;
+    if (ratioF <= 1.0) {{
+      const normalizedF = ratioF;
+      duengScore = 0.65 + 0.35 * Math.sin(normalizedF * Math.PI);
+    }} else {{
+      const overRatioF = Math.min(1, (ratioF - 1) / 1.5);
+      duengScore = Math.max(0, 0.65 * (1 - overRatioF));
+    }}
+  }} else {{
+    duengScore = 0.6;
+  }}
+
+  const total = (lichtScore * 0.40 + giessScore * 0.35 + duengScore * 0.25) * 100;
+  return {{
+    score:         Math.round(Math.max(0, Math.min(100, total))),
+    lichtPct:      Math.round(lichtScore * 100),
+    giessPct:      Math.round(giessScore * 100),
+    duengPct:      Math.round(duengScore * 100),
+    staunaesseRisk
+  }};
+}}
+
+/**
+ * Erzeugt einen SVG-Ring-Chart für den Vital-Score.
+ * r = Radius, cx/cy = Mittelpunkt, strokeColor = Farbe des Bogens
+ */
+function makeSvgRing(score, size=82, strokeColor=null) {{
+  const r = (size / 2) - 5;
+  const cx = size / 2, cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (score / 100) * circ;
+  let color = strokeColor;
+  if (!color) {{
+    if (score >= 72) color = "var(--accent)";
+    else if (score >= 45) color = "var(--warn)";
+    else color = "var(--danger)";
+  }}
+  return `
+    <svg width="${{size}}" height="${{size}}" viewBox="0 0 ${{size}} ${{size}}">
+      <circle class="vital-ring-track" cx="${{cx}}" cy="${{cy}}" r="${{r}}"/>
+      <circle class="vital-ring-fill"
+        cx="${{cx}}" cy="${{cy}}" r="${{r}}"
+        stroke="${{color}}"
+        stroke-dasharray="${{circ.toFixed(1)}}"
+        stroke-dashoffset="${{offset.toFixed(1)}}"/>
+    </svg>
+  `;
+}}
+
+/** Kleiner Inline-Ring für Bibliothekskarten */
+function makeSmallRingSvg(score, size=48) {{
+  const r = (size / 2) - 4;
+  const cx = size / 2, cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (score / 100) * circ;
+  let color = score >= 72 ? "var(--accent)" : score >= 45 ? "var(--warn)" : "var(--danger)";
+  return `
+    <svg width="${{size}}" height="${{size}}" viewBox="0 0 ${{size}} ${{size}}" style="transform:rotate(-90deg)">
+      <circle fill="none" stroke="rgba(44,59,46,0.08)" stroke-width="5" cx="${{cx}}" cy="${{cy}}" r="${{r}}"/>
+      <circle fill="none" stroke="${{color}}" stroke-width="5" stroke-linecap="round"
+        cx="${{cx}}" cy="${{cy}}" r="${{r}}"
+        stroke-dasharray="${{circ.toFixed(1)}}"
+        stroke-dashoffset="${{offset.toFixed(1)}}"
+        style="transition:stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)"/>
+    </svg>
+    <div class="lib-vital-badge-num">${{score}}</div>
+    <div class="lib-vital-badge-pct">%</div>
+  `;
+}}
 
 // ============================================================
 // ★ ASTRONOMISCHE LICHTSIMULATION
@@ -1128,11 +1659,8 @@ function calcSunPosition(date) {{
 // ============================================================
 function computeDLI(px, py, floor) {{
   const today = new Date();
-  const year  = today.getFullYear();
-  const month = today.getMonth();
-  const day   = today.getDate();
-  let sumScore   = 0;
-  let weightSum  = 0;
+  const year = today.getFullYear(), month = today.getMonth(), day = today.getDate();
+  let sumScore = 0, weightSum = 0;
   for(let h = 0; h < 24; h++) {{
     const dt = new Date(Date.UTC(year, month, day, h - 1, 0, 0));
     const sun = calcSunPosition(dt);
@@ -1201,13 +1729,11 @@ function skyDiffuse(sunElevDeg) {{
   if(sunElevDeg <= 0)  return 0.05;
   return 0.10 + 0.05 * Math.min(1, sunElevDeg / 30);
 }}
-
 function windowAzimuth(side, buildingNorthAzimuth) {{
   const sideOffset = {{"N":0,"E":90,"S":180,"W":270}};
   const offset = sideOffset[side] ?? 180;
   return (buildingNorthAzimuth + offset) % 360;
 }}
-
 function directSunFactor(winAz, sunAz, sunElevDeg) {{
   if(sunElevDeg <= 0) return 0;
   const diff    = Math.abs(((winAz - sunAz + 540) % 360) - 180);
@@ -1216,7 +1742,6 @@ function directSunFactor(winAz, sunAz, sunElevDeg) {{
   const sinElev = Math.sin(sunElevDeg * Math.PI / 180);
   return cosHoriz * sinElev;
 }}
-
 function roomPenetrationFactor(sunElevDeg, winSide, buildingNorthAzimuth) {{
   if(sunElevDeg <= 0) return 0;
   const elev = Math.max(5, Math.min(80, sunElevDeg));
@@ -1243,21 +1768,18 @@ function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
   const eps = 1e-6;
   return t>eps && t<1-eps && u>eps && u<1-eps;
 }}
-
 function isBlockedByInnerWall(pAX, pAY, sAX, sAY, fd) {{
   for(const w of fd.walls) {{
     if(segmentsIntersect(pAX,pAY,sAX,sAY, w.x1,w.y1,w.x2,w.y2)) return true;
   }}
   return false;
 }}
-
 function isBlockedByOuterWall(pAX, pAY, sAX, sAY, fd) {{
   for(const seg of fd.outerWalls) {{
     if(segmentsIntersect(pAX,pAY,sAX,sAY, seg.x1,seg.y1,seg.x2,seg.y2)) return true;
   }}
   return false;
 }}
-
 function px2rel(px, p1, p2) {{ return (px-p1)/(p2-p1); }}
 
 function computeLichtFull(px, py, floor) {{
@@ -1283,10 +1805,7 @@ function computeLichtFull(px, py, floor) {{
   const windowHits = [];
   for(const w of fd.windows) {{
     const winAz = windowAzimuth(w.side, bldAz);
-    let winContrib      = 0;
-    let samplesVisible  = 0;
-    let totalSamples    = 0;
-    let bestIncFactor   = 0;
+    let winContrib = 0, samplesVisible = 0, totalSamples = 0, bestIncFactor = 0;
     for(let s=0; s<WIN_SAMPLES; s++) {{
       const t = WIN_SAMPLES===1 ? 0.5 : s/(WIN_SAMPLES-1);
       const sAX = w.x1 + t*(w.x2-w.x1);
@@ -1316,11 +1835,10 @@ function computeLichtFull(px, py, floor) {{
       totalIlluminance += avgContrib * winSizeFactor;
     }}
     windowHits.push({{
-      side:       w.side,
-      winAz:      winAz.toFixed(0),
-      incFactor:  bestIncFactor.toFixed(2),
-      visRatio:   (samplesVisible/totalSamples).toFixed(2),
-      occluded:   samplesVisible === 0,
+      side: w.side, winAz: winAz.toFixed(0),
+      incFactor: bestIncFactor.toFixed(2),
+      visRatio: (samplesVisible/totalSamples).toFixed(2),
+      occluded: samplesVisible === 0,
     }});
   }}
   totalIlluminance *= (1 + wallReflectance);
@@ -1332,7 +1850,6 @@ function computeLichtFull(px, py, floor) {{
 function computeLicht(px, py, floor) {{
   return computeLichtFull(px, py, floor).score;
 }}
-
 function getLichtStatus(ist, soll) {{
   if(ist>=soll)   return "ideal";
   if(ist>=soll-2) return "ok";
@@ -1368,14 +1885,14 @@ function drawLightMap() {{
       if(dliMode) {{
         const cached = getDLIScore(rx, ry, currentFloor);
         lv = cached !== null ? cached : computeLicht(rx, ry, currentFloor);
-        const alpha = (lv/10)*0.28;
+        const alpha = (lv/10)*0.26;
         const r = Math.round(92 + (lv/10)*50);
         const g = Math.round(155 + (lv/10)*30);
         const b = Math.round(214 - (lv/10)*50);
         ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
       }} else {{
         lv = computeLicht(rx, ry, currentFloor);
-        const alpha=(lv/10)*0.25;
+        const alpha=(lv/10)*0.22;
         const r = Math.round(lv/10*251), g=222, b=Math.round((1-lv/10)*128+74);
         ctx.fillStyle=`rgba(${{r}},${{g}},${{b}},${{alpha.toFixed(3)}})`;
       }}
@@ -1418,8 +1935,8 @@ async function loadPlants() {{
   }} catch(e) {{
     console.warn("CSV-Fehler:",e);
     plants = [
-      {{name:"Monstera Deliciosa",botanisch:"Monstera deliciosa",licht:7,giessen:3,dungen:4,umtopfen:"Alle 2 Jahre",info:"Robuste Zimmerpflanze",emoji:"🌿",luftfeuchtigkeit:"60-80%",besprühen:"Ja",besonderheit:"Bekannt für ihre spektakulären Blattlöcher.",giessAll:{{}},duengAll:{{}}}},
-      {{name:"Sukkulente",botanisch:"Echeveria spp.",licht:9,giessen:14,dungen:8,umtopfen:"Alle 3 Jahre",info:"Viel Sonne",emoji:"🌵",luftfeuchtigkeit:"30-50%",besprühen:"Nein",besonderheit:"Speichert Wasser in Blättern – extrem pflegeleicht.",giessAll:{{}},duengAll:{{}}}},
+      {{name:"Monstera Deliciosa",botanisch:"Monstera deliciosa",licht:7,giessen:"3",dungen:"4",umtopfen:"Alle 2 Jahre",info:"Robuste Zimmerpflanze",emoji:"🌿",luftfeuchtigkeit:"60-80%",besprühen:"Ja",besonderheit:"Bekannt für ihre spektakulären Blattlöcher.",giessAll:{{}},duengAll:{{}}}},
+      {{name:"Sukkulente",botanisch:"Echeveria spp.",licht:9,giessen:"14",dungen:"8",umtopfen:"Alle 3 Jahre",info:"Viel Sonne",emoji:"🌵",luftfeuchtigkeit:"30-50%",besprühen:"Nein",besonderheit:"Speichert Wasser in Blättern – extrem pflegeleicht.",giessAll:{{}},duengAll:{{}}}},
     ];
     setStatus(false,"Offline-Modus");
   }}
@@ -1437,7 +1954,7 @@ async function loadPlants() {{
 }}
 
 // ============================================================
-// CSV PARSE
+// CSV PARSE — robust dataclass-style conversion
 // ============================================================
 function parseCSV(text) {{
   const lines   = text.trim().split("\\n");
@@ -1483,31 +2000,46 @@ function parseCSV(text) {{
     duengAll[m] = colFor("Düngen_", m);
   }});
 
-  console.log("[CSV] Headers:", headers.join(" | "));
-  console.log("[CSV] Monat:", monthName, " → Gießen-Idx:", colGiess, " Düngen-Idx:", colDueng);
-
-  return lines.slice(1).filter(l=>l.trim()).map((line,i)=>{{
-    const cols=splitCSVLine(line);
+  /**
+   * Konvertiert eine CSV-Zeile robust in ein Plant-ähnliches Objekt.
+   * Alle Felder werden typsicher extrahiert und validiert.
+   */
+  return lines.slice(1).filter(l=>l.trim()).map((line, i) => {{
+    const cols = splitCSVLine(line);
     const safeCol = (idx) => idx>=0 ? (cols[idx]||"").trim().replace(/"/g,"") : "";
-    const obj={{
-      id:i,
+    const safeFloat = (idx, fallback=5) => {{
+      const n = parseFloat(safeCol(idx));
+      return isNaN(n) ? fallback : n;
+    }};
+
+    // Robust: alle monatlichen Intervalle als Dictionary
+    const giessAllObj = {{}}, duengAllObj = {{}};
+    MONTHS_DE.forEach(m => {{
+      giessAllObj[m] = giessAll[m] >= 0 ? (safeCol(giessAll[m]) || "—") : "—";
+      duengAllObj[m] = duengAll[m] >= 0 ? (safeCol(duengAll[m]) || "—") : "—";
+    }});
+
+    return {{
+      id:            i,
       name:          safeCol(colName) || "Pflanze "+(i+1),
       botanisch:     safeCol(colBotanisch),
-      licht:         parseFloat(safeCol(colLicht))||5,
-      giessen:       colGiess>=0 ? (safeCol(colGiess)||"—") : "—",
-      dungen:        colDueng>=0 ? (safeCol(colDueng)||"—") : "—",
-      umtopfen:      safeCol(colUmtopf)||"—",
-      luftfeuchtigkeit: safeCol(colLuft)||"",
-      besprühen:     safeCol(colBespr)||"",
-      besonderheit:  safeCol(colBesond)||"",
-      emoji:         PLANT_EMOJIS[i%PLANT_EMOJIS.length],
-      giessAll:{{}}, duengAll:{{}},
+      licht:         safeFloat(colLicht, 5),
+      giessen:       colGiess >= 0 ? (safeCol(colGiess) || "—") : "—",
+      dungen:        colDueng >= 0 ? (safeCol(colDueng) || "—") : "—",
+      umtopfen:      safeCol(colUmtopf) || "—",
+      luftfeuchtigkeit: safeCol(colLuft) || "",
+      "besprühen":   safeCol(colBespr) || "",
+      besonderheit:  safeCol(colBesond) || "",
+      emoji:         PLANT_EMOJIS[i % PLANT_EMOJIS.length],
+      giessAll:      giessAllObj,
+      duengAll:      duengAllObj,
+      // Vital-Score-Felder: werden clientseitig bei Bedarf befüllt
+      vital_score:   null,
+      licht_score:   null,
+      giess_score:   null,
+      dueng_score:   null,
+      staunaesse_risk: false,
     }};
-    MONTHS_DE.forEach(m=>{{
-      obj.giessAll[m] = giessAll[m]>=0 ? (safeCol(giessAll[m])||"—") : "—";
-      obj.duengAll[m] = duengAll[m]>=0 ? (safeCol(duengAll[m])||"—") : "—";
-    }});
-    return obj;
   }});
 }}
 
@@ -1528,7 +2060,6 @@ function savePositionsLocal() {{
   try {{ localStorage.setItem("pflanzen_positions_v2", JSON.stringify(positions)); }}
   catch(e) {{ console.warn("localStorage write failed:", e); }}
 }}
-
 function loadPositionsLocal() {{
   try {{
     const raw = localStorage.getItem("pflanzen_positions_v2");
@@ -1616,7 +2147,7 @@ function updateCareSyncStatus(state) {{
   const el = $("care-sync-status");
   if(!el) return;
   if(state === "sync")    {{ el.textContent = "☁️ Synchronisiert…"; el.style.color = "var(--muted)"; }}
-  else if(state === "ok") {{ el.textContent = "☁️ Synced"; el.style.color = "var(--accent)"; }}
+  else if(state === "ok") {{ el.textContent = "☁️ Synced"; el.style.color = "var(--accent-dark)"; }}
   else                    {{ el.textContent = "💾 Lokal"; el.style.color = "var(--warn)"; }}
 }}
 
@@ -1716,7 +2247,7 @@ function render() {{
     const pin=document.createElement("div");
     pin.className="plant-pin"+(activePIdx===i?" active":"");
     pin.dataset.idx=i;
-    const tx=Math.round(pos.x*W-23), ty=Math.round(pos.y*H-23);
+    const tx=Math.round(pos.x*W-24), ty=Math.round(pos.y*H-24);
     pin.style.transform=`translate(${{tx}}px,${{ty}}px)`;
     const modeLabel = dliMode ? "DLI" : "Live";
     pin.innerHTML=`
@@ -1749,22 +2280,84 @@ function showEmptyDetail() {{
 }}
 
 // ============================================================
-// ★ RENDER DETAIL
+// ★ RENDER DETAIL (mit Vital-Score Ring + Staunässe-Warnung)
 // ============================================================
 function renderDetail(idx) {{
-  const p  =plants[idx];
-  const pos=positions[idx];
-  const floor=pos?pos.floor:currentFloor;
-  const lf = pos ? computeLichtFull(pos.x,pos.y,floor) : null;
+  const p   = plants[idx];
+  const pos = positions[idx];
+  const floor = pos ? pos.floor : currentFloor;
+  const lf = pos ? computeLichtFull(pos.x, pos.y, floor) : null;
   const liveScore = lf ? lf.score : null;
   const dliScore = pos ? getDLIScore(pos.x, pos.y, floor) : null;
   const primaryScore = dliMode && dliScore ? dliScore : liveScore;
-  const stat=primaryScore?getLichtStatus(primaryScore,p.licht):null;
-  const sc  =stat?STATUS_CFG[stat]:null;
+  const stat = primaryScore ? getLichtStatus(primaryScore, p.licht) : null;
+  const sc   = stat ? STATUS_CFG[stat] : null;
+
+  // Vital-Score berechnen
+  const vital = computeVitalScore(idx);
 
   $("rsb-empty").style.display="none";
-  const det=$("rsb-detail");
+  const det = $("rsb-detail");
   det.classList.add("visible");
+
+  // Vital-Score Ring-Chart (groß, im Detail)
+  const vColor = vital.score >= 72 ? "var(--accent)" : vital.score >= 45 ? "var(--warn)" : "var(--danger)";
+  const vLabel = vital.score >= 72 ? "Glücklich 🌟" : vital.score >= 45 ? "Okay ⛅" : "Gestresst 🌑";
+  const vitalHTML = `
+    <div class="vital-card">
+      <div class="vital-ring-wrap">
+        ${{makeSvgRing(vital.score)}}
+        <div class="vital-score-label">
+          <span class="vital-score-num">${{vital.score}}</span>
+          <span class="vital-score-pct">%</span>
+        </div>
+      </div>
+      <div class="vital-info">
+        <div class="vital-title">Glücks-Index · ${{vLabel}}</div>
+        <div class="vital-sub-row">
+          <div class="vital-sub">
+            <span style="font-size:14px;flex-shrink:0">☀️</span>
+            <div class="vital-sub-bar-wrap">
+              <div class="vital-sub-bar-track">
+                <div class="vital-sub-bar-fill" style="width:${{vital.lichtPct}}%;background:linear-gradient(90deg,var(--accent-dim),var(--accent))"></div>
+              </div>
+            </div>
+            <span class="vital-sub-val">${{vital.lichtPct}}%</span>
+          </div>
+          <div class="vital-sub">
+            <span style="font-size:14px;flex-shrink:0">💧</span>
+            <div class="vital-sub-bar-wrap">
+              <div class="vital-sub-bar-track">
+                <div class="vital-sub-bar-fill" style="width:${{vital.giessPct}}%;background:linear-gradient(90deg,rgba(107,158,196,0.4),var(--dli-color))"></div>
+              </div>
+            </div>
+            <span class="vital-sub-val">${{vital.giessPct}}%</span>
+          </div>
+          <div class="vital-sub">
+            <span style="font-size:14px;flex-shrink:0">🌿</span>
+            <div class="vital-sub-bar-wrap">
+              <div class="vital-sub-bar-track">
+                <div class="vital-sub-bar-fill" style="width:${{vital.duengPct}}%;background:linear-gradient(90deg,rgba(201,149,106,0.4),var(--warn))"></div>
+              </div>
+            </div>
+            <span class="vital-sub-val">${{vital.duengPct}}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Staunässe-Warnung
+  const stauHTML = vital.staunaesseRisk ? `
+    <div class="staunaesse-warn">
+      <div class="staunaesse-icon">🚱</div>
+      <div class="staunaesse-text">
+        <div class="staunaesse-title">Staunässegefahr</div>
+        Das Substrat wurde erst kürzlich gegossen. Warte noch etwas, bevor du erneut gießt –
+        Staunässe kann Wurzelfäule verursachen.
+      </div>
+    </div>
+  ` : "";
 
   const imgUrl = getPlantImageUrl(p.name);
   const imgHTML = `
@@ -1775,11 +2368,12 @@ function renderDetail(idx) {{
     </div>
   `;
 
-  const coordsHTML=pos
-    ?`<div class="coords-row">Rel. ${{(pos.x*100).toFixed(1)}}% · ${{(pos.y*100).toFixed(1)}}%</div>
-      <span class="floor-tag">📍 ${{pos.floor}}</span>`
-    :`<span class="floor-tag">📦 Im Inventar</span>`;
+  const coordsHTML = pos
+    ? `<div class="coords-row">Rel. ${{(pos.x*100).toFixed(1)}}% · ${{(pos.y*100).toFixed(1)}}%</div>
+       <span class="floor-tag">📍 ${{pos.floor}}</span>`
+    : `<span class="floor-tag">📦 Im Inventar</span>`;
 
+  // DLI Panel
   let dliHTML = "";
   if(pos) {{
     const hasCache = dliScore !== null;
@@ -1813,15 +2407,14 @@ function renderDetail(idx) {{
     `;
   }}
 
+  // Astro Panel
   let astroHTML="";
   if(lf) {{
     const winChips=lf.windowHits.map(w=>{{
       const visRatio = parseFloat(w.visRatio||0);
       const bright = !w.occluded && parseFloat(w.incFactor)>0.2;
       const partialLabel = visRatio>0&&visRatio<1 ? ` (${{Math.round(visRatio*100)}}%)` : "";
-      return `<span class="win-chip ${{bright?"hit":""}}">
-        ${{w.side}}${{w.occluded?" (verdeckt)": bright?" ☀️":""}}${{partialLabel}}
-      </span>`;
+      return `<span class="win-chip ${{bright?"hit":""}}">${{w.side}}${{w.occluded?" (verdeckt)": bright?" ☀️":""}}${{partialLabel}}</span>`;
     }}).join("");
     const nightMode = sunState.elevation <= -6;
     const dawnMode  = sunState.elevation <= 0 && !nightMode;
@@ -1857,7 +2450,7 @@ function renderDetail(idx) {{
 
   const barColor = stat==='ideal' ? 'var(--accent)' : stat==='ok' ? 'var(--warn)' : 'var(--danger)';
   const scoreToShow = primaryScore || liveScore;
-  const lightHTML=scoreToShow?`
+  const lightHTML = scoreToShow ? `
     <div class="score-badge ${{sc.cls}}">
       <div class="sc-icon">${{sc.icon}}</div>
       <div class="sc-text"><h3>${{sc.label}}</h3><p>${{sc.desc}}</p></div>
@@ -1868,19 +2461,19 @@ function renderDetail(idx) {{
         <div class="lbw-fill" style="width:${{(scoreToShow/10*100).toFixed(1)}}%;background:linear-gradient(90deg, var(--accent-glow), ${{barColor}})"></div>
         <div class="lbw-needle" style="left:${{(p.licht/10*100).toFixed(1)}}%"></div>
       </div>
-      <div class="lbw-label"><span style="color:var(--muted);font-weight:500;">Bedarf: ${{p.licht}}/10</span><span style="color:var(--muted);font-weight:500;">Verfügbar: ${{scoreToShow}}/10</span></div>
+      <div class="lbw-label"><span style="color:var(--muted);font-weight:400;">Bedarf: ${{p.licht}}/10</span><span style="color:var(--muted);font-weight:400;">Verfügbar: ${{scoreToShow}}/10</span></div>
     </div>
     ${{dliHTML}}${{astroHTML}}
-  `:`
-    ${{dliHTML || '<div style="font-size:14px;font-weight:500;color:var(--muted);background:var(--surface-solid);border-radius:var(--rx);padding:20px;text-align:center;box-shadow:0 4px 16px rgba(45,71,57,0.02);border:1px solid var(--border);">Pflanze auf Karte platzieren, um Lichtwert zu berechnen.</div>'}}
+  ` : `
+    ${{dliHTML || '<div style="font-size:13.5px;font-weight:500;color:var(--muted);background:rgba(255,255,255,0.72);border-radius:var(--rx);padding:20px;text-align:center;border:1px solid var(--border);">Pflanze auf Karte platzieren, um Lichtwert zu berechnen.</div>'}}
   `;
 
-  const removeHTML=pos?`<button class="act-btn danger-btn" onclick="removePlant(${{idx}})">🗑️ Entfernen</button>`:"";
+  const removeHTML = pos ? `<button class="act-btn danger-btn" onclick="removePlant(${{idx}})">🗑️ Entfernen</button>` : "";
 
   const extraHTML = `
     <div style="display:flex;flex-direction:column;gap:10px;">
       ${{p.luftfeuchtigkeit ? `<div class="detail-extra-row"><div class="detail-extra-lbl">💧 Opt. Luftfeuchtigkeit</div><div class="detail-extra-val">${{p.luftfeuchtigkeit}}</div></div>` : ''}}
-      ${{p.besprühen ? `<div class="detail-extra-row"><div class="detail-extra-lbl">🌫️ Besprühen</div><div class="detail-extra-val">${{p.besprühen}}</div></div>` : ''}}
+      ${{p["besprühen"] ? `<div class="detail-extra-row"><div class="detail-extra-lbl">🌫️ Besprühen</div><div class="detail-extra-val">${{p["besprühen"]}}</div></div>` : ''}}
       ${{p.besonderheit ? `<div class="detail-extra-row"><div class="detail-extra-lbl">💡 Besonderheit</div><div class="detail-extra-val">${{p.besonderheit}}</div></div>` : ''}}
     </div>
   `;
@@ -1895,6 +2488,8 @@ function renderDetail(idx) {{
         ${{coordsHTML}}
       </div>
     </div>
+    ${{vitalHTML}}
+    ${{stauHTML}}
     ${{lightHTML}}
     <div class="data-grid">
       <div class="dc">
@@ -1933,8 +2528,8 @@ function removePlant(idx) {{
 // ★ RENDER INVENTORY
 // ============================================================
 function renderInventory() {{
-  const list  =$("inv-list");
-  const filter=inventoryFilter.toLowerCase();
+  const list  = $("inv-list");
+  const filter= inventoryFilter.toLowerCase();
   const available=[], placedHere=[], otherFloor=[];
 
   plants.forEach((p,i)=>{{
@@ -2023,7 +2618,7 @@ mapArea.addEventListener("drop",e=>{{
 // ============================================================
 // PIN DRAG
 // ============================================================
-function setupPinDrag(pin,idx) {{
+function setupPinDrag(pin, idx) {{
   let startX,startY,startPX,startPY,dragging=false;
   function getWH() {{
     const img=$("floor-img");
@@ -2043,7 +2638,7 @@ function setupPinDrag(pin,idx) {{
     const {{W,H,scaleX,scaleY}}=getWH();
     positions[idx].x=Math.max(0,Math.min(1,startPX+(e.clientX-startX)*scaleX/W));
     positions[idx].y=Math.max(0,Math.min(1,startPY+(e.clientY-startY)*scaleY/H));
-    const tx=Math.round(positions[idx].x*W-23), ty=Math.round(positions[idx].y*H-23);
+    const tx=Math.round(positions[idx].x*W-24), ty=Math.round(positions[idx].y*H-24);
     pin.style.transform=`translate(${{tx}}px,${{ty}}px)`;
     const ist=computeLicht(positions[idx].x,positions[idx].y,currentFloor);
     const stat=getLichtStatus(ist,plants[idx].licht);
@@ -2062,19 +2657,23 @@ function setupPinDrag(pin,idx) {{
 }}
 
 // ============================================================
-// ★ NEU: SORT HELPERS (Bibliothek)
+// ★ SORT HELPERS (Bibliothek)
 // ============================================================
 function toggleSortDir() {{
   libSortAsc = !libSortAsc;
   $("lib-sort-dir-btn").textContent = libSortAsc ? "↑" : "↓";
-  $("lib-sort-dir-btn").title = libSortAsc ? "Aufsteigend (klicken für ↓)" : "Absteigend (klicken für ↑)";
+  $("lib-sort-dir-btn").title = libSortAsc ? "Aufsteigend" : "Absteigend";
   renderLibrary();
 }}
 
 function getSortValue(plant, key) {{
   if(key === "licht") return plant.licht || 0;
+  if(key === "vital") {{
+    const i = plants.indexOf(plant);
+    const v = computeVitalScore(i);
+    return v.score;
+  }}
   if(key === "giessen") {{
-    // Numerischen Gießwert aus aktuellem Monat extrahieren
     const monthName = MONTHS_DE[NOW_MONTH];
     const raw = plant.giessAll ? plant.giessAll[monthName] : plant.giessen;
     const n = parseFloat(raw);
@@ -2084,19 +2683,16 @@ function getSortValue(plant, key) {{
 }}
 
 // ============================================================
-// ★ LIBRARY VIEW — mit Sortierfunktion
+// ★ LIBRARY VIEW — mit Vital-Score Ring
 // ============================================================
 function renderLibrary() {{
   const grid=$("lib-grid");
   const filter=libraryFilter.toLowerCase();
   grid.innerHTML="";
 
-  // Sortier-State aus Select lesen
   libSortKey = $("lib-sort-key") ? $("lib-sort-key").value : libSortKey;
-
   let filtered = plants.filter(p=>!filter||p.name.toLowerCase().includes(filter));
 
-  // NEU: Sortieren
   filtered = [...filtered].sort((a,b) => {{
     const va = getSortValue(a, libSortKey);
     const vb = getSortValue(b, libSortKey);
@@ -2108,11 +2704,11 @@ function renderLibrary() {{
   const libSub=$("lib-sub-label");
   if(libSub) {{
     const placed=Object.keys(positions).length;
-    const sortLabel = libSortKey==="licht" ? "Lichtbedarf" : libSortKey==="giessen" ? "Gießbedarf" : "Name";
-    libSub.textContent=`${{filtered.length}} Pflanzen · ${{placed}} platziert · Sortiert nach ${{sortLabel}} ${{libSortAsc?"↑":"↓"}}`;
+    const sortLabel = libSortKey==="licht" ? "Lichtbedarf" : libSortKey==="giessen" ? "Gießbedarf" : libSortKey==="vital" ? "Vital-Score" : "Name";
+    libSub.textContent=`${{filtered.length}} Pflanzen · ${{placed}} platziert · ${{sortLabel}} ${{libSortAsc?"↑":"↓"}}`;
   }}
 
-  filtered.forEach((p)=>{{
+  filtered.forEach((p) => {{
     const i=plants.indexOf(p);
     const pos=positions[i];
     const lf=pos?computeLichtFull(pos.x,pos.y,pos.floor):null;
@@ -2121,6 +2717,10 @@ function renderLibrary() {{
     const floorLabel=pos?`📍 ${{pos.floor}}`:"📦 Im Inventar";
     const barColor=stat==='ideal'?'var(--accent)':stat==='ok'?'var(--warn)':'var(--danger)';
     const lightPct=ist?(ist/10*100).toFixed(1):0;
+
+    // Vital-Score für Karte
+    const vital = computeVitalScore(i);
+    const vColor = vital.score >= 72 ? "var(--accent)" : vital.score >= 45 ? "var(--warn)" : "var(--danger)";
 
     let statusChip="";
     if(stat) {{
@@ -2138,11 +2738,19 @@ function renderLibrary() {{
         ${{p.besonderheit}}
       </div>
     ` : '';
-    const humiHTML = (p.luftfeuchtigkeit || p.besprühen) ? `
+    const humiHTML = (p.luftfeuchtigkeit || p["besprühen"]) ? `
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
         ${{p.luftfeuchtigkeit ? `<div class="lib-humidity-row">💧 <span class="lib-humidity-badge">${{p.luftfeuchtigkeit}}</span></div>` : ''}}
-        ${{p.besprühen ? `<div class="lib-humidity-row">🌫️ Besprühen: <strong style="margin-left:4px;color:var(--text);">${{p.besprühen}}</strong></div>` : ''}}
+        ${{p["besprühen"] ? `<div class="lib-humidity-row">🌫️ Besprühen: <strong style="margin-left:4px;color:var(--text);">${{p["besprühen"]}}</strong></div>` : ''}}
       </div>
+    ` : '';
+
+    const stauBadge = vital.staunaesseRisk ? `
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+        padding:4px 10px;border-radius:99px;background:rgba(123,174,196,0.14);
+        color:var(--staunaesse);border:1px solid rgba(123,174,196,0.3);">
+        🚱 Staunässegefahr
+      </span>
     ` : '';
 
     const card=document.createElement("div");
@@ -2156,10 +2764,15 @@ function renderLibrary() {{
           <div class="lib-card-name">${{p.name}}</div>
           ${{p.botanisch ? `<div class="lib-card-botanical">${{p.botanisch}}</div>` : ''}}
         </div>
+        <!-- Vital-Score Miniatur-Ring (oben rechts auf dem Bild) -->
+        <div class="lib-vital-badge" style="position:absolute;top:12px;right:12px;">
+          ${{makeSmallRingSvg(vital.score)}}
+        </div>
       </div>
       <div class="lib-card-body">
         <div class="lib-card-top-row">
           ${{statusChip}}
+          ${{stauBadge}}
           <div class="lib-card-loc" style="margin-left:auto">
             <div class="lib-card-loc-dot ${{pos?"placed":""}}"></div>
             ${{floorLabel}}
@@ -2169,7 +2782,7 @@ function renderLibrary() {{
           <div class="lib-light-icon">☀️</div>
           <div class="lib-light-bar-wrap">
             <div class="lib-light-bar-track">
-              <div class="lib-light-bar-fill" style="width:${{lightPct}}%;background:${{ist?'linear-gradient(90deg, var(--accent-glow), '+barColor+')':'rgba(45,71,57,0.1)'}}"></div>
+              <div class="lib-light-bar-fill" style="width:${{lightPct}}%;background:${{ist?'linear-gradient(90deg, var(--accent-glow), '+barColor+')':'rgba(44,59,46,0.08)'}}"></div>
             </div>
             <div class="lib-light-labels">
               <span>Licht verfügbar</span>
@@ -2257,8 +2870,8 @@ function renderCalendar() {{
   }}
 
   const todayD = NOW.getDate(), todayM = NOW.getMonth(), todayY = NOW.getFullYear();
-
   const eventsByDay = {{}};
+
   careHistory.forEach(h=>{{
     const d = new Date(h.time);
     if(d.getMonth()===calMonth && d.getFullYear()===calYear) {{
@@ -2365,9 +2978,7 @@ function renderCareStatus() {{
     ${{allItems.map(e => makeCareCard(e.idx, e.ws, e.fs)).join("")}}
   ` : '';
 
-  // Checkboxen nach dem Rendern verdrahten
   bindCheckboxEvents();
-  // Selektion visuell wiederherstellen
   restoreSelection();
   updateBulkBar();
 }}
@@ -2400,7 +3011,7 @@ function renderCareHistory() {{
     histSection.innerHTML = `
       <div class="care-history">
         <div class="care-history-header">📋 Pflege-Historie</div>
-        <div style="padding:24px;text-align:center;color:var(--muted);font-size:14px;font-weight:500;">
+        <div style="padding:24px;text-align:center;color:var(--muted);font-size:14px;font-weight:400;">
           Noch keine Aktionen aufgezeichnet.
         </div>
       </div>
@@ -2409,16 +3020,14 @@ function renderCareHistory() {{
 }}
 
 // ============================================================
-// ★ NEU: MULTI-SELEKTION Logik
+// ★ MULTI-SELEKTION
 // ============================================================
-
 function bindCheckboxEvents() {{
   document.querySelectorAll(".care-checkbox").forEach(cb => {{
     cb.addEventListener("change", () => {{
       const idx = parseInt(cb.dataset.pidx);
       if(cb.checked) selectedPlantIdxs.add(idx);
       else selectedPlantIdxs.delete(idx);
-      // Card-Klasse aktualisieren
       const card = cb.closest(".care-card");
       if(card) card.classList.toggle("selected-card", cb.checked);
       updateBulkBar();
@@ -2440,12 +3049,8 @@ function updateBulkBar() {{
   const bar = $("bulk-action-bar");
   const countEl = $("bulk-count-label");
   const n = selectedPlantIdxs.size;
-  if(n > 0) {{
-    bar.classList.add("visible");
-    countEl.textContent = `${{n}} ausgewählt`;
-  }} else {{
-    bar.classList.remove("visible");
-  }}
+  if(n > 0) {{ bar.classList.add("visible"); countEl.textContent = `${{n}} ausgewählt`; }}
+  else {{ bar.classList.remove("visible"); }}
 }}
 
 function clearSelection() {{
@@ -2458,59 +3063,39 @@ function clearSelection() {{
   updateBulkBar();
 }}
 
-// NEU: Bulk-Gießen
 function bulkWater() {{
   if(selectedPlantIdxs.size === 0) return;
   const now = new Date().toISOString();
   selectedPlantIdxs.forEach(idx => {{
     if(!careData[idx]) careData[idx]={{}};
     careData[idx].lastWatered = now;
-    careHistory.unshift({{
-      type:'water', plantIdx:idx,
-      name: plants[idx].name, emoji: plants[idx].emoji, time: now
-    }});
+    careHistory.unshift({{ type:'water', plantIdx:idx, name:plants[idx].name, emoji:plants[idx].emoji, time:now }});
   }});
   const count = selectedPlantIdxs.size;
   selectedPlantIdxs.clear();
-  saveCareData();
-  renderCare();
-  renderCalendar();
+  saveCareData(); renderCare(); renderCalendar();
   showToast(`💧 ${{count}} Pflanzen gegossen`);
 }}
 
-// NEU: Bulk-Düngen (inklusive automatisches Gießen — Feature 2)
 function bulkFertilize() {{
   if(selectedPlantIdxs.size === 0) return;
   const now = new Date().toISOString();
   selectedPlantIdxs.forEach(idx => {{
     if(!careData[idx]) careData[idx]={{}};
-    // Düngen impliziert Gießen — gleicher Zeitstempel
     careData[idx].lastFertilized = now;
     careData[idx].lastWatered    = now;
-    careHistory.unshift({{
-      type:'fertilize', plantIdx:idx,
-      name: plants[idx].name, emoji: plants[idx].emoji, time: now
-    }});
-    careHistory.unshift({{
-      type:'water', plantIdx:idx,
-      name: plants[idx].name, emoji: plants[idx].emoji, time: now
-    }});
+    careHistory.unshift({{ type:'fertilize', plantIdx:idx, name:plants[idx].name, emoji:plants[idx].emoji, time:now }});
+    careHistory.unshift({{ type:'water',      plantIdx:idx, name:plants[idx].name, emoji:plants[idx].emoji, time:now }});
   }});
   const count = selectedPlantIdxs.size;
   selectedPlantIdxs.clear();
-  saveCareData();
-  renderCare();
-  renderCalendar();
+  saveCareData(); renderCare(); renderCalendar();
   showToast(`🌿 ${{count}} Pflanzen gedüngt & gegossen`);
 }}
 
 // ============================================================
 // ★ PFLEGE-KERN-LOGIK
 // ============================================================
-function daysInMonth(year, month) {{
-  return new Date(year, month + 1, 0).getDate();
-}}
-
 function parseIntervalDays(val) {{
   if(!val || val==="—" || val.trim()==="") return null;
   const n = parseFloat(val);
@@ -2565,37 +3150,23 @@ function formatAbsDate(isoStr) {{
     + " " + d.toLocaleTimeString("de-DE",{{hour:"2-digit",minute:"2-digit"}});
 }}
 
-// ★ FEATURE 2: Düngen impliziert Gießen
 function doWater(plantIdx) {{
   if(!careData[plantIdx]) careData[plantIdx]={{}};
   const now = new Date().toISOString();
   careData[plantIdx].lastWatered = now;
-  careHistory.unshift({{
-    type:'water', plantIdx,
-    name: plants[plantIdx].name, emoji: plants[plantIdx].emoji, time: now
-  }});
-  saveCareData();
-  renderCare(); renderCalendar();
+  careHistory.unshift({{ type:'water', plantIdx, name:plants[plantIdx].name, emoji:plants[plantIdx].emoji, time:now }});
+  saveCareData(); renderCare(); renderCalendar();
   showToast(`💧 ${{plants[plantIdx].name}} gegossen`);
 }}
 
 function doFertilize(plantIdx) {{
   if(!careData[plantIdx]) careData[plantIdx]={{}};
   const now = new Date().toISOString();
-  // Düngen setzt BEIDE Zeitstempel gleichzeitig
   careData[plantIdx].lastFertilized = now;
-  careData[plantIdx].lastWatered    = now;  // ← Feature 2
-  careHistory.unshift({{
-    type:'fertilize', plantIdx,
-    name: plants[plantIdx].name, emoji: plants[plantIdx].emoji, time: now
-  }});
-  // Gieß-Historie-Eintrag ebenfalls hinzufügen
-  careHistory.unshift({{
-    type:'water', plantIdx,
-    name: plants[plantIdx].name, emoji: plants[plantIdx].emoji, time: now
-  }});
-  saveCareData();
-  renderCare(); renderCalendar();
+  careData[plantIdx].lastWatered    = now;
+  careHistory.unshift({{ type:'fertilize', plantIdx, name:plants[plantIdx].name, emoji:plants[plantIdx].emoji, time:now }});
+  careHistory.unshift({{ type:'water',      plantIdx, name:plants[plantIdx].name, emoji:plants[plantIdx].emoji, time:now }});
+  saveCareData(); renderCare(); renderCalendar();
   showToast(`🌿 ${{plants[plantIdx].name}} gedüngt & gegossen`);
 }}
 
@@ -2634,8 +3205,6 @@ function exportCareCSV() {{
   URL.revokeObjectURL(url);
 }}
 
-function refreshCare() {{ renderCare(); renderCalendar(); }}
-
 function renderCare() {{
   if(currentCareSubtab === 'calendar') {{ renderUpcoming(); renderCalendar(); }}
   else if(currentCareSubtab === 'status') renderCareStatus();
@@ -2667,9 +3236,9 @@ function renderCareStatusCounts() {{
 function renderUpcoming() {{
   const el = $("care-upcoming-section");
   if(!el) return;
-  const now     = new Date();
-  const in14    = new Date(now.getTime() + 14*24*3600*1000);
-  const items   = [];
+  const now    = new Date();
+  const in14   = new Date(now.getTime() + 14*24*3600*1000);
+  const items  = [];
   plants.forEach((p, i) => {{
     [['water','💧'],['fertilize','🌿']].forEach(([type, icon]) => {{
       const s = getCareStatus(i, type);
@@ -2683,11 +3252,13 @@ function renderUpcoming() {{
 
   if(items.length === 0) {{
     el.innerHTML = `
-      <div style="background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
-        padding:20px 24px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(45,71,57,0.03);">
+      <div style="background:rgba(255,255,255,0.75);backdrop-filter:blur(14px);
+        border:1px solid rgba(255,255,255,0.7);border-radius:var(--rx);
+        padding:20px 24px;display:flex;align-items:center;gap:14px;
+        box-shadow:0 6px 24px rgba(44,59,46,0.05);">
         <span style="font-size:28px;">🎉</span>
         <div>
-          <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);">Alles versorgt!</div>
+          <div style="font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--text);">Alles versorgt!</div>
           <div style="font-size:13px;color:var(--muted);margin-top:2px;">In den nächsten 14 Tagen keine Aktionen fällig.</div>
         </div>
       </div>`;
@@ -2698,12 +3269,13 @@ function renderUpcoming() {{
   const overdueItems = items.filter(it => it.diffDays < 0);
 
   let html = `
-    <div style="background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
-      overflow:hidden;box-shadow:0 4px 16px rgba(45,71,57,0.03);">
+    <div style="background:rgba(255,255,255,0.75);backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,0.7);border-radius:var(--rx);overflow:hidden;
+      box-shadow:0 6px 24px rgba(44,59,46,0.05);">
       <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
-        <span style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);">📅 Nächste 14 Tage</span>
+        <span style="font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--text);">📅 Nächste 14 Tage</span>
         ${{overdueItems.length > 0 ? `<span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;
-          background:var(--danger-dim);color:var(--danger);border:1px solid rgba(229,115,115,0.3);">
+          background:var(--danger-dim);color:var(--danger);border:1px solid rgba(201,112,112,0.28);">
           ${{overdueItems.length}} überfällig</span>` : ''}}
         <span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:99px;
           background:var(--surface-2);color:var(--muted);margin-left:auto;">${{items.length}} Aktionen</span>
@@ -2713,7 +3285,7 @@ function renderUpcoming() {{
 
   items.forEach((it, idx) => {{
     const isOverdue = it.diffDays < 0;
-    const bgColor   = isOverdue ? 'rgba(229,115,115,0.04)' : it.diffDays===0 ? 'rgba(226,167,111,0.05)' : 'transparent';
+    const bgColor   = isOverdue ? 'rgba(201,112,112,0.04)' : it.diffDays===0 ? 'rgba(201,149,106,0.04)' : 'transparent';
     const chipCls   = isOverdue ? 'overdue' : it.diffDays<=0 ? 'soon' : it.diffDays<=3 ? 'soon' : 'ok';
     const chipLabel = formatRelDate(it.status.nextDate);
     const lastLabel = it.status.lastDate ? `Zuletzt: ${{formatAbsDate(it.status.lastDate.toISOString())}}` : "Noch nie";
@@ -2746,7 +3318,7 @@ function renderUpcoming() {{
 }}
 
 // ============================================================
-// ★ FEATURE 4: Standort-Quicklink
+// ★ STANDORT-QUICKLINK
 // ============================================================
 function showOnMap(plantIdx) {{
   const pos = positions[plantIdx];
@@ -2765,11 +3337,12 @@ function showOnMap(plantIdx) {{
 }}
 
 // ============================================================
-// ★ CARE CARD (mit Checkbox + Standort-Button)
+// ★ CARE CARD (mit Checkbox + Vital-Score Mini-Indikator)
 // ============================================================
 function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
-  const p = plants[plantIdx];
+  const p  = plants[plantIdx];
   const cd = careData[plantIdx] || {{}};
+  const vital = computeVitalScore(plantIdx);
   const wOver = waterStatus && waterStatus.overdueDays > 0;
   const fOver = fertilizeStatus && fertilizeStatus.overdueDays > 0;
   let cardClass = "care-card";
@@ -2816,18 +3389,31 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
     </div>
   `;
 
-  const lastW = cd.lastWatered   ? `Zuletzt: ${{formatAbsDate(cd.lastWatered)}}`   : "Noch nie gegossen";
-  const lastF = cd.lastFertilized? `Zuletzt: ${{formatAbsDate(cd.lastFertilized)}}` : "Noch nie gedüngt";
+  const lastW = cd.lastWatered    ? `Zuletzt: ${{formatAbsDate(cd.lastWatered)}}`    : "Noch nie gegossen";
+  const lastF = cd.lastFertilized ? `Zuletzt: ${{formatAbsDate(cd.lastFertilized)}}` : "Noch nie gedüngt";
 
-  // NEU: Standort-Button nur wenn platziert
   const hasPos = !!positions[plantIdx];
   const locationBtn = hasPos
     ? `<button class="care-btn location" onclick="showOnMap(${{plantIdx}})">📍 Standort</button>`
     : '';
 
+  // Staunässe-Chip
+  const stauChip = vital.staunaesseRisk
+    ? `<span class="care-chip" style="background:rgba(123,174,196,0.14);color:var(--staunaesse);border-color:rgba(123,174,196,0.3);">🚱 Staunässe</span>`
+    : '';
+
+  // Vital-Score Mini-Indikator
+  const vColor = vital.score >= 72 ? "var(--accent)" : vital.score >= 45 ? "var(--warn)" : "var(--danger)";
+  const vitalMini = `
+    <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+      padding:3px 10px;border-radius:99px;background:rgba(255,255,255,0.7);
+      border:1px solid var(--border);color:${{vColor}};">
+      💚 ${{vital.score}}%
+    </span>
+  `;
+
   return `
     <div class="${{cardClass}}" data-plant-idx="${{plantIdx}}">
-      <!-- NEU: Checkbox für Multi-Selektion -->
       <div class="care-card-checkbox-wrap">
         <input type="checkbox" class="care-checkbox" data-pidx="${{plantIdx}}">
       </div>
@@ -2835,7 +3421,7 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
       <div class="care-card-info">
         <div class="care-card-name">${{p.name}}</div>
         <div class="care-card-meta">
-          ${{waterChip}}${{fertChip}}
+          ${{waterChip}}${{fertChip}}${{stauChip}}${{vitalMini}}
           ${{!waterChip && !fertChip ? '<span class="care-chip">Kein Intervall hinterlegt</span>' : ''}}
         </div>
         ${{progressBars}}
