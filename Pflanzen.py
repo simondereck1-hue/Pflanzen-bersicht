@@ -910,6 +910,45 @@ input,select {{ font-family:inherit }}
 .lib-light-labels {{ display:flex; justify-content:space-between; font-size:11px; font-weight:600; color:var(--muted); margin-top:5px }}
 .lib-light-score {{ font-family:'Playfair Display',serif; font-size:16px; font-weight:700; min-width:44px; text-align:right; flex-shrink:0 }}
 
+/* ── VITAL-SCORE AUFSCHLÜSSELUNG IN BIBLIOTHEKSKARTE ── */
+.lib-vital-breakdown {{
+  background:linear-gradient(135deg, rgba(141,170,145,0.06), rgba(249,247,242,0.9));
+  border:1px solid var(--border); border-radius:var(--rs); padding:12px 14px;
+  display:flex; flex-direction:column; gap:8px;
+}}
+.lib-vital-breakdown-title {{
+  font-size:10px; font-weight:700; color:var(--accent-dark);
+  text-transform:uppercase; letter-spacing:.08em;
+  display:flex; align-items:center; justify-content:space-between;
+}}
+.lib-vital-total-badge {{
+  font-family:'Playfair Display',serif; font-size:14px; font-weight:700;
+}}
+.lib-vital-row {{
+  display:flex; align-items:center; gap:8px;
+}}
+.lib-vital-row-icon {{ font-size:13px; width:18px; text-align:center; flex-shrink:0; }}
+.lib-vital-row-label {{ font-size:11px; font-weight:500; color:var(--muted); width:62px; flex-shrink:0; }}
+.lib-vital-row-track {{
+  flex:1; height:5px; border-radius:3px;
+  background:rgba(44,59,46,0.07); overflow:hidden;
+}}
+.lib-vital-row-fill {{
+  height:100%; border-radius:3px;
+  transition:width .9s var(--ease);
+}}
+.lib-vital-row-fill.licht     {{ background:linear-gradient(90deg,rgba(201,149,106,.4),var(--warn)); }}
+.lib-vital-row-fill.giessen   {{ background:linear-gradient(90deg,rgba(107,158,196,.4),var(--dli-color)); }}
+.lib-vital-row-fill.duengen   {{ background:linear-gradient(90deg,var(--accent-dim),var(--accent)); }}
+.lib-vital-row-val {{
+  font-size:11px; font-weight:700; color:var(--text);
+  min-width:34px; text-align:right; flex-shrink:0;
+}}
+.lib-vital-weight {{
+  font-size:9.5px; font-weight:500; color:var(--muted2);
+  min-width:30px; text-align:right; flex-shrink:0;
+}}
+
 .lib-divider {{ height:1px; background:var(--border) }}
 .lib-care-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:9px }}
 .lib-care-cell {{
@@ -1073,6 +1112,90 @@ input,select {{ font-family:inherit }}
 .cal-event.fertilize      {{ background:var(--accent-dim); color:var(--accent-dark) }}
 .cal-event.due-water      {{ background:rgba(107,158,196,0.28); color:#2b6e9e; border:1px solid rgba(107,158,196,0.35) }}
 .cal-event.due-fertilize  {{ background:rgba(141,170,145,0.22); color:var(--accent-dark); border:1px solid var(--accent-glow) }}
+
+/* ── KALENDER KLICKBARE ZELLEN ── */
+.cal-cell {{
+  cursor: pointer;
+}}
+.cal-cell:not(.other-month):hover {{
+  background: rgba(141,170,145,0.09);
+}}
+.cal-cell.selected-day {{
+  background: rgba(141,170,145,0.15);
+  outline: 2px solid var(--accent-glow);
+  outline-offset: -2px;
+}}
+
+/* ── TAG-DETAIL MODAL ── */
+#day-modal-overlay {{
+  display:none; position:fixed; inset:0; z-index:800;
+  background:rgba(44,59,46,0.28); backdrop-filter:blur(6px);
+  align-items:center; justify-content:center;
+}}
+#day-modal-overlay.open {{ display:flex; }}
+#day-modal {{
+  background:var(--surface-solid);
+  border:1px solid rgba(255,255,255,0.8);
+  border-radius:var(--rx);
+  box-shadow:0 32px 80px rgba(44,59,46,0.18), inset 0 1px 0 rgba(255,255,255,0.9);
+  width:min(520px, 95vw); max-height:80vh;
+  display:flex; flex-direction:column; overflow:hidden;
+  animation: modalIn .28s var(--ease) both;
+}}
+@keyframes modalIn {{
+  from {{ transform:scale(0.92) translateY(12px); opacity:0; }}
+  to   {{ transform:scale(1)    translateY(0);    opacity:1; }}
+}}
+.day-modal-header {{
+  padding:22px 26px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:12px;
+}}
+.day-modal-title {{
+  font-family:'Playfair Display',serif;
+  font-size:19px; font-weight:700; color:var(--text); flex:1;
+}}
+.day-modal-close {{
+  width:32px; height:32px; border-radius:50%;
+  border:1px solid var(--border); background:rgba(255,255,255,0.8);
+  color:var(--muted); font-size:14px; display:flex;
+  align-items:center; justify-content:center;
+  transition:all var(--t) var(--ease); cursor:pointer; flex-shrink:0;
+}}
+.day-modal-close:hover {{ background:var(--danger-dim); color:var(--danger); border-color:rgba(201,112,112,0.35); }}
+.day-modal-body {{ padding:20px 26px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:10px; }}
+.day-modal-empty {{
+  text-align:center; padding:32px 0; color:var(--muted);
+  font-size:14px; font-weight:500;
+}}
+.day-modal-empty .dm-icon {{ font-size:36px; margin-bottom:10px; opacity:.4; }}
+.day-event-row {{
+  display:flex; align-items:center; gap:12px;
+  padding:11px 14px; border-radius:var(--r);
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.7);
+  transition:background .18s;
+}}
+.day-event-row:hover {{ background:rgba(255,255,255,0.95); }}
+.day-event-icon {{
+  width:34px; height:34px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+}}
+.day-event-icon.water {{ background:rgba(107,158,196,0.14); }}
+.day-event-icon.fertilize {{ background:var(--accent-dim); }}
+.day-event-icon.due-water {{ background:rgba(107,158,196,0.22); }}
+.day-event-icon.due-fertilize {{ background:rgba(141,170,145,0.22); }}
+.day-event-info {{ flex:1; min-width:0; }}
+.day-event-name {{ font-size:14px; font-weight:600; color:var(--text); }}
+.day-event-sub {{ font-size:11.5px; color:var(--muted); margin-top:2px; }}
+.day-event-chip {{
+  font-size:11px; font-weight:700; padding:3px 10px;
+  border-radius:99px; border:1px solid transparent; flex-shrink:0;
+}}
+.day-event-chip.done {{ background:rgba(107,158,196,0.12); color:#2b6e9e; border-color:rgba(107,158,196,0.3); }}
+.day-event-chip.due  {{ background:var(--accent-dim); color:var(--accent-dark); border-color:var(--accent-glow); }}
+.day-event-chip.overdue {{ background:var(--danger-dim); color:var(--danger); border-color:rgba(201,112,112,0.28); }}
 
 /* Bulk-Action-Bar */
 #bulk-action-bar {{
@@ -1391,7 +1514,7 @@ input,select {{ font-family:inherit }}
     </div>
 
     <div id="care-calendar-pane">
-      <div id="care-upcoming-section"></div>
+      <div id="care-upcoming-section" style="display:none"></div>
       <div class="calendar-wrap">
         <div class="calendar-nav">
           <button class="calendar-nav-btn" onclick="changeCalMonth(-1)">‹</button>
@@ -1429,6 +1552,17 @@ input,select {{ font-family:inherit }}
   </div>
 
 </div><!-- /main -->
+
+<!-- TAG-DETAIL MODAL -->
+<div id="day-modal-overlay" onclick="closeDayModal(event)">
+  <div id="day-modal">
+    <div class="day-modal-header">
+      <div class="day-modal-title" id="day-modal-title">Tag</div>
+      <button class="day-modal-close" onclick="closeDayModal()">✕</button>
+    </div>
+    <div class="day-modal-body" id="day-modal-body"></div>
+  </div>
+</div>
 
 <script>
 // ============================================================
@@ -2793,6 +2927,34 @@ function renderLibrary() {{
             ${{ist?ist+"/10":"—"}}
           </div>
         </div>
+        <!-- ✦ Vital-Score Aufschlüsselung -->
+        <div class="lib-vital-breakdown">
+          <div class="lib-vital-breakdown-title">
+            <span>💚 Vital-Score Aufschlüsselung</span>
+            <span class="lib-vital-total-badge" style="color:${{vColor}}">${{vital.score}}%</span>
+          </div>
+          <div class="lib-vital-row">
+            <span class="lib-vital-row-icon">☀️</span>
+            <span class="lib-vital-row-label">Licht</span>
+            <div class="lib-vital-row-track"><div class="lib-vital-row-fill licht" style="width:${{vital.lichtPct}}%"></div></div>
+            <span class="lib-vital-row-val">${{vital.lichtPct}}%</span>
+            <span class="lib-vital-weight">×40%</span>
+          </div>
+          <div class="lib-vital-row">
+            <span class="lib-vital-row-icon">💧</span>
+            <span class="lib-vital-row-label">Gießen</span>
+            <div class="lib-vital-row-track"><div class="lib-vital-row-fill giessen" style="width:${{vital.giessPct}}%"></div></div>
+            <span class="lib-vital-row-val">${{vital.giessPct}}%</span>
+            <span class="lib-vital-weight">×35%</span>
+          </div>
+          <div class="lib-vital-row">
+            <span class="lib-vital-row-icon">🌿</span>
+            <span class="lib-vital-row-label">Düngen</span>
+            <div class="lib-vital-row-track"><div class="lib-vital-row-fill duengen" style="width:${{vital.duengPct}}%"></div></div>
+            <span class="lib-vital-row-val">${{vital.duengPct}}%</span>
+            <span class="lib-vital-weight">×25%</span>
+          </div>
+        </div>
         <div class="lib-divider"></div>
         <div class="lib-care-grid">
           <div class="lib-care-cell">
@@ -2905,7 +3067,7 @@ function renderCalendar() {{
       return `<div class="cal-event ${{cls}}">${{icon}} ${{e.name}}</div>`;
     }}).join("");
     const moreHTML = events.length>3 ? `<div class="cal-event" style="color:var(--muted);background:transparent;">+${{events.length-3}} weitere</div>` : "";
-    html += `<div class="${{cellClass}}"><div class="cal-day-num">${{d}}</div><div class="cal-events">${{evHTML}}${{moreHTML}}</div></div>`;
+    html += `<div class="${{cellClass}}" onclick="openDayModal(${{d}},${{calMonth}},${{calYear}})"><div class="cal-day-num">${{d}}</div><div class="cal-events">${{evHTML}}${{moreHTML}}</div></div>`;
   }}
 
   const cellsUsed = startDow + totalDays;
@@ -3316,6 +3478,108 @@ function renderUpcoming() {{
   html += `</div></div>`;
   el.innerHTML = html;
 }}
+
+// ============================================================
+// ★ TAG-DETAIL MODAL
+// ============================================================
+function openDayModal(day, month, year) {{
+  const overlay = $("day-modal-overlay");
+  const title   = $("day-modal-title");
+  const body    = $("day-modal-body");
+  if(!overlay || !title || !body) return;
+
+  const date = new Date(year, month, day);
+  const dayName = date.toLocaleDateString("de-DE", {{weekday:"long"}});
+  const dateStr = date.toLocaleDateString("de-DE", {{day:"2-digit", month:"long", year:"numeric"}});
+  title.textContent = `${{dayName}}, ${{dateStr}}`;
+
+  // Ereignisse sammeln: durchgeführte Aktionen (careHistory) + geplante (nextDate)
+  const events = [];
+
+  // 1) Durchgeführte Aktionen aus careHistory
+  careHistory.forEach(h => {{
+    const d = new Date(h.time);
+    if(d.getDate()===day && d.getMonth()===month && d.getFullYear()===year) {{
+      events.push({{
+        type: h.type,
+        name: h.name,
+        emoji: h.emoji,
+        kind: 'done',
+        time: d.toLocaleTimeString("de-DE", {{hour:"2-digit",minute:"2-digit"}})
+      }});
+    }}
+  }});
+
+  // 2) Geplante Aktionen (nextDate fällt auf diesen Tag)
+  plants.forEach((p, i) => {{
+    [['water','💧'],['fertilize','🌿']].forEach(([type, icon]) => {{
+      const s = getCareStatus(i, type);
+      if(!s) return;
+      const nd = s.nextDate;
+      if(nd.getDate()===day && nd.getMonth()===month && nd.getFullYear()===year) {{
+        // Nur anzeigen wenn nicht schon als "done" erfasst (gleiche Pflanze+Typ heute)
+        const alreadyDone = events.some(e => e.name===p.name && e.type===type && e.kind==='done');
+        if(!alreadyDone) {{
+          const now = new Date();
+          const isPast = nd < now;
+          events.push({{
+            type: 'due-'+type,
+            name: p.name,
+            emoji: p.emoji,
+            kind: isPast ? 'overdue' : 'due',
+            intervalDays: s.intervalDays
+          }});
+        }}
+      }}
+    }});
+  }});
+
+  if(events.length === 0) {{
+    body.innerHTML = `
+      <div class="day-modal-empty">
+        <div class="dm-icon">📅</div>
+        <p>Keine Aktionen an diesem Tag.</p>
+      </div>`;
+  }} else {{
+    const typeLabel = t => {{
+      if(t==='water'||t==='due-water')      return 'Gießen';
+      if(t==='fertilize'||t==='due-fertilize') return 'Düngen';
+      return t;
+    }};
+    const iconClass = t => {{
+      if(t==='water')          return 'water';
+      if(t==='fertilize')      return 'fertilize';
+      if(t==='due-water')      return 'due-water';
+      return 'due-fertilize';
+    }};
+    const iconEmoji = t => t.includes('water') ? '💧' : '🌿';
+
+    body.innerHTML = events.map(e => `
+      <div class="day-event-row">
+        <div class="day-event-icon ${{iconClass(e.type)}}">${{iconEmoji(e.type)}}</div>
+        <div class="day-event-info">
+          <div class="day-event-name">${{e.emoji}} ${{e.name}}</div>
+          <div class="day-event-sub">${{typeLabel(e.type)}}${{e.time ? ' · ' + e.time : ''}}${{e.intervalDays ? ' · alle ' + e.intervalDays + ' Tage' : ''}}</div>
+        </div>
+        <span class="day-event-chip ${{e.kind}}">
+          ${{e.kind==='done' ? '✓ Erledigt' : e.kind==='overdue' ? '⚠️ Überfällig' : '📅 Geplant'}}
+        </span>
+      </div>
+    `).join("");
+  }}
+
+  overlay.classList.add("open");
+}}
+
+function closeDayModal(event) {{
+  if(event && event.target !== $("day-modal-overlay")) return;
+  $("day-modal-overlay").classList.remove("open");
+}}
+
+// Escape-Taste schließt Modal
+document.addEventListener("keydown", e => {{
+  if(e.key === "Escape") $("day-modal-overlay").classList.remove("open");
+}});
 
 // ============================================================
 // ★ STANDORT-QUICKLINK
