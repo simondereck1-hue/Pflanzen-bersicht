@@ -2076,7 +2076,7 @@ async function loadPlants() {{
   }}
   plants.forEach((p,i)=>{{ if(!p.emoji) p.emoji=PLANT_EMOJIS[i%PLANT_EMOJIS.length]; }});
   $("inv-count").textContent = plants.length;
-  loadPositionsLocal();
+  await loadPositionsFromSheets();  // lädt lokal + Cloud (geräteübergreifend)
   renderInventory();
   loadCareData();
   renderLibrary();
@@ -2288,18 +2288,41 @@ function updateCareSyncStatus(state) {{
 async function savePositionsToSheets() {{
   savePositionsLocal();
   if(!APPS_SCRIPT_URL) return;
-  const payload = Object.entries(positions).map(([idx,pos])=>{{
-    return {{ idx:parseInt(idx), floor:pos.floor, x:pos.x, y:pos.y }};
-  }});
+  const payload = {{
+    action: "savePositions",
+    positions: Object.entries(positions).map(([idx,pos])=>{{
+      return {{ idx:parseInt(idx), floor:pos.floor, x:pos.x, y:pos.y }};
+    }})
+  }};
   try {{
     await fetch(APPS_SCRIPT_URL, {{
       method:"POST", mode:"no-cors",
       headers:{{"Content-Type":"application/json"}},
       body: JSON.stringify(payload),
     }});
-    showToast("☁️ Synchronisiert");
+    showToast("☁️ Standorte synchronisiert");
   }} catch(e) {{
-    showToast("💾 Lokal gespeichert");
+    showToast("💾 Lokal gespeichert (offline)");
+  }}
+}}
+
+async function loadPositionsFromSheets() {{
+  loadPositionsLocal();
+  if(!APPS_SCRIPT_URL) return;
+  try {{
+    const res = await fetch(APPS_SCRIPT_URL + "?action=loadPositions", {{ method:"GET", mode:"cors" }});
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data && data.positions && Array.isArray(data.positions)) {{
+      const cloud = {{}};
+      data.positions.forEach(p => {{ cloud[p.idx] = {{ floor:p.floor, x:p.x, y:p.y }}; }});
+      Object.assign(positions, cloud);
+      savePositionsLocal();
+      render();
+      renderInventory();
+    }}
+  }} catch(e) {{
+    console.warn("loadPositionsFromSheets failed:", e);
   }}
 }}
 
