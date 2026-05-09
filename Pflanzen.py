@@ -1,74 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import json, math
-from dataclasses import dataclass, field
-from typing import Optional, Dict
-
-# ============================================================
-# REF 2.1 – DATACLASS: Plant
-# ============================================================
-@dataclass
-class Plant:
-    """Typsichere Repräsentation einer Pflanze aus dem Google Sheet."""
-    id: int
-    name: str
-    botanisch: str = ""
-    licht: float = 5.0
-    giessen: str = "—"          # Gießintervall im aktuellen Monat (Tage)
-    dungen: str = "—"           # Düngeintervall im aktuellen Monat
-    umtopfen: str = "—"
-    luftfeuchtigkeit: str = ""
-    besprühen: str = ""
-    besonderheit: str = ""
-    emoji: str = "🌿"
-    giessAll: Dict[str, str] = field(default_factory=dict)
-    duengAll: Dict[str, str] = field(default_factory=dict)
-    # Vitals-Score-Felder (werden per JS berechnet, hier als Metadaten-Marker)
-    vitals_water_interval: Optional[float] = None
-    vitals_fert_interval: Optional[float] = None
-
-    def to_dict(self) -> dict:
-        """Konvertierung für JSON-Serialisierung an den HTML/JS-Layer."""
-        return {
-            "id": self.id,
-            "name": self.name,
-            "botanisch": self.botanisch,
-            "licht": self.licht,
-            "giessen": self.giessen,
-            "dungen": self.dungen,
-            "umtopfen": self.umtopfen,
-            "luftfeuchtigkeit": self.luftfeuchtigkeit,
-            "besprühen": self.besprühen,
-            "besonderheit": self.besonderheit,
-            "emoji": self.emoji,
-            "giessAll": self.giessAll,
-            "duengAll": self.duengAll,
-        }
-
-    @staticmethod
-    def from_csv_row(row_dict: dict) -> "Plant":
-        """Robuste Konvertierung einer CSV-Zeile in ein Plant-Objekt."""
-        def safe_float(val, default=5.0):
-            try:
-                return float(val)
-            except (TypeError, ValueError):
-                return default
-
-        return Plant(
-            id=row_dict.get("id", 0),
-            name=row_dict.get("name", "Unbekannte Pflanze"),
-            botanisch=row_dict.get("botanisch", ""),
-            licht=safe_float(row_dict.get("licht"), 5.0),
-            giessen=row_dict.get("giessen", "—"),
-            dungen=row_dict.get("dungen", "—"),
-            umtopfen=row_dict.get("umtopfen", "—"),
-            luftfeuchtigkeit=row_dict.get("luftfeuchtigkeit", ""),
-            besprühen=row_dict.get("besprühen", ""),
-            besonderheit=row_dict.get("besonderheit", ""),
-            emoji=row_dict.get("emoji", "🌿"),
-            giessAll=row_dict.get("giessAll", {}),
-            duengAll=row_dict.get("duengAll", {}),
-        )
 
 # ============================================================
 # KONFIGURATION
@@ -79,8 +11,7 @@ st.markdown("""
 <style>
   #MainMenu, header, footer { visibility: hidden; }
   .block-container { padding: 0 !important; max-width: 100% !important; }
-  /* REF 4.1 – Biophilic Palette: Creme Hintergrund */
-  .stApp { background: #F9F7F2; }
+  .stApp { background: #FCFAF7; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -210,38 +141,30 @@ html_app = f"""<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-/* ── REF 4.1: TOKENS (Biophilic High-End Palette) ── */
+/* ── TOKENS (Biophilic Palette) ── */
 :root {{
-  /* Hintergrund: sanftes Creme */
-  --bg: #F9F7F2;
-  /* Glassmorphism-Surfaces */
-  --surface: rgba(253, 251, 246, 0.80);
-  --surface-solid: #FDFBF6;
-  --surface-2: #F2EFE7;
-  --surface-3: #EBE8DF;
-  /* Borders */
-  --border: rgba(60, 80, 55, 0.07);
-  --border-2: rgba(60, 80, 55, 0.14);
-  /* Akzent: Salbeigrün */
-  --accent: #8DAA91;
-  --accent-dim: rgba(141, 170, 145, 0.15);
-  --accent-glow: rgba(141, 170, 145, 0.35);
-  --accent-dark: #5C7D60;
-  /* Warn / Danger */
-  --warn: #C4956A;
-  --warn-dim: rgba(196, 149, 106, 0.15);
-  --danger: #B85C5C;
-  --danger-dim: rgba(184, 92, 92, 0.12);
-  /* DLI */
-  --dli-color: #6A93B8;
-  --dli-dim: rgba(106, 147, 184, 0.15);
-  /* Typografie: tiefes Waldgrün / Anthrazit */
-  --text: #2C3E2D;
-  --muted: #6B7F6C;
-  --muted2: #A3B4A4;
-  /* Radien & Timing */
+  --bg: #FCFAF7;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-solid: #FFFFFF;
+  --surface-2: #F1F8E9;
+  --surface-3: #E8F5E9;
+  --border: rgba(45, 71, 57, 0.08);
+  --border-2: rgba(45, 71, 57, 0.15);
+  --accent: #7CB342;
+  --accent-dim: rgba(124, 179, 66, 0.15);
+  --accent-glow: rgba(124, 179, 66, 0.35);
+  --accent-dark: #558B2F;
+  --warn: #E2A76F;
+  --warn-dim: rgba(226, 167, 111, 0.15);
+  --danger: #E57373;
+  --danger-dim: rgba(229, 115, 115, 0.15);
+  --dli-color: #5C9BD6;
+  --dli-dim: rgba(92, 155, 214, 0.15);
+  --text: #2D4739;
+  --muted: #688E7B;
+  --muted2: #9EB5A8;
   --r: 16px; --rs: 12px; --rx: 24px;
-  --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   --sidebar-w: 340px;
   --header-h: 68px; --tab-h: 56px;
 }}
@@ -250,10 +173,8 @@ html,body{{width:100%;height:100%;overflow:hidden}}
 body{{
   font-family:'DM Sans',sans-serif;
   background: var(--bg);
-  background-image:
-    radial-gradient(ellipse at 0% 0%, rgba(141,170,145,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse at 100% 100%, rgba(196,149,106,0.08) 0%, transparent 55%),
-    radial-gradient(ellipse at 50% 0%, rgba(253,251,246,0.6) 0%, transparent 40%);
+  background-image: radial-gradient(circle at 0% 0%, rgba(241, 248, 233, 0.8) 0%, transparent 40%),
+                    radial-gradient(circle at 100% 100%, rgba(232, 245, 233, 0.8) 0%, transparent 40%);
   color:var(--text);display:flex;flex-direction:column;
 }}
 button{{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}}
@@ -261,15 +182,13 @@ input,select{{font-family:inherit}}
 
 /* ── HEADER ── */
 #header{{
-  height:var(--header-h);
-  background:var(--surface);
-  backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  border-bottom: 1px solid rgba(255,255,255,0.65);
-  box-shadow: 0 4px 32px rgba(44,62,45,0.05), inset 0 -1px 0 var(--border);
-  display:flex;align-items:center;padding:0 28px;gap:14px;flex-shrink:0;z-index:200;
+  height:var(--header-h);background:var(--surface);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+  box-shadow: 0 4px 30px rgba(45, 71, 57, 0.04);
+  display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0;z-index:200;
 }}
-.logo{{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--accent-dark);letter-spacing:-.3px}}
-</style>
+.logo{{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;color:var(--accent);letter-spacing:-.5px}}
 .logo-sep{{color:var(--border-2);font-size:20px;font-weight:300;}}
 .header-meta{{display:flex;align-items:center;gap:14px;margin-left:auto}}
 .sun-info{{
@@ -285,19 +204,18 @@ input,select{{font-family:inherit}}
 /* ── TABS ── */
 #tabs{{
   height:var(--tab-h);background:transparent;
-  display:flex;align-items:center;justify-content:flex-start;padding:0 28px;gap:10px;flex-shrink:0;z-index:150;
+  display:flex;align-items:center;justify-content:flex-start;padding:0 24px;gap:10px;flex-shrink:0;z-index:150;
   margin-top: 12px;
 }}
 .tab{{
-  padding:11px 22px;font-size:14px;font-weight:600;color:var(--muted);
+  padding:12px 24px;font-size:14px;font-weight:600;color:var(--muted);
   border-radius:99px;cursor:pointer;
-  background: rgba(253,251,246,0.55); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border:1px solid rgba(255,255,255,0.7);transition:all 0.3s ease;
-  box-shadow: 0 2px 12px rgba(44,62,45,0.03);
-  letter-spacing: 0.01em;
+  background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border:1px solid var(--border);transition:all var(--transition);
+  box-shadow: 0 2px 10px rgba(45, 71, 57, 0.02);
 }}
-.tab:hover{{color:var(--text);background:rgba(253,251,246,0.95);transform:translateY(-2px);box-shadow: 0 6px 18px rgba(44,62,45,0.06);}}
-.tab.active{{color:var(--accent-dark);background:var(--surface-solid);border-color:var(--accent-glow);box-shadow: 0 4px 16px var(--accent-dim);}}
+.tab:hover{{color:var(--text);background:rgba(255, 255, 255, 0.9);transform:translateY(-2px);box-shadow: 0 6px 16px rgba(45, 71, 57, 0.05);}}
+.tab.active{{color:var(--text);background:var(--surface-solid);border-color:var(--accent);box-shadow: 0 4px 16px var(--accent-dim);}}
 .tab-icon{{margin-right:8px;font-size:16px;}}
 
 /* ── MAIN ── */
@@ -305,12 +223,11 @@ input,select{{font-family:inherit}}
 
 /* ── SIDEBARS ── */
 #left-sidebar, #right-sidebar{{
-  width:var(--sidebar-w);
-  background:var(--surface);
-  backdrop-filter: blur(28px) saturate(1.3); -webkit-backdrop-filter: blur(28px) saturate(1.3);
-  border:1px solid rgba(255,255,255,0.70);
+  width:var(--sidebar-w);background:var(--surface);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border:1px solid rgba(255,255,255,0.6);
   border-radius: var(--rx);
-  box-shadow: 0 16px 48px rgba(44,62,45,0.07), inset 0 1px 0 rgba(255,255,255,0.8);
+  box-shadow: 0 12px 40px rgba(45, 71, 57, 0.05);
   display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;
 }}
 #left-sidebar.hidden, #right-sidebar.hidden{{display:none}}
@@ -557,9 +474,7 @@ input,select{{font-family:inherit}}
 #library-view::-webkit-scrollbar{{width:8px}}
 #library-view::-webkit-scrollbar-thumb{{background:var(--border-2);border-radius:4px}}
 
-.lib-header{{display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;
-  background:var(--surface);padding:24px;border-radius:var(--rx);border:1px solid rgba(255,255,255,0.7);
-  backdrop-filter:blur(20px);box-shadow:0 8px 36px rgba(44,62,45,0.05), inset 0 1px 0 rgba(255,255,255,0.75);}}
+.lib-header{{display:flex;align-items:center;gap:16px;flex-shrink:0;flex-wrap:wrap;background:var(--surface);padding:24px;border-radius:var(--rx);border:1px solid var(--border);backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(45,71,57,0.04);}}
 .lib-header h2{{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);}}
 .lib-header-sub{{font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}}
 .lib-search{{
@@ -597,14 +512,14 @@ input,select{{font-family:inherit}}
 
 /* Premium Library Card */
 .lib-card{{
-  background:var(--surface-solid);border:1px solid rgba(255,255,255,0.85);border-radius:var(--rx);
+  background:var(--surface-solid);border:1px solid rgba(255,255,255,0.8);border-radius:var(--rx);
   display:flex;flex-direction:column;overflow:hidden;position:relative;
-  transition:all 0.3s ease; cursor:default;
-  box-shadow:0 8px 28px rgba(44,62,45,0.05);
+  transition:all var(--transition); cursor:default;
+  box-shadow:0 8px 24px rgba(45,71,57,0.04);
 }}
 .lib-card:hover{{
   border-color:var(--accent-glow);
-  box-shadow:0 22px 64px rgba(44,62,45,0.11);
+  box-shadow:0 20px 60px rgba(45,71,57,0.1);
   transform:translateY(-6px);
 }}
 .lib-card-img{{
@@ -805,7 +720,7 @@ input,select{{font-family:inherit}}
 .care-card{{
   background:var(--surface-solid);border:1px solid var(--border);border-radius:var(--rx);
   padding:20px;display:flex;align-items:center;gap:16px;
-  transition:all 0.3s ease;box-shadow:0 4px 18px rgba(44,62,45,0.04);
+  transition:all var(--transition);box-shadow:0 4px 16px rgba(45,71,57,0.03);
   position:relative;overflow:hidden;
 }}
 .care-card::before{{
@@ -919,49 +834,12 @@ input,select{{font-family:inherit}}
 .care-empty .ce-icon{{font-size:48px;margin-bottom:12px;opacity:.5}}
 .care-empty p{{font-size:14px;font-weight:500;line-height:1.6;}}
 
-/* ── REF 3.1: VITALS-SCORE Ring ── */
-.vitals-ring-wrap{{
-  display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;
-}}
-.vitals-score-label{{
-  font-family:'Syne',sans-serif;font-size:11px;font-weight:700;
-  letter-spacing:.02em;
-}}
-/* Vitals-Sektion im Detail-Panel */
-.vitals-panel{{
-  background:linear-gradient(135deg,rgba(141,170,145,0.07),rgba(196,149,106,0.05));
-  border:1px solid var(--border);border-radius:var(--rx);padding:16px 20px;
-  display:flex;align-items:center;gap:20px;box-shadow:0 4px 16px rgba(44,62,45,0.04);
-}}
-.vitals-panel-text{{flex:1;min-width:0;}}
-.vitals-panel-title{{
-  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
-  color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;
-}}
-.vitals-panel-sub{{font-size:13px;font-weight:500;color:var(--text);line-height:1.5;}}
-
-/* ── REF 3.2: KONTEXTUELLE WARNUNGEN ── */
-.vitals-warnings{{
-  display:flex;flex-direction:column;gap:8px;margin-top:12px;
-}}
-.vitals-warning{{
-  display:flex;align-items:center;gap:8px;
-  padding:10px 14px;border-radius:var(--rs);font-size:12px;font-weight:600;
-  transition:all 0.3s ease;
-}}
-.vitals-warning.warn{{
-  background:var(--warn-dim);color:#8B5E35;border:1px solid rgba(196,149,106,0.3);
-}}
-.vitals-warning.danger{{
-  background:var(--danger-dim);color:var(--danger);border:1px solid rgba(184,92,92,0.25);
-}}
-
 /* ── TOAST & TOOLTIP ── */
 #tooltip{{
   position:fixed;z-index:500;pointer-events:none;
-  background:rgba(253,251,246,0.97);backdrop-filter:blur(12px);border:1px solid var(--border-2);
+  background:rgba(255,255,255,0.95);backdrop-filter:blur(8px);border:1px solid var(--border-2);
   border-radius:var(--rs);padding:10px 14px;font-size:12px;font-weight:600;color:var(--text);
-  box-shadow:0 8px 28px rgba(44,62,45,0.09);opacity:0;transition:opacity .15s;
+  box-shadow:0 8px 24px rgba(45,71,57,0.08);opacity:0;transition:opacity .15s;
   max-width:240px;
 }}
 #tooltip.visible{{opacity:1}}
@@ -987,7 +865,6 @@ input,select{{font-family:inherit}}
 #loading .ld-icon{{font-size:54px;animation:pulse 2s ease-in-out infinite}}
 #loading p{{font-size:16px;font-weight:500;color:var(--text)}}
 @keyframes pulse{{0%,100%{{transform:scale(1);opacity:.6}}50%{{transform:scale(1.1);opacity:1}}}}
-@keyframes fadeIn{{from{{opacity:0;transform:translateY(-4px)}}to{{opacity:1;transform:none}}}}
 </style>
 </head>
 <body>
@@ -1002,11 +879,6 @@ input,select{{font-family:inherit}}
   <span class="logo-sep">|</span>
   <span style="font-size:14px;font-weight:500;color:var(--text)" id="month-label"></span>
   <div class="header-meta">
-    <!-- REF 3.2: Globale Sonnenwarnung -->
-    <div id="sun-warning-banner" style="display:none;align-items:center;gap:6px;
-      padding:5px 14px;border-radius:99px;font-size:12px;font-weight:600;
-      background:var(--warn-dim);color:#8B5E35;border:1px solid rgba(196,149,106,0.4);
-      animation:fadeIn .4s ease;"></div>
     <div class="sun-info">
       <div class="sun-dot"></div>
       <span id="sun-label">Sonnenstand wird berechnet…</span>
@@ -1361,17 +1233,6 @@ function updateSunInfo() {{
   }} else {{
     $("sun-label").textContent = `🌙 Sonne unter Horizont (${{elev}}°)`;
   }}
-
-  // REF 3.2: Globale Sonnen-Warnung bei hoher Intensität
-  const banner = $("sun-warning-banner");
-  if(banner) {{
-    if(sunState.elevation > 40 && sunState.factor > 0.65) {{
-      banner.textContent = `🌡️ Hohe Verdunstung heute – Wasserbedarf prüfen`;
-      banner.style.display = 'flex';
-    }} else {{
-      banner.style.display = 'none';
-    }}
-  }}
 }}
 
 function segmentsIntersect(ax,ay,bx,by, cx,cy,dx,dy) {{
@@ -1483,123 +1344,6 @@ const STATUS_CFG = {{
   ok:   {{icon:"⛅",label:"Akzeptabler Standort",desc:"Etwas weniger als optimal, aber tolerierbar.",cls:"ok"}},
   bad:  {{icon:"🌑",label:"Zu dunkel",desc:"Bitte näher ans Fenster stellen.",cls:"bad"}},
 }};
-
-// ============================================================
-// ★ REF 3.1: VITALS-SCORE (Glücks-Index 0–100%)
-// ============================================================
-function calcVitalsScore(plantIdx) {{
-  const p = plants[plantIdx];
-  const pos = positions[plantIdx];
-  const scores = [];
-
-  // 1. Wasser-Score: 100% kurz nach dem Gießen, 0% bei Überfälligkeit
-  const ws = getCareStatus(plantIdx, 'water');
-  if(ws) {{
-    const waterScore = Math.max(0, Math.min(100, ws.moisturePct));
-    scores.push({{ label:'💧', value:waterScore, weight:0.4 }});
-  }}
-
-  // 2. Dünge-Score
-  const fs = getCareStatus(plantIdx, 'fertilize');
-  if(fs) {{
-    const fertScore = Math.max(0, Math.min(100, fs.moisturePct));
-    scores.push({{ label:'🌿', value:fertScore, weight:0.25 }});
-  }}
-
-  // 3. Licht-Score: Verhältnis von verfügbarem Licht zu Bedarf (0–100%)
-  if(pos) {{
-    const liveScore = computeLicht(pos.x, pos.y, pos.floor);
-    const need = p.licht || 5;
-    const lightPct = Math.min(100, Math.round((liveScore / need) * 100));
-    scores.push({{ label:'☀️', value:lightPct, weight:0.35 }});
-  }} else {{
-    // Keine Position → neutral 50%
-    scores.push({{ label:'☀️', value:50, weight:0.35 }});
-  }}
-
-  if(scores.length === 0) return 50;
-  const totalWeight = scores.reduce((a,b)=>a+b.weight,0);
-  const weighted = scores.reduce((a,b)=>a + b.value*b.weight, 0);
-  return Math.round(weighted / totalWeight);
-}}
-
-function getVitalsColor(score) {{
-  if(score >= 75) return 'var(--accent)';
-  if(score >= 45) return 'var(--warn)';
-  return 'var(--danger)';
-}}
-
-function makeVitalsRing(score) {{
-  const r = 20, cx = 26, cy = 26;
-  const circ = 2 * Math.PI * r;
-  const dash = (score / 100) * circ;
-  const color = getVitalsColor(score);
-  const emoji = score >= 75 ? '😊' : score >= 45 ? '😐' : '😟';
-  return `
-    <div class="vitals-ring-wrap" title="Glücks-Index: ${{score}}%">
-      <svg width="52" height="52" viewBox="0 0 52 52">
-        <circle cx="${{cx}}" cy="${{cy}}" r="${{r}}" fill="none" stroke="var(--border)" stroke-width="4"/>
-        <circle cx="${{cx}}" cy="${{cy}}" r="${{r}}" fill="none" stroke="${{color}}" stroke-width="4"
-          stroke-dasharray="${{dash.toFixed(1)}} ${{circ.toFixed(1)}}"
-          stroke-dashoffset="${{(circ/4).toFixed(1)}}"
-          stroke-linecap="round" style="transition:stroke-dasharray 0.8s ease"/>
-        <text x="${{cx}}" y="${{cy+5}}" text-anchor="middle" font-size="14" style="font-family:inherit">${{emoji}}</text>
-      </svg>
-      <div class="vitals-score-label" style="color:${{color}}">${{score}}%</div>
-    </div>
-  `;
-}}
-
-// ============================================================
-// ★ REF 3.2: KONTEXTUELLE WARNUNGEN
-// ============================================================
-function generateWarnings(plantIdx) {{
-  const warnings = [];
-  const p = plants[plantIdx];
-  const pos = positions[plantIdx];
-
-  // Warnung 1: Hohe Sonneneinstrahlung → erhöhte Verdunstung
-  if(pos && sunState.elevation > 40 && sunState.factor > 0.6) {{
-    const lf = computeLichtFull(pos.x, pos.y, pos.floor);
-    const highLight = lf.windowHits.some(w => !w.occluded && parseFloat(w.incFactor) > 0.45);
-    if(highLight) {{
-      warnings.push({{
-        icon: '🌡️',
-        cls: 'warn',
-        text: 'Hohe Verdunstung heute – Wasserbedarf prüfen'
-      }});
-    }}
-  }}
-
-  // Warnung 2: Staunässe-Risiko (Intervall noch weit nicht erreicht)
-  const ws = getCareStatus(plantIdx, 'water');
-  if(ws && ws.moisturePct > 85) {{
-    warnings.push({{
-      icon: '💦',
-      cls: 'danger',
-      text: 'Staunässe-Risiko – Intervall noch nicht erreicht'
-    }});
-  }}
-
-  // Warnung 3: Trockenheit (überfällig)
-  if(ws && ws.overdueDays > 2) {{
-    warnings.push({{
-      icon: '🏜️',
-      cls: 'danger',
-      text: `Dringend gießen – ${{ws.overdueDays}} Tage überfällig`
-    }});
-  }}
-
-  return warnings;
-}}
-
-function renderWarningsBadges(plantIdx) {{
-  const warnings = generateWarnings(plantIdx);
-  if(!warnings.length) return '';
-  return `<div class="vitals-warnings">` + warnings.map(w =>
-    `<div class="vitals-warning ${{w.cls}}">${{w.icon}} ${{w.text}}</div>`
-  ).join('') + `</div>`;
-}}
 
 // ============================================================
 // LIGHT MAP (Canvas overlay)
@@ -2141,23 +1885,6 @@ function renderDetail(idx) {{
     </div>
   `;
 
-  // REF 3.1 + 3.2: Vitals-Score und Warnungen im Detail-Panel
-  const vitals = calcVitalsScore(idx);
-  const vitalsColor = getVitalsColor(vitals);
-  const vitalsLabel = vitals >= 75 ? 'Bestens versorgt 😊' : vitals >= 45 ? 'Versorgung OK 😐' : 'Aufmerksamkeit nötig 😟';
-  const warningsHTML = renderWarningsBadges(idx);
-  const vitalsHTML = `
-    <div class="vitals-panel">
-      ${{makeVitalsRing(vitals)}}
-      <div class="vitals-panel-text">
-        <div class="vitals-panel-title">🌱 Glücks-Index</div>
-        <div class="vitals-panel-sub" style="color:${{vitalsColor}};font-weight:700;">${{vitalsLabel}}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:3px;">Wasser · Dünger · Licht kombiniert</div>
-      </div>
-    </div>
-    ${{warningsHTML}}
-  `;
-
   det.innerHTML=`
     ${{imgHTML}}
     <div class="plant-hdr">
@@ -2168,7 +1895,6 @@ function renderDetail(idx) {{
         ${{coordsHTML}}
       </div>
     </div>
-    ${{vitalsHTML}}
     ${{lightHTML}}
     <div class="data-grid">
       <div class="dc">
@@ -2421,15 +2147,6 @@ function renderLibrary() {{
 
     const card=document.createElement("div");
     card.className="lib-card";
-
-    // REF 3.1: Vitals-Score für Bibliothekskarte
-    const libVitals = calcVitalsScore(i);
-    const libVitalsColor = getVitalsColor(libVitals);
-    const libVitalsBg = libVitals>=75 ? 'rgba(141,170,145,0.12)' : libVitals>=45 ? 'rgba(196,149,106,0.12)' : 'rgba(184,92,92,0.12)';
-    const libVitalsBorder = libVitals>=75 ? 'rgba(141,170,145,0.35)' : libVitals>=45 ? 'rgba(196,149,106,0.35)' : 'rgba(184,92,92,0.35)';
-    const libVitalsEmoji = libVitals>=75 ? '😊' : libVitals>=45 ? '😐' : '😟';
-    const libVitalsChip = `<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:700;background:${{libVitalsBg}};color:${{libVitalsColor}};border:1px solid ${{libVitalsBorder}}">${{libVitalsEmoji}} ${{libVitals}}%</span>`;
-
     card.innerHTML=`
       <div class="lib-card-img">
         <img src="${{imgUrl}}" alt="${{p.name}}"
@@ -2443,7 +2160,6 @@ function renderLibrary() {{
       <div class="lib-card-body">
         <div class="lib-card-top-row">
           ${{statusChip}}
-          ${{libVitalsChip}}
           <div class="lib-card-loc" style="margin-left:auto">
             <div class="lib-card-loc-dot ${{pos?"placed":""}}"></div>
             ${{floorLabel}}
@@ -3100,10 +2816,6 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
     </div>
   `;
 
-  // REF 3.1: Vitals-Score Ring
-  const vitalsScore = calcVitalsScore(plantIdx);
-  const vitalsRingHTML = makeVitalsRing(vitalsScore);
-
   const lastW = cd.lastWatered   ? `Zuletzt: ${{formatAbsDate(cd.lastWatered)}}`   : "Noch nie gegossen";
   const lastF = cd.lastFertilized? `Zuletzt: ${{formatAbsDate(cd.lastFertilized)}}` : "Noch nie gedüngt";
 
@@ -3132,8 +2844,6 @@ function makeCareCard(plantIdx, waterStatus, fertilizeStatus) {{
           <span>🌿 ${{lastF}}</span>
         </div>
       </div>
-      <!-- REF 3.1: Vitals-Score Ring -->
-      ${{vitalsRingHTML}}
       <div class="care-card-actions">
         <button class="care-btn water" onclick="doWater(${{plantIdx}})">💧 Gießen</button>
         <button class="care-btn fertilize" onclick="doFertilize(${{plantIdx}})">🌿 Düngen</button>
